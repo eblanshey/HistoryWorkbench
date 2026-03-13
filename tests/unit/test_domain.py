@@ -1,0 +1,536 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""Unit tests for domain models."""
+
+import pytest
+
+from freecad.diff_wb.domain import (
+    DiffResult,
+    DiffState,
+    DiffSummary,
+    NodeDiff,
+    Placement,
+    PropertyDiff,
+    PropertyType,
+    PropertyValue,
+    Rotation,
+    Snapshot,
+    TreeNode,
+    Vector,
+)
+
+
+class TestVector:
+    """Tests for the Vector class."""
+
+    def test_creation(self):
+        """Test vector creation."""
+        v = Vector(x=1.0, y=2.0, z=3.0)
+        assert v.x == 1.0
+        assert v.y == 2.0
+        assert v.z == 3.0
+
+    def test_string_representation(self):
+        """Test string representation."""
+        v = Vector(x=1.0, y=2.0, z=3.0)
+        assert str(v) == "(1.0, 2.0, 3.0)"
+
+    def test_equality_exact(self):
+        """Test exact equality."""
+        v1 = Vector(1.0, 2.0, 3.0)
+        v2 = Vector(1.0, 2.0, 3.0)
+        assert v1 == v2
+
+    def test_equality_approximate(self):
+        """Test approximate equality for floats."""
+        v1 = Vector(1.0, 2.0, 3.0)
+        v2 = Vector(1.0 + 1e-10, 2.0 - 1e-10, 3.0)
+        assert v1 == v2
+
+    def test_inequality(self):
+        """Test inequality."""
+        v1 = Vector(1.0, 2.0, 3.0)
+        v2 = Vector(1.0, 2.0, 4.0)
+        assert v1 != v2
+
+
+class TestRotation:
+    """Tests for the Rotation class."""
+
+    def test_creation(self):
+        """Test rotation creation."""
+        r = Rotation(axis_x=0.0, axis_y=0.0, axis_z=1.0, angle_degrees=45.0)
+        assert r.axis_x == 0.0
+        assert r.axis_y == 0.0
+        assert r.axis_z == 1.0
+        assert r.angle_degrees == 45.0
+
+    def test_identity(self):
+        """Test identity rotation."""
+        r = Rotation.identity()
+        assert r.axis_x == 0.0
+        assert r.axis_y == 0.0
+        assert r.axis_z == 1.0
+        assert r.angle_degrees == 0.0
+
+    def test_string_representation(self):
+        """Test string representation."""
+        r = Rotation(0.0, 0.0, 1.0, 90.0)
+        assert "Angle=90" in str(r)
+
+    def test_equality(self):
+        """Test rotation equality."""
+        r1 = Rotation(0.0, 0.0, 1.0, 45.0)
+        r2 = Rotation(0.0, 0.0, 1.0, 45.0)
+        assert r1 == r2
+
+
+class TestPlacement:
+    """Tests for the Placement class."""
+
+    def test_creation(self):
+        """Test placement creation."""
+        pos = Vector(1.0, 2.0, 3.0)
+        rot = Rotation(0.0, 0.0, 1.0, 45.0)
+        p = Placement(position=pos, rotation=rot)
+        assert p.position == pos
+        assert p.rotation == rot
+
+    def test_identity(self):
+        """Test identity placement."""
+        p = Placement.identity()
+        assert p.position == Vector(0.0, 0.0, 0.0)
+        assert p.rotation == Rotation.identity()
+
+    def test_equality(self):
+        """Test placement equality."""
+        p1 = Placement(Vector(1.0, 2.0, 3.0), Rotation(0.0, 0.0, 1.0, 45.0))
+        p2 = Placement(Vector(1.0, 2.0, 3.0), Rotation(0.0, 0.0, 1.0, 45.0))
+        assert p1 == p2
+
+
+class TestPropertyValue:
+    """Tests for the PropertyValue class."""
+
+    def test_bool_creation(self):
+        """Test boolean property value creation."""
+        pv = PropertyValue.from_bool(True)
+        assert pv.type_ == PropertyType.BOOL
+        assert pv.value is True
+
+    def test_int_creation(self):
+        """Test integer property value creation."""
+        pv = PropertyValue.from_int(42)
+        assert pv.type_ == PropertyType.INT
+        assert pv.value == 42
+
+    def test_float_creation(self):
+        """Test float property value creation."""
+        pv = PropertyValue.from_float(3.14)
+        assert pv.type_ == PropertyType.FLOAT
+        assert pv.value == 3.14
+
+    def test_string_creation(self):
+        """Test string property value creation."""
+        pv = PropertyValue.from_string("hello")
+        assert pv.type_ == PropertyType.STRING
+        assert pv.value == "hello"
+
+    def test_vector_creation(self):
+        """Test vector property value creation."""
+        pv = PropertyValue.from_vector(1.0, 2.0, 3.0)
+        assert pv.type_ == PropertyType.VECTOR
+        assert pv.value == (1.0, 2.0, 3.0)
+
+    def test_vector_with_expression(self):
+        """Test vector with expression."""
+        pv = PropertyValue.from_vector(1.0, 2.0, 3.0, expression="Sketch001.X")
+        assert pv.expression == "Sketch001.X"
+        assert str(pv) == "(1.0, 2.0, 3.0) (via Sketch001.X)"
+
+    def test_placement_creation(self):
+        """Test placement property value creation."""
+        pv = PropertyValue.from_placement((0, 0, 0), (0, 0, 1, 90))
+        assert pv.type_ == PropertyType.PLACEMENT
+        assert pv.value["position"] == (0, 0, 0)
+
+    def test_link_creation(self):
+        """Test link property value creation."""
+        pv = PropertyValue.from_link("Body")
+        assert pv.type_ == PropertyType.LINK
+        assert pv.value == "Body"
+
+    def test_equality_same_type(self):
+        """Test equality for same type values."""
+        pv1 = PropertyValue.from_int(42)
+        pv2 = PropertyValue.from_int(42)
+        assert pv1 == pv2
+
+    def test_inequality_different_type(self):
+        """Test inequality for different types."""
+        pv1 = PropertyValue.from_int(42)
+        pv2 = PropertyValue.from_float(42.0)
+        assert pv1 != pv2
+
+    def test_float_approximate_equality(self):
+        """Test approximate equality for floats."""
+        pv1 = PropertyValue.from_float(1.0)
+        pv2 = PropertyValue.from_float(1.0 + 1e-10)
+        assert pv1 == pv2
+
+    # =====================================================================
+    # Expression Support Tests
+    # =====================================================================
+
+    def test_bool_with_expression(self):
+        """Test boolean property with expression."""
+        pv = PropertyValue.from_bool(True, expression="Sketch001.Constrain")
+        assert pv.type_ == PropertyType.BOOL
+        assert pv.value is True
+        assert pv.expression == "Sketch001.Constrain"
+        assert str(pv) == "True (via Sketch001.Constrain)"
+
+    def test_int_with_expression(self):
+        """Test integer property with expression."""
+        pv = PropertyValue.from_int(10, expression="Sketch001.Count")
+        assert pv.type_ == PropertyType.INT
+        assert pv.value == 10
+        assert pv.expression == "Sketch001.Count"
+        assert str(pv) == "10 (via Sketch001.Count)"
+
+    def test_float_with_expression(self):
+        """Test float property with expression."""
+        pv = PropertyValue.from_float(5.5, expression="Body.Length")
+        assert pv.type_ == PropertyType.FLOAT
+        assert pv.value == 5.5
+        assert pv.expression == "Body.Length"
+        assert str(pv) == "5.5 (via Body.Length)"
+
+    def test_string_with_expression(self):
+        """Test string property with expression."""
+        pv = PropertyValue.from_string("test", expression="Document.Name")
+        assert pv.type_ == PropertyType.STRING
+        assert pv.value == "test"
+        assert pv.expression == "Document.Name"
+        assert str(pv) == "test (via Document.Name)"
+
+    def test_link_with_expression(self):
+        """Test link property with expression."""
+        pv = PropertyValue.from_link("Body001", expression="PartDesign::Feature")
+        assert pv.type_ == PropertyType.LINK
+        assert pv.value == "Body001"
+        assert pv.expression == "PartDesign::Feature"
+        assert str(pv) == "Body001 (via PartDesign::Feature)"
+
+    def test_equality_same_value_different_expression(self):
+        """Test that same values with different expressions are NOT equal."""
+        pv1 = PropertyValue.from_float(10.0)
+        pv2 = PropertyValue.from_float(10.0, expression="Sketch001.X")
+        assert pv1 != pv2
+
+    def test_equality_expression_vs_no_expression(self):
+        """Test that value with expression differs from value without."""
+        pv1 = PropertyValue.from_int(42, expression="Some.Expression")
+        pv2 = PropertyValue.from_int(42)
+        assert pv1 != pv2
+
+    def test_equality_same_expression(self):
+        """Test that same value and expression are equal."""
+        pv1 = PropertyValue.from_string("hello", expression="Doc.Name")
+        pv2 = PropertyValue.from_string("hello", expression="Doc.Name")
+        assert pv1 == pv2
+
+    def test_equality_different_expressions(self):
+        """Test that same value with different expressions are NOT equal."""
+        pv1 = PropertyValue.from_vector(1.0, 2.0, 3.0, expression="Sketch001.X")
+        pv2 = PropertyValue.from_vector(1.0, 2.0, 3.0, expression="Sketch002.X")
+        assert pv1 != pv2
+
+    def test_equality_both_none_expressions(self):
+        """Test equality when both have no expressions."""
+        pv1 = PropertyValue.from_bool(False)
+        pv2 = PropertyValue.from_bool(False)
+        assert pv1 == pv2
+
+    def test_placement_with_expression(self):
+        """Test placement with expression."""
+        pv = PropertyValue.from_placement((0, 0, 0), (0, 0, 1, 45), expression="Body.Placement")
+        assert pv.type_ == PropertyType.PLACEMENT
+        assert pv.expression == "Body.Placement"
+        assert str(pv) == "{'position': (0, 0, 0), 'rotation': (0, 0, 1, 45)} (via Body.Placement)"
+
+
+class TestTreeNode:
+    """Tests for the TreeNode class."""
+
+    def test_creation(self):
+        """Test tree node creation."""
+        node = TreeNode(name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad", is_root=False)
+        assert node.name == "Pad"
+        assert node.path == "Body/Pad"
+        assert node.is_root is False
+
+    def test_creation_with_properties(self):
+        """Test tree node with properties."""
+        prop = PropertyValue.from_float(10.0)
+        node = TreeNode(
+            name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad", properties={"Length": prop}
+        )
+        assert "Length" in node.properties
+        assert node.properties["Length"].value == 10.0
+
+    def test_creation_with_children(self):
+        """Test tree node with children."""
+        child = TreeNode(name="Sub", type_id="Part::Feature", label="Sub", path="Body/Pad/Sub")
+        node = TreeNode(name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad", children=[child])
+        assert len(node.children) == 1
+        assert node.children[0].name == "Sub"
+
+    def test_string_representation(self):
+        """Test string representation."""
+        node = TreeNode(name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
+        assert "Body/Pad" in str(node)
+        assert "PartDesign::Pad" in str(node)
+
+
+class TestSnapshot:
+    """Tests for the Snapshot class."""
+
+    def test_creation(self):
+        """Test snapshot creation."""
+        snapshot = Snapshot(document_name="TestDocument", timestamp="2024-01-01T00:00:00")
+        assert snapshot.document_name == "TestDocument"
+        assert snapshot.timestamp == "2024-01-01T00:00:00"
+
+    def test_with_root_nodes(self):
+        """Test snapshot with root nodes."""
+        node = TreeNode(name="Body", type_id="PartDesign::Body", label="Body", path="Body")
+        snapshot = Snapshot(document_name="TestDocument", timestamp="2024-01-01T00:00:00", root_nodes=[node])
+        assert len(snapshot.root_nodes) == 1
+
+    def test_get_all_nodes(self):
+        """Test getting all nodes recursively."""
+        child = TreeNode(name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad", is_root=False)
+        parent = TreeNode(name="Body", type_id="PartDesign::Body", label="Body", path="Body", children=[child])
+        snapshot = Snapshot(document_name="TestDocument", timestamp="2024-01-01T00:00:00", root_nodes=[parent])
+        all_nodes = snapshot.get_all_nodes()
+        assert len(all_nodes) == 2
+
+    def test_find_node_by_path(self):
+        """Test finding a node by path."""
+        child = TreeNode(name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad", is_root=False)
+        parent = TreeNode(name="Body", type_id="PartDesign::Body", label="Body", path="Body", children=[child])
+        snapshot = Snapshot(document_name="TestDocument", timestamp="2024-01-01T00:00:00", root_nodes=[parent])
+        found = snapshot.find_node_by_path("Body/Pad")
+        assert found is not None
+        assert found.name == "Pad"
+
+    def test_find_nonexistent_node(self):
+        """Test finding a nonexistent node."""
+        snapshot = Snapshot(document_name="TestDocument", timestamp="2024-01-01T00:00:00")
+        found = snapshot.find_node_by_path("NonExistent")
+        assert found is None
+
+
+class TestDiffState:
+    """Tests for the DiffState enum."""
+
+    def test_states_exist(self):
+        """Test that all states exist."""
+        assert DiffState.ADDED is not None
+        assert DiffState.DELETED is not None
+        assert DiffState.MODIFIED is not None
+        assert DiffState.UNCHANGED is not None
+
+
+class TestPropertyDiff:
+    """Tests for the PropertyDiff class."""
+
+    def test_added_property(self):
+        """Test added property diff."""
+        new_val = PropertyValue.from_float(10.0)
+        diff = PropertyDiff(property_name="Length", old_value=None, new_value=new_val, state=DiffState.ADDED)
+        assert diff.state == DiffState.ADDED
+        assert "+10.0" in str(diff)
+
+    def test_deleted_property(self):
+        """Test deleted property diff."""
+        old_val = PropertyValue.from_float(5.0)
+        diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=None, state=DiffState.DELETED)
+        assert diff.state == DiffState.DELETED
+        assert "-5.0" in str(diff)
+
+    def test_modified_property(self):
+        """Test modified property diff."""
+        old_val = PropertyValue.from_float(5.0)
+        new_val = PropertyValue.from_float(10.0)
+        diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+        assert "5.0 -> 10.0" in str(diff)
+
+    def test_unchanged_property(self):
+        """Test unchanged property diff."""
+        val = PropertyValue.from_float(10.0)
+        diff = PropertyDiff(property_name="Length", old_value=val, new_value=val, state=DiffState.UNCHANGED)
+        assert diff.state == DiffState.UNCHANGED
+
+    # =====================================================================
+    # Expression Change Tests in PropertyDiff
+    # =====================================================================
+
+    def test_expression_only_change_detected(self):
+        """Test that expression-only change is detected as modified."""
+        old_val = PropertyValue.from_float(10.0)
+        new_val = PropertyValue.from_float(10.0, expression="Sketch001.X")
+        diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+        assert "10.0 -> 10.0" in str(diff)  # Values same but expression changed
+
+    def test_value_only_change_detected(self):
+        """Test that value-only change is detected as modified."""
+        old_val = PropertyValue.from_int(10, expression="Sketch001.Count")
+        new_val = PropertyValue.from_int(20, expression="Sketch001.Count")
+        diff = PropertyDiff(property_name="Count", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+        # String format: "Count: 10 (via Sketch001.Count) -> 20 (via Sketch001.Count)"
+        assert "Count:" in str(diff)
+        assert "10" in str(diff)
+        assert "20" in str(diff)
+
+    def test_both_expression_and_value_change(self):
+        """Test that both expression and value change is detected."""
+        old_val = PropertyValue.from_float(5.0, expression="Sketch001.X")
+        new_val = PropertyValue.from_float(15.0, expression="Sketch002.Y")
+        diff = PropertyDiff(property_name="Dimension", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+        # String format includes property name, values, and expressions
+        assert "Dimension:" in str(diff)
+        assert "5.0" in str(diff)
+        assert "15.0" in str(diff)
+        assert "Sketch001.X" in str(diff)
+        assert "Sketch002.Y" in str(diff)
+
+    def test_expression_changed_to_none(self):
+        """Test that removing an expression is detected as modified."""
+        old_val = PropertyValue.from_string("test", expression="Doc.Name")
+        new_val = PropertyValue.from_string("test")
+        diff = PropertyDiff(property_name="Name", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+
+    def test_expression_added_from_none(self):
+        """Test that adding an expression is detected as modified."""
+        old_val = PropertyValue.from_int(42)
+        new_val = PropertyValue.from_int(42, expression="Some.Expr")
+        diff = PropertyDiff(property_name="Value", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+
+    def test_different_expressions_same_value(self):
+        """Test different expressions with same value detected as modified."""
+        old_val = PropertyValue.from_vector(1.0, 2.0, 3.0, expression="Sketch001.X")
+        new_val = PropertyValue.from_vector(1.0, 2.0, 3.0, expression="Sketch002.X")
+        diff = PropertyDiff(property_name="Position", old_value=old_val, new_value=new_val, state=DiffState.MODIFIED)
+        assert diff.state == DiffState.MODIFIED
+
+
+class TestNodeDiff:
+    """Tests for the NodeDiff class."""
+
+    def test_creation(self):
+        """Test node diff creation."""
+        diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.MODIFIED)
+        assert diff.path == "Body/Pad"
+        assert diff.state == DiffState.MODIFIED
+
+    def test_has_changes_with_state(self):
+        """Test has_changes when state is not UNCHANGED."""
+        diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.MODIFIED)
+        assert diff.has_changes is True
+
+    def test_has_changes_with_property_diffs(self):
+        """Test has_changes when there are property diffs."""
+        prop_diff = PropertyDiff(
+            property_name="Length",
+            old_value=PropertyValue.from_float(5.0),
+            new_value=PropertyValue.from_float(10.0),
+            state=DiffState.MODIFIED,
+        )
+        diff = NodeDiff(
+            path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.UNCHANGED, property_diffs=[prop_diff]
+        )
+        assert diff.has_changes is True
+
+    def test_has_changes_no_changes(self):
+        """Test has_changes when nothing changed."""
+        diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.UNCHANGED, property_diffs=[])
+        assert diff.has_changes is False
+
+    def test_changed_properties(self):
+        """Test getting only changed properties."""
+        changed = PropertyDiff(
+            property_name="Length",
+            old_value=PropertyValue.from_float(5.0),
+            new_value=PropertyValue.from_float(10.0),
+            state=DiffState.MODIFIED,
+        )
+        unchanged = PropertyDiff(
+            property_name="Type",
+            old_value=PropertyValue.from_string("Dimension"),
+            new_value=PropertyValue.from_string("Dimension"),
+            state=DiffState.UNCHANGED,
+        )
+        diff = NodeDiff(
+            path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.UNCHANGED, property_diffs=[changed, unchanged]
+        )
+        changed_props = diff.changed_properties
+        assert len(changed_props) == 1
+        assert changed_props[0].property_name == "Length"
+
+
+class TestDiffSummary:
+    """Tests for the DiffSummary class."""
+
+    def test_empty_summary(self):
+        """Test empty summary."""
+        summary = DiffSummary()
+        assert summary.total_nodes == 0
+        assert summary.added_nodes == 0
+
+    def test_string_representation(self):
+        """Test string representation."""
+        summary = DiffSummary(added_nodes=2, deleted_nodes=1, modified_nodes=3, unchanged_nodes=10)
+        str_repr = str(summary)
+        assert "2 added" in str_repr
+        assert "1 deleted" in str_repr
+
+
+class TestDiffResult:
+    """Tests for the DiffResult class."""
+
+    def test_creation(self):
+        """Test diff result creation."""
+        diff = DiffResult(old_snapshot_name="v1", new_snapshot_name="v2")
+        assert diff.old_snapshot_name == "v1"
+        assert diff.new_snapshot_name == "v2"
+
+    def test_has_changes_false(self):
+        """Test has_changes when no changes."""
+        diff = DiffResult(old_snapshot_name="v1", new_snapshot_name="v2")
+        assert diff.has_changes is False
+
+    def test_has_changes_true(self):
+        """Test has_changes when there are changes."""
+        node_diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.MODIFIED)
+        diff = DiffResult(old_snapshot_name="v1", new_snapshot_name="v2", node_diffs=[node_diff])
+        assert diff.has_changes is True
+
+    def test_get_all_changed_paths(self):
+        """Test getting all changed paths."""
+        child = NodeDiff(path="Body/Pad/Sub", type_id="Part::Feature", state=DiffState.MODIFIED)
+        parent = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", state=DiffState.UNCHANGED, children=[child])
+        unchanged = NodeDiff(path="Body", type_id="PartDesign::Body", state=DiffState.UNCHANGED)
+
+        diff = DiffResult(old_snapshot_name="v1", new_snapshot_name="v2", node_diffs=[parent, unchanged])
+
+        changed_paths = diff.get_all_changed_paths()
+        assert "Body/Pad/Sub" in changed_paths
+        assert "Body/Pad" in changed_paths  # Parent included because child changed
+        assert "Body" not in changed_paths  # Unchanged with no changed children

@@ -31,26 +31,42 @@ def safe_repr(value, max_depth=3, current_depth=0):
         value_type = type(value).__name__
 
         # For vectors and placements
-        if hasattr(value, 'x') and hasattr(value, 'y') and hasattr(value, 'z'):
+        if hasattr(value, "x") and hasattr(value, "y") and hasattr(value, "z"):
             return f"Vector(x={value.x}, y={value.y}, z={value.z})"
 
         # For placements
-        if hasattr(value, 'Base') and hasattr(value, 'Rotation'):
+        if hasattr(value, "Base") and hasattr(value, "Rotation"):
             base = safe_repr(value.Base, max_depth, current_depth + 1)
             rotation = safe_repr(value.Rotation, max_depth, current_depth + 1)
             return f"Placement(Base={base}, Rotation={rotation})"
 
         # For rotations
-        if hasattr(value, 'Axis') and hasattr(value, 'Angle'):
+        if hasattr(value, "Axis") and hasattr(value, "Angle"):
             axis = safe_repr(value.Axis, max_depth, current_depth + 1)
             angle = value.Angle
             return f"Rotation(Axis={axis}, Angle={angle} rad)"
 
         # For matrices
-        if hasattr(value, 'A11'):
-            attrs = ['A11', 'A12', 'A13', 'A14', 'A21', 'A22', 'A23', 'A24',
-                     'A31', 'A32', 'A33', 'A34', 'A41', 'A42', 'A43', 'A44']
-            matrix_str = ', '.join(f"{a}={getattr(value, a, '?')}" for a in attrs)
+        if hasattr(value, "A11"):
+            attrs = [
+                "A11",
+                "A12",
+                "A13",
+                "A14",
+                "A21",
+                "A22",
+                "A23",
+                "A24",
+                "A31",
+                "A32",
+                "A33",
+                "A34",
+                "A41",
+                "A42",
+                "A43",
+                "A44",
+            ]
+            matrix_str = ", ".join(f"{a}={getattr(value, a, '?')}" for a in attrs)
             return f"Matrix({matrix_str})"
 
         # For lists/tuples
@@ -70,7 +86,7 @@ def safe_repr(value, max_depth=3, current_depth=0):
             items = [f"{k!r}: {safe_repr(v, max_depth, current_depth + 1)}" for k, v in list(value.items())[:20]]
             if len(value) > 20:
                 items.append(f"... ({len(value) - 20} more keys)")
-            return '{' + ', '.join(items) + '}'
+            return "{" + ", ".join(items) + "}"
 
         # For strings, limit length
         if isinstance(value, str):
@@ -89,7 +105,7 @@ def get_property_type_name(obj, prop_name):
     """Get the property type name for a given property."""
     try:
         # Try to get the property info tuple
-        if hasattr(obj, 'getPropertyInterface'):
+        if hasattr(obj, "getPropertyInterface"):
             try:
                 interface = obj.getPropertyInterface(prop_name)
                 if interface:
@@ -99,7 +115,7 @@ def get_property_type_name(obj, prop_name):
 
         # Try TypeId of the property value
         prop_value = getattr(obj, prop_name)
-        if hasattr(prop_value, 'TypeId'):
+        if hasattr(prop_value, "TypeId"):
             return f"Value.TypeId={prop_value.TypeId}"
 
         # Return Python type
@@ -114,40 +130,40 @@ def explore_object(obj, doc):
     result = {}
 
     # Basic object info
-    result['Name'] = obj.Name
-    result['TypeId'] = obj.TypeId
-    result['Label'] = obj.Label
+    result["Name"] = obj.Name
+    result["TypeId"] = obj.TypeId
+    result["Label"] = obj.Label
 
     # UUID if available
     try:
-        result['UUID'] = str(obj.UUID)
+        result["UUID"] = str(obj.UUID)
     except:
-        result['UUID'] = "<not available>"
+        result["UUID"] = "<not available>"
 
     # Position/Placement if available
     try:
-        if hasattr(obj, 'Placement'):
-            result['Placement'] = safe_repr(obj.Placement)
+        if hasattr(obj, "Placement"):
+            result["Placement"] = safe_repr(obj.Placement)
     except Exception as e:
-        result['Placement'] = f"<error: {e}>"
+        result["Placement"] = f"<error: {e}>"
 
     try:
-        if hasattr(obj, 'Position'):
-            result['Position'] = safe_repr(obj.Position)
+        if hasattr(obj, "Position"):
+            result["Position"] = safe_repr(obj.Position)
     except Exception as e:
-        result['Position'] = f"<error: {e}>"
+        result["Position"] = f"<error: {e}>"
 
     try:
-        if hasattr(obj, 'Rotation'):
-            result['Rotation'] = safe_repr(obj.Rotation)
+        if hasattr(obj, "Rotation"):
+            result["Rotation"] = safe_repr(obj.Rotation)
     except Exception as e:
-        result['Rotation'] = f"<error: {e}>"
+        result["Rotation"] = f"<error: {e}>"
 
     try:
-        if hasattr(obj, 'Scale'):
-            result['Scale'] = safe_repr(obj.Scale)
+        if hasattr(obj, "Scale"):
+            result["Scale"] = safe_repr(obj.Scale)
     except Exception as e:
-        result['Scale'] = f"<error: {e}>"
+        result["Scale"] = f"<error: {e}>"
 
     # Properties - DETAILED exploration
     properties = {}
@@ -155,20 +171,20 @@ def explore_object(obj, doc):
         props_list = obj.PropertiesList
         for prop_name in props_list:
             prop_info = {
-                'Type': get_property_type_name(obj, prop_name),
+                "Type": get_property_type_name(obj, prop_name),
             }
 
             # Get value
             try:
-                prop_info['Value'] = safe_repr(getattr(obj, prop_name))
+                prop_info["Value"] = safe_repr(getattr(obj, prop_name))
             except Exception as e:
-                prop_info['Value'] = f"<error reading: {e}>"
+                prop_info["Value"] = f"<error reading: {e}>"
 
             # Get expression from ExpressionEngine list
             # Note: getExpression() method does NOT exist in this FreeCAD version
             # Expressions are stored in ExpressionEngine as [(prop_name, expression), ...]
             try:
-                expr_engine = getattr(obj, 'ExpressionEngine', [])
+                expr_engine = getattr(obj, "ExpressionEngine", [])
                 expr = None
                 if isinstance(expr_engine, list):
                     for entry in expr_engine:
@@ -176,18 +192,18 @@ def explore_object(obj, doc):
                             if entry[0] == prop_name:
                                 expr = entry[1]
                                 break
-                prop_info['Expression'] = expr if expr else "(none)"
-                prop_info['HasExpression'] = bool(expr)
+                prop_info["Expression"] = expr if expr else "(none)"
+                prop_info["HasExpression"] = bool(expr)
             except Exception as e:
-                prop_info['Expression'] = f"<error: {e}>"
-                prop_info['HasExpression'] = False
+                prop_info["Expression"] = f"<error: {e}>"
+                prop_info["HasExpression"] = False
 
             properties[prop_name] = prop_info
     except Exception as e:
-        properties['<error>'] = f"Could not enumerate properties: {e}"
+        properties["<error>"] = f"Could not enumerate properties: {e}"
 
-    result['Properties'] = properties
-    result['PropertyCount'] = len(properties)
+    result["Properties"] = properties
+    result["PropertyCount"] = len(properties)
 
     # Hierarchy information
     hierarchy = {}
@@ -195,11 +211,11 @@ def explore_object(obj, doc):
     # InList (objects that reference this object)
     try:
         in_list = obj.InList
-        hierarchy['InList'] = [o.Name for o in in_list] if in_list else []
+        hierarchy["InList"] = [o.Name for o in in_list] if in_list else []
 
         # Detailed InList with relationship info
         in_list_details = []
-        for parent in (in_list or []):
+        for parent in in_list or []:
             try:
                 # Try to find the property name that references this object
                 ref_props = []
@@ -210,25 +226,23 @@ def explore_object(obj, doc):
                             ref_props.append(prop_name)
                     except:
                         pass
-                in_list_details.append({
-                    'Name': parent.Name,
-                    'TypeId': parent.TypeId,
-                    'ReferencingProperties': ref_props
-                })
+                in_list_details.append(
+                    {"Name": parent.Name, "TypeId": parent.TypeId, "ReferencingProperties": ref_props}
+                )
             except Exception as e:
-                in_list_details.append({'Name': parent.Name, 'error': str(e)})
-        hierarchy['InListDetailed'] = in_list_details
+                in_list_details.append({"Name": parent.Name, "error": str(e)})
+        hierarchy["InListDetailed"] = in_list_details
     except Exception as e:
-        hierarchy['InList'] = f"<error: {e}>"
+        hierarchy["InList"] = f"<error: {e}>"
 
     # OutList (objects referenced by this object)
     try:
         out_list = obj.OutList
-        hierarchy['OutList'] = [o.Name for o in out_list] if out_list else []
+        hierarchy["OutList"] = [o.Name for o in out_list] if out_list else []
 
         # Detailed OutList
         out_list_details = []
-        for child in (out_list or []):
+        for child in out_list or []:
             try:
                 # Try to find the property name that references the child
                 ref_props = []
@@ -239,67 +253,64 @@ def explore_object(obj, doc):
                             ref_props.append(prop_name)
                     except:
                         pass
-                out_list_details.append({
-                    'Name': child.Name,
-                    'TypeId': child.TypeId,
-                    'ReferencingProperties': ref_props
-                })
+                out_list_details.append(
+                    {"Name": child.Name, "TypeId": child.TypeId, "ReferencingProperties": ref_props}
+                )
             except Exception as e:
-                out_list_details.append({'Name': child.Name, 'error': str(e)})
-        hierarchy['OutListDetailed'] = out_list_details
+                out_list_details.append({"Name": child.Name, "error": str(e)})
+        hierarchy["OutListDetailed"] = out_list_details
     except Exception as e:
-        hierarchy['OutList'] = f"<error: {e}>"
+        hierarchy["OutList"] = f"<error: {e}>"
 
     # SubObjects
     try:
         sub_objects = obj.SubObjects
-        hierarchy['SubObjects'] = sub_objects if sub_objects else []
+        hierarchy["SubObjects"] = sub_objects if sub_objects else []
     except Exception as e:
-        hierarchy['SubObjects'] = f"<error: {e}>"
+        hierarchy["SubObjects"] = f"<error: {e}>"
 
     # getSubObjects() method
     try:
         sub_objs_method = obj.getSubObjects()
-        hierarchy['getSubObjects()'] = sub_objs_method if sub_objs_method else []
+        hierarchy["getSubObjects()"] = sub_objs_method if sub_objs_method else []
     except Exception as e:
-        hierarchy['getSubObjects()'] = f"<error: {e}>"
+        hierarchy["getSubObjects()"] = f"<error: {e}>"
 
-    result['Hierarchy'] = hierarchy
+    result["Hierarchy"] = hierarchy
 
     # Property Groups
     property_groups = {}
     try:
-        if hasattr(obj, 'getPropertyGroups'):
+        if hasattr(obj, "getPropertyGroups"):
             groups = obj.getPropertyGroups()
-            for group_name in (groups or []):
+            for group_name in groups or []:
                 try:
                     props_in_group = obj.getPropertiesInGroup(group_name)
                     property_groups[group_name] = props_in_group if props_in_group else []
                 except Exception as e:
                     property_groups[group_name] = f"<error: {e}>"
     except Exception as e:
-        property_groups['<error>'] = f"Could not enumerate groups: {e}"
+        property_groups["<error>"] = f"Could not enumerate groups: {e}"
 
-    result['PropertyGroups'] = property_groups
+    result["PropertyGroups"] = property_groups
 
     # Additional object-specific attributes
     additional_attrs = {}
-    common_attrs = ['Shape', 'ViewProvider', 'Document', 'FullName',
-                    'GroupName', 'InListDepth', 'OutListDepth']
+    common_attrs = ["Shape", "ViewProvider", "Document", "FullName", "GroupName", "InListDepth", "OutListDepth"]
 
     for attr in common_attrs:
         try:
             if hasattr(obj, attr):
                 value = getattr(obj, attr)
                 # Skip ViewProvider for now (GUI only)
-                if attr == 'ViewProvider' and value is not None:
+                if attr == "ViewProvider" and value is not None:
                     additional_attrs[attr] = "<ViewProvider (GUI only)>"
                 else:
                     additional_attrs[attr] = safe_repr(value)
         except Exception as e:
             additional_attrs[attr] = f"<error: {e}>"
 
-    result['AdditionalAttributes'] = additional_attrs
+    result["AdditionalAttributes"] = additional_attrs
 
     return result
 
@@ -309,24 +320,24 @@ def format_yaml_output(doc_path, doc_info):
     import yaml
 
     output_data = {
-        'metadata': {
-            'generator': 'FreeCAD Document Structure Exploration Script',
-            'generated_at': datetime.now().isoformat(),
-            'document_path': doc_path,
+        "metadata": {
+            "generator": "FreeCAD Document Structure Exploration Script",
+            "generated_at": datetime.now().isoformat(),
+            "document_path": doc_path,
         },
-        'document_info': {
-            'name': doc_info.get('DocumentName', 'N/A'),
-            'path': doc_info.get('DocumentPath', 'N/A'),
-            'object_count': doc_info.get('ObjectCount', 0),
+        "document_info": {
+            "name": doc_info.get("DocumentName", "N/A"),
+            "path": doc_info.get("DocumentPath", "N/A"),
+            "object_count": doc_info.get("ObjectCount", 0),
         },
-        'objects': doc_info.get('Objects', []),
-        'summary': {
-            'object_types': {},
-            'property_names': {},
-            'property_types': {},
-            'properties_with_expressions': [],
-            'potential_excluded_properties': {},
-        }
+        "objects": doc_info.get("Objects", []),
+        "summary": {
+            "object_types": {},
+            "property_names": {},
+            "property_types": {},
+            "properties_with_expressions": [],
+            "potential_excluded_properties": {},
+        },
     }
 
     # Calculate summary statistics
@@ -335,31 +346,30 @@ def format_yaml_output(doc_path, doc_info):
     prop_types = {}
     expr_props = []
 
-    for obj_info in doc_info.get('Objects', []):
+    for obj_info in doc_info.get("Objects", []):
         # Object types
-        t = obj_info['TypeId']
+        t = obj_info["TypeId"]
         type_counts[t] = type_counts.get(t, 0) + 1
 
         # Property names
-        for prop_name, prop_info in obj_info.get('Properties', {}).items():
-            if prop_name != '<error>':
+        for prop_name, prop_info in obj_info.get("Properties", {}).items():
+            if prop_name != "<error>":
                 all_props[prop_name] = all_props.get(prop_name, 0) + 1
-                ptype = prop_info.get('Type', 'Unknown')
+                ptype = prop_info.get("Type", "Unknown")
                 prop_types[ptype] = prop_types.get(ptype, 0) + 1
 
-                if prop_info.get('HasExpression', False):
+                if prop_info.get("HasExpression", False):
                     expr_props.append(f"{obj_info['Name']}.{prop_name}")
 
-    output_data['summary']['object_types'] = dict(sorted(type_counts.items()))
-    output_data['summary']['property_names'] = dict(sorted(all_props.items(), key=lambda x: -x[1]))
-    output_data['summary']['property_types'] = dict(sorted(prop_types.items(), key=lambda x: -x[1]))
-    output_data['summary']['properties_with_expressions'] = expr_props
+    output_data["summary"]["object_types"] = dict(sorted(type_counts.items()))
+    output_data["summary"]["property_names"] = dict(sorted(all_props.items(), key=lambda x: -x[1]))
+    output_data["summary"]["property_types"] = dict(sorted(prop_types.items(), key=lambda x: -x[1]))
+    output_data["summary"]["properties_with_expressions"] = expr_props
 
     # Potential excluded properties
-    auto_props = ['TimeStamp', 'LastModified', 'Label2', 'FullName',
-                  'InList', 'OutList', 'InListDepth', 'OutListDepth']
+    auto_props = ["TimeStamp", "LastModified", "Label2", "FullName", "InList", "OutList", "InListDepth", "OutListDepth"]
     found_auto = {p: all_props[p] for p in auto_props if p in all_props}
-    output_data['summary']['potential_excluded_properties'] = found_auto
+    output_data["summary"]["potential_excluded_properties"] = found_auto
 
     # Convert to YAML
     yaml_output = yaml.dump(output_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
@@ -390,25 +400,27 @@ def main():
 
         # Collect document info
         doc_info = {
-            'DocumentName': doc.Name,
-            'DocumentPath': getattr(doc, 'FileName', doc_path),
-            'ObjectCount': len(doc.Objects),
-            'Objects': []
+            "DocumentName": doc.Name,
+            "DocumentPath": getattr(doc, "FileName", doc_path),
+            "ObjectCount": len(doc.Objects),
+            "Objects": [],
         }
 
         # Explore each object
         for obj in doc.Objects:
             try:
                 obj_info = explore_object(obj, doc)
-                doc_info['Objects'].append(obj_info)
+                doc_info["Objects"].append(obj_info)
             except Exception as e:
                 print(f"WARNING: Error exploring object {obj.Name}: {e}")
-                doc_info['Objects'].append({
-                    'Name': obj.Name,
-                    'TypeId': obj.TypeId,
-                    'Label': obj.Label,
-                    'Properties': {'<error>': f'Could not explore: {e}'}
-                })
+                doc_info["Objects"].append(
+                    {
+                        "Name": obj.Name,
+                        "TypeId": obj.TypeId,
+                        "Label": obj.Label,
+                        "Properties": {"<error>": f"Could not explore: {e}"},
+                    }
+                )
 
         # Format and print YAML output
         output = format_yaml_output(doc_path, doc_info)
@@ -418,8 +430,9 @@ def main():
         output_file = "docs/api-exploration/examples/basic-file-output.yaml"
         try:
             import os
+
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(output)
             print(f"\nYAML output saved to: {output_file}")
         except Exception as e:
@@ -430,6 +443,7 @@ def main():
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

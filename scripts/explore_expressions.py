@@ -45,14 +45,14 @@ def main():
 
     # Check ExpressionEngine
     print(f"\n--- ExpressionEngine ---")
-    expr_engine = getattr(pocket, 'ExpressionEngine', [])
+    expr_engine = getattr(pocket, "ExpressionEngine", [])
     print(f"ExpressionEngine value: {expr_engine}")
     print(f"ExpressionEngine type: {type(expr_engine)}")
 
     # Try to get expression for Length property using getExpression
     print(f"\n--- Testing getExpression('Length') ---")
     try:
-        if hasattr(pocket, 'getExpression'):
+        if hasattr(pocket, "getExpression"):
             expr = pocket.getExpression("Length")
             print(f"Result: '{expr}'")
         else:
@@ -73,7 +73,7 @@ def main():
 
     # Get actual Length value
     print(f"\n--- Actual Property Value ---")
-    length_value = getattr(pocket, 'Length', 'N/A')
+    length_value = getattr(pocket, "Length", "N/A")
     print(f"Length value: {length_value}")
 
     # Check all objects for getExpression support
@@ -82,9 +82,9 @@ def main():
     print(f"{'=' * 80}")
 
     for obj in doc.Objects:
-        has_get_expr = hasattr(obj, 'getExpression')
-        has_expr_engine = hasattr(obj, 'ExpressionEngine')
-        expr_engine_val = getattr(obj, 'ExpressionEngine', [])
+        has_get_expr = hasattr(obj, "getExpression")
+        has_expr_engine = hasattr(obj, "ExpressionEngine")
+        expr_engine_val = getattr(obj, "ExpressionEngine", [])
 
         # Only show objects with non-empty ExpressionEngine or no getExpression
         if expr_engine_val or not has_get_expr:

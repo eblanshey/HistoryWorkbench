@@ -25,7 +25,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["freecad/diff_wb"]
+packages = ["freecad"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "freecad/diff_wb/resources" = "freecad/diff_wb/resources"

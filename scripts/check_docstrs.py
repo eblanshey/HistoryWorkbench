@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-import sys
 
 
 @dataclass(frozen=True)
@@ -81,9 +81,7 @@ def _iter_python_files(paths: list[Path]) -> list[Path]:
     return unique
 
 
-def _check_class(
-    *, file: Path, cls: ast.ClassDef, prefix: str
-) -> list[MissingDocstring]:
+def _check_class(*, file: Path, cls: ast.ClassDef, prefix: str) -> list[MissingDocstring]:
     """Check a class (and its public methods/nested classes) for docstrings."""
     missing: list[MissingDocstring] = []
 
@@ -129,9 +127,7 @@ def check_file(path: Path) -> list[MissingDocstring]:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
-        return [
-            MissingDocstring(file=path, lineno=1, kind="file", name="unreadable")
-        ]
+        return [MissingDocstring(file=path, lineno=1, kind="file", name="unreadable")]
 
     try:
         tree = ast.parse(text, filename=str(path))

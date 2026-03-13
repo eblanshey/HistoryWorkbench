@@ -14,10 +14,10 @@ Architecture:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tomllib
+from pathlib import Path
 from typing import Any
 
 
@@ -142,16 +142,21 @@ def gather_test_metrics(tests_paths: list[Path], package: str) -> dict[str, Any]
 
 def get_coverage_metrics(package: str, tests_paths: list[Path]) -> dict[str, Any]:
     """Get coverage metrics from pytest."""
-    result = run_command([
-        "uv", "run", "pytest",
-        "--timeout", "30",
-        *_path_list_to_str_parts(tests_paths),
-        f"--cov={package}",
-        "--cov-report=json:coverage.json",
-        "--quiet",
-        "--no-header",
-        "--tb=no",
-    ])
+    result = run_command(
+        [
+            "uv",
+            "run",
+            "pytest",
+            "--timeout",
+            "30",
+            *_path_list_to_str_parts(tests_paths),
+            f"--cov={package}",
+            "--cov-report=json:coverage.json",
+            "--quiet",
+            "--no-header",
+            "--tb=no",
+        ]
+    )
 
     test_results = ""
     for line in result.stdout.split("\n"):

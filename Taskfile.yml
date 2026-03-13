@@ -17,60 +17,40 @@ tasks:
 
   check:
     desc: Run all code quality checks
-    summary: Runs formatting check, linting, docstring check, and complexity analysis
+    summary: Runs ruff, mypy, docstring check, and complexity analysis
     cmds:
-      - task: format:check
-      - task: lint
-      - task: lint:check_docstrs
-      - task: metrics:complexity
+      - task: check:ruff
+      - task: check:mypy
+      - task: check:docstrings
+      - task: check:complexity
 
-  format:
-    desc: Format code with ruff (including import sorting)
-    summary: Formats source code and fixes import ordering
+  fix:
+    desc: Fix all auto-fixable issues
+    summary: Fixes import sorting, lint issues, and formats code
     cmds:
-      - "{{.UV}} run ruff check --fix --select I {{.CLI_ARGS | default .SRC}}"
+      - "{{.UV}} run ruff check --fix {{.CLI_ARGS | default .SRC}}"
       - "{{.UV}} run ruff format {{.CLI_ARGS | default .SRC}}"
 
-  format:check:
-    desc: Check code formatting without modifying files
-    summary: Verifies source code is properly formatted
-    cmds:
-      - "{{.UV}} run ruff check --select I {{.CLI_ARGS | default .SRC}}"
-      - "{{.UV}} run ruff format --check {{.CLI_ARGS | default .SRC}}"
-
-  lint:
-    desc: Run all linting tasks
-    summary: Runs ruff and mypy on source code
-    cmds:
-      - task: lint:ruff
-      - task: lint:mypy
-
-  lint:ruff:
-    desc: Run linting with ruff
+  check:ruff:
+    desc: Run ruff linting checks
     summary: Checks code style, imports, and common issues
     cmds:
       - "{{.UV}} run ruff check {{.CLI_ARGS | default .SRC}}"
 
-  lint:mypy:
+  check:mypy:
     desc: Run type checking with mypy
     summary: Validates type hints and catches type errors
     cmds:
       - "{{.UV}} run mypy {{.CLI_ARGS | default .SRC}}"
 
-  lint:check_docstrs:
+  check:docstrings:
     desc: Check that modules and public objects have docstrings
     summary: Runs the docstring checker on the source directory
     cmds:
       - echo "Checking docstrings..."
       - "{{.UV}} run python scripts/check_docstrs.py {{.SRC}}"
 
-  metrics:
-    desc: Display comprehensive project metrics summary
-    summary: Shows LOC, test coverage, complexity, and quality scores
-    cmds:
-      - "{{.UV}} run python scripts/dev-metrics.py"
-
-  metrics:complexity:
+  check:complexity:
     desc: Analyze code complexity with radon
     summary: Reports cyclomatic complexity for functions/classes with grade B or worse
     silent: true
@@ -95,9 +75,3 @@ tasks:
     summary: Executes tests and generates coverage report
     cmds:
       - "{{.UV}} run pytest --cov={{.APP_NAME}} --cov-report=term-missing {{.CLI_ARGS | default .TESTS}}"
-
-  help:
-    desc: Show available tasks
-    summary: Displays all available tasks with descriptions
-    cmd: taskfile-help search {{.CLI_ARGS}}
-    silent: true

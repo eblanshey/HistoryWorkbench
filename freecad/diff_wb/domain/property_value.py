@@ -3,6 +3,7 @@
 
 This module provides a unified representation of FreeCAD property values,
 supporting all common property types found in PartDesign and Part workbenches.
+It also includes domain models for 3D vectors and placements.
 """
 
 from dataclasses import dataclass
@@ -31,6 +32,104 @@ class PropertyType(Enum):
     SHAPE = auto()  # Geometry data
     MATERIAL = auto()  # Material assignment
     UNKNOWN = auto()
+
+
+@dataclass(frozen=True)
+class Vector:
+    """A 3D vector representing position or direction.
+
+    Attributes:
+        x: X coordinate
+        y: Y coordinate
+        z: Z coordinate
+    """
+
+    x: float
+    y: float
+    z: float
+
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y}, {self.z})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Vector):
+            return NotImplemented
+        # Use approximate equality for floats
+        tolerance = 1e-9
+        return (
+            abs(self.x - other.x) < tolerance
+            and abs(self.y - other.y) < tolerance
+            and abs(self.z - other.z) < tolerance
+        )
+
+
+@dataclass(frozen=True)
+class Rotation:
+    """A rotation represented by axis-angle notation.
+
+    FreeCAD uses axis-angle representation internally. A rotation consists of
+    an axis (unit vector) and an angle (in degrees).
+
+    Attributes:
+        axis_x: X component of rotation axis
+        axis_y: Y component of rotation axis
+        axis_z: Z component of rotation axis
+        angle_degrees: Rotation angle in degrees
+    """
+
+    axis_x: float
+    axis_y: float
+    axis_z: float
+    angle_degrees: float
+
+    def __str__(self) -> str:
+        return f"Axis=({self.axis_x}, {self.axis_y}, {self.axis_z}), Angle={self.angle_degrees}\u00b0"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Rotation):
+            return NotImplemented
+        # Use approximate equality for floats
+        tolerance = 1e-9
+        return (
+            abs(self.axis_x - other.axis_x) < tolerance
+            and abs(self.axis_y - other.axis_y) < tolerance
+            and abs(self.axis_z - other.axis_z) < tolerance
+            and abs(self.angle_degrees - other.angle_degrees) < tolerance
+        )
+
+    @classmethod
+    def identity(cls) -> "Rotation":
+        """Create an identity rotation (no rotation)."""
+        return cls(axis_x=0.0, axis_y=0.0, axis_z=1.0, angle_degrees=0.0)
+
+
+@dataclass(frozen=True)
+class Placement:
+    """A placement combining position and orientation.
+
+    Represents a transformation in 3D space, combining a position vector
+    and a rotation. This is the fundamental way FreeCAD positions objects.
+
+    Attributes:
+        position: The position vector
+        rotation: The rotation (axis-angle)
+    """
+
+    position: Vector
+    rotation: Rotation
+
+    def __str__(self) -> str:
+        return f"Pos={self.position}, Rot={self.rotation}"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Placement):
+            return NotImplemented
+        return self.position == other.position and self.rotation == other.rotation
+
+    @classmethod
+    def identity(cls) -> "Placement":
+        """Create an identity placement (origin, no rotation)."""
+        return cls(position=Vector(0.0, 0.0, 0.0), rotation=Rotation.identity())
 
 
 @dataclass(frozen=True)
@@ -81,75 +180,67 @@ class PropertyValue:
         return bool(self.value == other.value)
 
     @classmethod
-    def from_bool(cls, value: bool, expression: str | None = None) -> "PropertyValue":
-        """Create a boolean property value.
+    def create(cls, type_: PropertyType, value: Any, expression: str | None = None) -> "PropertyValue":
+        """Create a PropertyValue with proper type handling.
+
+        This factory method accepts structured data (tuples/dicts) as the value
+        parameter and internally creates the appropriate domain objects.
 
         Args:
-            value: The boolean value
-            expression: Optional expression that drives this value (e.g., "Sketch001.Length")
-        """
-        return cls(type_=PropertyType.BOOL, value=value, expression=expression)
-
-    @classmethod
-    def from_int(cls, value: int, expression: str | None = None) -> "PropertyValue":
-        """Create an integer property value.
-
-        Args:
-            value: The integer value
+            type_: The property type
+            value: The value in structured form:
+                - BOOL, INT, FLOAT, STRING, LINK: direct value
+                - VECTOR: tuple (x, y, z)
+                - PLACEMENT: dict {"position": (x, y, z), "rotation": (ax, ay, az, angle)}
             expression: Optional expression that drives this value
+
+        Returns:
+            A PropertyValue instance with properly structured value
+
+        Examples:
+            >>> PropertyValue.create(PropertyType.BOOL, True)
+            >>> PropertyValue.create(PropertyType.INT, 42)
+            >>> PropertyValue.create(PropertyType.FLOAT, 3.14)
+            >>> PropertyValue.create(PropertyType.STRING, "hello")
+            >>> PropertyValue.create(PropertyType.LINK, "Body")
+            >>> PropertyValue.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
+            >>> PropertyValue.create(
+            ...     PropertyType.PLACEMENT, {"position": (0, 0, 0), "rotation": (0, 0, 1, 90)}
+            ... )
         """
-        return cls(type_=PropertyType.INT, value=value, expression=expression)
-
-    @classmethod
-    def from_float(cls, value: float, expression: str | None = None) -> "PropertyValue":
-        """Create a float property value.
-
-        Args:
-            value: The float value
-            expression: Optional expression that drives this value
-        """
-        return cls(type_=PropertyType.FLOAT, value=value, expression=expression)
-
-    @classmethod
-    def from_string(cls, value: str, expression: str | None = None) -> "PropertyValue":
-        """Create a string property value.
-
-        Args:
-            value: The string value
-            expression: Optional expression that drives this value
-        """
-        return cls(type_=PropertyType.STRING, value=value, expression=expression)
-
-    @classmethod
-    def from_vector(cls, x: float, y: float, z: float, expression: str | None = None) -> "PropertyValue":
-        """Create a vector property value."""
-        return cls(type_=PropertyType.VECTOR, value=(x, y, z), expression=expression)
-
-    @classmethod
-    def from_placement(
-        cls,
-        position: tuple[float, float, float],
-        rotation: tuple[float, float, float, float],  # axis_x, axis_y, axis_z, angle
-        expression: str | None = None,
-    ) -> "PropertyValue":
-        """Create a placement property value."""
-        return cls(
-            type_=PropertyType.PLACEMENT, value={"position": position, "rotation": rotation}, expression=expression
-        )
-
-    @classmethod
-    def from_link(cls, object_name: str, expression: str | None = None) -> "PropertyValue":
-        """Create a link property value (reference to another object).
-
-        Args:
-            object_name: The name of the linked object
-            expression: Optional expression that drives this link
-        """
-        return cls(type_=PropertyType.LINK, value=object_name, expression=expression)
+        if type_ == PropertyType.BOOL:
+            return cls(type_=type_, value=bool(value), expression=expression)
+        elif type_ == PropertyType.INT:
+            return cls(type_=type_, value=int(value), expression=expression)
+        elif type_ == PropertyType.FLOAT:
+            return cls(type_=type_, value=float(value), expression=expression)
+        elif type_ in (PropertyType.STRING, PropertyType.LINK):
+            return cls(type_=type_, value=str(value), expression=expression)
+        elif type_ == PropertyType.VECTOR:
+            # value is expected to be a tuple (x, y, z)
+            x, y, z = value
+            return cls(type_=type_, value=Vector(x=x, y=y, z=z), expression=expression)
+        elif type_ == PropertyType.PLACEMENT:
+            # value is expected to be a dict {"position": (x,y,z), "rotation": (ax,ay,az,angle)}
+            pos = value["position"]
+            rot = value["rotation"]
+            return cls(
+                type_=type_,
+                value=Placement(
+                    position=Vector(x=pos[0], y=pos[1], z=pos[2]),
+                    rotation=Rotation(axis_x=rot[0], axis_y=rot[1], axis_z=rot[2], angle_degrees=rot[3]),
+                ),
+                expression=expression,
+            )
+        else:
+            # For unknown/expression/shape/material types, store value as-is
+            return cls(type_=type_, value=value, expression=expression)
 
 
 def make_property_value(type_: PropertyType, value: Any, **kwargs: Any) -> PropertyValue:
     """Factory function to create a PropertyValue with proper type handling.
+
+    This is an alias for PropertyValue.create() for backward compatibility.
 
     Args:
         type_: The property type
@@ -159,4 +250,4 @@ def make_property_value(type_: PropertyType, value: Any, **kwargs: Any) -> Prope
     Returns:
         A PropertyValue instance
     """
-    return PropertyValue(type_=type_, value=value, **kwargs)
+    return PropertyValue.create(type_=type_, value=value, **kwargs)

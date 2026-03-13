@@ -6,6 +6,7 @@ at a point in time, represented as a tree structure.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from .property_value import PropertyValue
 
@@ -61,7 +62,7 @@ class Snapshot:
     """
 
     document_name: str
-    timestamp: str
+    timestamp: datetime
     root_nodes: list[TreeNode] = field(default_factory=list)
 
     def __str__(self) -> str:

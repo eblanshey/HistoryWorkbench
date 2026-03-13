@@ -13,10 +13,12 @@ from .diff_result import (
     NodeDiff,
     PropertyDiff,
 )
-from .placement import Placement, Rotation, Vector
 from .property_value import (
+    Placement,
     PropertyType,
     PropertyValue,
+    Rotation,
+    Vector,
     make_property_value,
 )
 from .snapshot import Snapshot, TreeNode

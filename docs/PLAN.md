@@ -52,10 +52,9 @@ freecad_diff_workbench/
 │       │
 │       ├── domain/                    # Pure domain models (no FreeCAD deps)
 │       │   ├── __init__.py
-│       │   ├── snapshot.py            # Snapshot dataclass
-│       │   ├── tree_node.py           # TreeNode dataclass
+│       │   ├── snapshot.py            # Snapshot, TreeNode dataclasses
 │       │   ├── diff_result.py         # DiffResult, NodeDiff, PropertyDiff
-│       │   └── property_value.py      # PropertyValue dataclass
+│       │   └── property_value.py      # PropertyValue, Vector, Rotation, Placement
 │       │
 │       ├── diff/                      # Diff computation (pure algorithms)
 │       │   ├── __init__.py
@@ -271,8 +270,35 @@ class TreeNode:
 ```python
 @dataclass(frozen=True)
 class PropertyValue:
-    value: object
-    expression: str | None  # Expression if available
+    type_: PropertyType
+    value: Any
+    expression: str | None = None
+
+    @classmethod
+    def create(cls, type_: PropertyType, value: Any, expression: str | None = None) -> "PropertyValue":
+        """Factory method to create a PropertyValue with proper type handling."""
+        ...
+```
+
+#### Vector, Rotation, Placement
+```python
+@dataclass(frozen=True)
+class Vector:
+    x: float
+    y: float
+    z: float
+
+@dataclass(frozen=True)
+class Rotation:
+    axis_x: float
+    axis_y: float
+    axis_z: float
+    angle_degrees: float
+
+@dataclass(frozen=True)
+class Placement:
+    position: Vector
+    rotation: Rotation
 ```
 
 #### DiffResult

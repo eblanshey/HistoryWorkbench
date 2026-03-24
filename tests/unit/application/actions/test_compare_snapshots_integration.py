@@ -1,7 +1,9 @@
-"""File responsibility: Integration tests for CompareSnapshotsAction.
+"""File responsibility: Application-level tests for CompareSnapshotsAction.
 
 These tests verify the complete compare snapshots workflow using real domain services
 (SnapshotExtractor, DiffEngine) with fake ports (FakeFreeCadPort, InMemorySnapshotRepository).
+
+See AGENTS.md in this directory for more information about application action testing.
 """
 
 from freecad.diff_wb.application.actions.commands.compare_snapshots import CompareSnapshotsAction
@@ -39,8 +41,8 @@ class FakeSettingsRepository(SettingsRepository):
         )
 
 
-class TestCompareSnapshotsActionIntegration:
-    """Integration tests for CompareSnapshotsAction using real domain services."""
+class TestCompareSnapshotsAction:
+    """Application-level tests for CompareSnapshotsAction using real domain services."""
 
     def test_compare_snapshots_with_existing_snapshots(self) -> None:
         """Test successful comparison of two existing snapshots."""

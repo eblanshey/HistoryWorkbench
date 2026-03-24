@@ -1,21 +1,20 @@
-"""File responsibility: Integration tests for TakeSnapshotAction.
+"""File responsibility: Application-level tests for TakeSnapshotAction.
 
 These tests verify the complete take snapshot workflow using real domain services
 (SnapshotExtractor, DiffEngine) with fake ports (FakeFreeCadPort, InMemorySnapshotRepository).
-"""
 
-import pytest
+See AGENTS.md in this directory for more information about application action testing.
+"""
 
 from freecad.diff_wb.application.actions.commands.take_snapshot import TakeSnapshotAction
 from freecad.diff_wb.domain.snapshots.extractor import SnapshotExtractor
 from freecad.diff_wb.domain.snapshots.repository import InMemorySnapshotRepository
-from freecad.diff_wb.domain.tree.node import TreeNode
 from tests.fakes.fake_freecad_port import FakeFreeCadPort
 from tests.fakes.fake_logger import FakeLogger
 
 
-class TestTakeSnapshotActionIntegration:
-    """Integration tests for TakeSnapshotAction using real domain services."""
+class TestTakeSnapshotAction:
+    """Application-level tests for TakeSnapshotAction using real domain services."""
 
     def test_take_snapshot_with_valid_document(self):
         """Test successful snapshot creation with a valid document."""

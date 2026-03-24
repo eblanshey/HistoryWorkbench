@@ -12,7 +12,11 @@ and application layers testable without FreeCAD dependencies.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import QObject
 
 
 class ConsoleLike(Protocol):
@@ -41,6 +45,8 @@ class AppLike(Protocol):
     def ParamGet(self, path: str) -> object: ...
     def translate(self, context: str, text: str) -> str: ...
     def GetString(self, name: str) -> str: ...
+    @property
+    def Qt(self) -> QObject: ...
 
 
 class GuiLike(Protocol):
@@ -160,7 +166,14 @@ class FreeCadPortAdapter:
         self._ctx.app.Console.PrintMessage(text + "\n")
 
     def translate(self, context: str, text: str) -> str:
-        return self._ctx.app.translate(context, text)
+
+        try:
+            qt_obj = self._ctx.app.Qt
+        except AttributeError:
+            # Fall back to simple translation if Qt not available
+            return text.replace(" ", "_").lower()
+        result = qt_obj.translate(context, text)  # type: ignore[return-value]
+        return result
 
 
 def get_port(ctx: FreeCadContext) -> FreeCadPort:
@@ -197,7 +210,14 @@ class AppPortAdapter:
         self._ctx = ctx
 
     def translate(self, context: str, text: str) -> str:
-        return self._ctx.app.translate(context, text)
+
+        try:
+            qt_obj = self._ctx.app.Qt
+        except AttributeError:
+            # Fall back to simple translation if Qt not available
+            return text.replace(" ", "_").lower()
+        result = qt_obj.translate(context, text)  # type: ignore[return-value]
+        return result
 
 
 def get_app_port(ctx: FreeCadContext) -> AppPort:
@@ -256,11 +276,21 @@ class GuiPortAdapter:
 
     def load_ui(self, ui_path: str) -> object:
         from PySide6.QtCore import QFile
+        from PySide6.QtGui import QApplication as QtApp
         from PySide6.QtUiTools import QUiLoader
+
+        # Get the main application instance if available
+        try:
+            from FreeCADGui import getMainWindow
+
+            if getMainWindow():
+                QtApp.instance()
+        except Exception:
+            pass
 
         loader = QUiLoader()
         file = QFile(ui_path)
-        if not file.open(QFile.ReadOnly):
+        if not file.open(QFile.OpenModeFlag.ReadOnly):
             raise RuntimeError(f"Cannot open UI file: {ui_path}")
         widget = loader.load(file)
         file.close()

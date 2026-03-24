@@ -68,10 +68,16 @@ tasks:
     desc: Run tests with pytest
     summary: Executes unit tests with coverage
     cmds:
-      - "{{.UV}} run pytest {{.CLI_ARGS | default .TESTS}}"
+      - "{{.UV}} run pytest {{.CLI_ARGS | default \"tests/unit\"}}"
 
   test:coverage:
     desc: Run tests with coverage report
-    summary: Executes tests and generates coverage report
+    summary: Executes tests and produces coverage report
     cmds:
-      - "{{.UV}} run pytest --cov={{.APP_NAME}} --cov-report=term-missing {{.CLI_ARGS | default .TESTS}}"
+      - "{{.UV}} run pytest --cov={{.APP_NAME}} --cov-report=term-missing {{.CLI_ARGS | default \"tests/unit\"}}"
+
+  test:integration:
+    desc: Run integration tests requiring FreeCAD runtime
+    summary: Executes integration tests using FreeCAD's Python interpreter
+    cmds:
+      - "./run_integration_tests.sh {{.CLI_ARGS | default \"\"}}"

@@ -25,6 +25,26 @@ The Diff Workbench uses a **layered architecture** with Domain-Driven Design (DD
 
 ## Layer Definitions
 
+### Entry Points (`entrypoints/`)
+
+**Responsibility**: FreeCAD workbench entry points and command registration. Thin wrappers that wire FreeCAD API to application layer.
+
+**Characteristics**:
+- Contains `workbench.py` and `commands.py`
+- Registers workbench and commands with FreeCAD
+- Uses container helpers for logging and translation
+- No business logic - delegates to application layer
+
+**Structure** (`freecad/diff_wb/entrypoints/`):
+```
+entrypoints/
+├── __init__.py
+├── workbench.py                   # DiffWorkbench class
+└── commands.py                    # Command definitions
+```
+
+---
+
 ### 1. Domain Layer (`domain/`)
 
 **Responsibility**: Core workbench logic and concepts. Pure Python with NO external dependencies.
@@ -35,7 +55,7 @@ The Diff Workbench uses a **layered architecture** with Domain-Driven Design (DD
 - Can be tested without FreeCAD or any external system
 - No imports from `infrastructure/`, `application/`, or `ui/`
 
-**Structure**:
+**Structure** (`freecad/diff_wb/domain/`):
 ```
 domain/
 ├── tree/                          # Shared tree models
@@ -46,7 +66,7 @@ domain/
 ├── snapshots/                     # Snapshot domain concept
 │   ├── __init__.py               # __all__ = ["Snapshot", "SnapshotRepository"]
 │   ├── models.py                 # Snapshot dataclass
-│   ├── extractor.py              # Tree extraction logic (uses Logger port)
+│   ├── extractor.py              # Tree extraction logic (uses FreeCAD port)
 │   └── repository.py             # SnapshotRepository protocol + InMemory implementation
 │
 ├── diff/                          # Diff domain concept
@@ -80,7 +100,7 @@ domain/
 - Handles transaction boundaries
 - Depends on domain layer only
 
-**Structure**:
+**Structure** (`freecad/diff_wb/application/`):
 ```
 application/
 ├── __init__.py
@@ -88,9 +108,18 @@ application/
 │   ├── commands/
 │   │   ├── take_snapshot.py      # TakeSnapshot use case
 │   │   └── compare_snapshots.py  # CompareSnapshots use case
-│   └── queries/
-│       └── list_snapshots.py     # ListSnapshots query
-└── result_models.py              # Action result dataclasses
+│   ├── queries/
+│   │   └── list_snapshots.py     # ListSnapshots query
+│   └── __init__.py
+├── di/                            # Dependency injection
+│   ├── container.py              # ApplicationContainer
+│   └── ports_factory.py          # Port creation
+├── presenters/                    # Application presenters
+│   └── presentation_models.py    # Result dataclasses
+└── ui/                            # UI components (moved from ui/)
+    ├── views/                     # Qt view implementations
+    ├── widgets/                   # Qt custom widgets
+    └── utils/                     # UI utilities
 ```
 
 ### 3. UI Layer (`ui/`)
@@ -103,7 +132,7 @@ application/
 - Presenters transform application results into view protocol calls
 - Depends on application layer for behavior
 
-**Structure**:
+**Structure** (`freecad/diff_wb/ui/`):
 ```
 ui/
 ├── __init__.py
@@ -114,7 +143,16 @@ ui/
 ├── protocols/                     # View interfaces (ports)
 │   ├── diff_view.py              # DiffView protocol
 │   └── snapshot_view.py          # SnapshotView protocol
-└── diff_panel.py                 # Qt widget (two-column diff view)
+└── views/                         # Qt view implementations
+    └── diff_panel.py             # Qt widget (two-column diff view)
+```
+
+**Structure** (`freecad/diff_wb/application/ui/`):
+```
+application/ui/
+├── views/                         # Additional Qt views
+├── widgets/                       # Additional Qt widgets
+└── utils/                         # UI utilities
 ```
 
 **Flow**: Application Action → Presenter → View Protocol → Qt Widget
@@ -129,7 +167,7 @@ ui/
 - File I/O, database access, network calls
 - Can depend on any inner layer
 
-**Structure**:
+**Structure** (`freecad/diff_wb/infrastructure/`):
 ```
 infrastructure/
 ├── __init__.py
@@ -150,14 +188,20 @@ infrastructure/
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│                    Entry Points                              │
+│              (workbench.py, commands.py)                     │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ uses
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
 │                         UI Layer                             │
-│                    (Qt widgets only)                         │
+│                    (Qt widgets, views)                       │
 └───────────────────────┬─────────────────────────────────────┘
                         │ uses
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Application Layer                         │
-│       (controllers, presenters - orchestration & formatting) │
+│       (actions, presenters - orchestration & formatting)     │
 └───────────────────────┬─────────────────────────────────────┘
                         │ uses
                         ▼
@@ -178,7 +222,6 @@ infrastructure/
 │    (adapters, implementations - external systems)            │
 │                                                              │
 │   infrastructure/freecad/    ← FreeCAD API adapter          │
-│   infrastructure/gui/        ← Qt adapter                   │
 │   infrastructure/persistence/← Storage adapter              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -499,11 +542,14 @@ This approach ensures core workbench logic is tested independently from external
 - Repository interfaces (with fakes)
 - Diff algorithms
 - Tree extraction logic
+- Application actions and queries
+- Presenters
+- Entry point commands
 
 **Characteristics**:
 - Pure Python, no FreeCAD imports
 - Fast execution (< 1 second total)
-- Use inline fixtures or fakes
+- Use inline fixtures or fakes from `tests/fakes/`
 
 ### Integration Tests (With FreeCAD)
 
@@ -513,9 +559,11 @@ This approach ensures core workbench logic is tested independently from external
 - Infrastructure adapters
 - FreeCAD context handling
 - Full end-to-end workflows
+- Workbench loading and activation
+- UI widgets with FreeCAD runtime
 
 **Characteristics**:
-- Requires FreeCAD runtime
+- Requires FreeCAD runtime via `run_with_freecad.sh`
 - Slower execution
 - Test real FreeCAD API interactions
 
@@ -524,12 +572,12 @@ This approach ensures core workbench logic is tested independently from external
 **Unit Tests** (`tests/unit/`):
 - Focus: Error handling paths, input validation, orchestration logic
 - Dependencies: Fakes and mocks only
-- Examples: No document error, snapshot not found, extraction failures
+- Examples: No document error, snapshot not found, extraction failures, command routing
 
-**Integration Tests** (`tests/integration/application/actions/`):
+**Integration Tests** (`tests/integration/`):
 - Focus: Happy path with real domain services, end-to-end workflows
 - Dependencies: Real services (DiffEngine, SnapshotExtractor) + fake ports
-- Examples: Successful snapshot creation, complex diff scenarios, exclusion rules
+- Examples: Successful snapshot creation, complex diff scenarios, exclusion rules, workbench lifecycle
 
 **Principle**: Unit tests provide fast feedback for common errors; integration tests verify real services work together correctly.
 
@@ -541,16 +589,15 @@ Tests use **strict mirroring** of source structure:
 
 ```
 tests/
-├── unit/domain/tree/test_node.py      ← mirrors domain/tree/node.py
-├── unit/domain/snapshots/test_models.py
-├── unit/application/controllers/...
-├── unit/infrastructure/freecad/...
-├── integration/
-├── fakes/
-└── conftest.py
+├── unit/          ← mirrors freecad/diff_wb/ (domain, application, ui, infrastructure)
+├── integration/   ← FreeCAD runtime tests (workbench, application actions)
+├── fakes/         ← fake implementations for dependency injection
+└── conftest.py    ← pytest fixtures
 ```
 
-**Naming**: `test_<module>.py` (pytest standard).
+**Running Tests**:
+- Unit tests: `task test`
+- Integration tests: `task test:integration`
 
 ---
 

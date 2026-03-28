@@ -200,6 +200,71 @@ def _build_hierarchy_map(doc: DocumentLike) -> tuple[dict[str, str], dict[str, l
     return parent_map, children_map
 
 
+def _is_property_hidden(obj: object, prop_name: str) -> tuple[bool, str]:
+    """Check if a property should be hidden from the property editor.
+
+    Two conditions make a property hidden:
+    1. getEditorMode() returns ['Hidden']
+    2. getGroupOfProperty() returns empty string (shown only with "show hidden")
+
+    Args:
+        obj: The FreeCAD object
+        prop_name: Name of the property to check
+
+    Returns:
+        Tuple of (is_hidden, reason_for_hiding)
+    """
+    get_editor_mode = getattr(obj, "getEditorMode", None)
+    get_group_of_property = getattr(obj, "getGroupOfProperty", None)
+
+    if get_editor_mode is not None:
+        editor_mode = get_editor_mode(prop_name)
+        if "Hidden" in editor_mode:
+            return True, f"editor_mode={editor_mode}"
+
+    if get_group_of_property is not None:
+        prop_group = get_group_of_property(prop_name)
+        if not prop_group:
+            return True, "empty_group"
+
+    return False, ""
+
+
+def _extract_visible_properties(obj: object, obj_name: str) -> dict[str, Property]:
+    """Extract only visible properties from a FreeCAD object.
+
+    Filters out hidden properties based on editor mode and property group.
+
+    Args:
+        obj: The FreeCAD object
+        obj_name: Name of the object (for logging)
+
+    Returns:
+        Dictionary of property name to property value
+    """
+    properties: dict[str, Property] = {}
+    properties_list = getattr(obj, "PropertiesList", [])
+
+    Log.info(f"[EXTRACTOR] {obj_name}: PropertiesList has {len(properties_list)} total props")
+
+    for prop_name in properties_list:
+        is_hidden, skip_reason = _is_property_hidden(obj, prop_name)
+
+        if is_hidden:
+            Log.info(f"[EXTRACTOR]   SKIP HIDDEN: {prop_name} ({skip_reason})")
+            continue
+
+        prop_value = _extract_property_value(obj, prop_name)
+        if prop_value is not None:
+            properties[prop_name] = prop_value
+
+    filtered_count = len(properties_list) - len(properties)
+    Log.info(
+        f"[EXTRACTOR] {obj_name}: extracted {len(properties)} visible properties (filtered {filtered_count} hidden)"
+    )
+    return properties
+
+
 def _build_tree_node(
     obj: object,
     port: FreeCadPort,
@@ -207,7 +272,7 @@ def _build_tree_node(
     parent_path: str,
     children_map: dict[str, list[str]],
     is_root: bool = True,
-) -> TreeNode | None:  # noqa: C901
+) -> TreeNode | None:
     """Build a TreeNode from a FreeCAD object.
 
     Uses simplified hierarchy detection based on Group, OriginFeatures, and InList
@@ -235,17 +300,12 @@ def _build_tree_node(
     path = f"{parent_path}/{name}" if parent_path else name
     Log.info(f"[EXTRACTOR] Building node: name={name}, type={type_id}, parent_path='{parent_path}', full_path='{path}'")
 
-    # Extract all properties (no filtering - snapshots capture everything)
+    # Extract only visible properties
     properties: dict[str, Property] = {}
     try:
-        properties_list = getattr(obj, "PropertiesList", [])
-        for prop_name in properties_list:
-            prop_value = _extract_property_value(obj, prop_name)
-            if prop_value is not None:
-                properties[prop_name] = prop_value
-    except Exception:
-        # If we can't read properties, continue with empty dict
-        pass
+        properties = _extract_visible_properties(obj, name)
+    except Exception as e:
+        Log.warning(f"[EXTRACTOR] {name}: error extracting properties: {e}")
 
     # Build children TreeNodes from the pre-built children map
     children: list[TreeNode] = []

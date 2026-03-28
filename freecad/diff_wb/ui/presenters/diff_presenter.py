@@ -83,11 +83,13 @@ class DiffPresenter:
 
         # If not found, clear properties
         if node_diff is None:
+            print(f"[PRESENTER] NodeDiff not found for path: {path}")
             self._view.show_properties([])
             return
 
         # Transform property diffs to presentations
         properties = self._transform_property_diffs(node_diff)
+        print(f"[PRESENTER] Transformed to {len(properties)} PropertyPresentation")
         self._view.show_properties(properties)
 
     def _find_node_diff_by_path(self, path: str, node_diffs: list[NodeDiff]) -> NodeDiff | None:

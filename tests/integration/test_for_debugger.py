@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from freecad.diff_wb.domain.ports import AppLike, FreeCadContext
 
 
-class TestDebugExplorer:
+class TestForDebugger:
     """Debug helper for exploring document structure - NO ASSERTIONS."""
 
     def test_explore_basic_file(
@@ -125,6 +125,20 @@ class TestDebugExplorer:
                                     support_names.append(obj_ref.Name)
                     if support_names:
                         print(f"  AttachmentSupport: {support_names}")
+
+                # Properties and their visibility status
+                print(f"\n  Properties ({len(obj.PropertiesList)} total):")
+                visible_props = []
+                hidden_props = []
+                for prop in obj.PropertiesList:
+                    mode = obj.getEditorMode(prop)
+                    if "Hidden" in mode:
+                        hidden_props.append(prop)
+                    else:
+                        visible_props.append(prop)
+                print(f"    Visible: {visible_props}")
+                if hidden_props:
+                    print(f"    Hidden:  {hidden_props}")
 
             print("\n" + "=" * 80)
             print("SIMPLE HIERARCHY (using Group + OriginFeatures + InList):")

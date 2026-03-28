@@ -27,6 +27,8 @@ class MockFreeCADObject:
         origin_features=None,
         in_list=None,
         expression_engine=None,
+        property_editor_modes=None,
+        property_groups=None,
     ):
         """Initialize a mock FreeCAD object.
 
@@ -39,6 +41,10 @@ class MockFreeCADObject:
             origin_features: Origin geometry objects
             in_list: Objects that reference this one (for parent detection)
             expression_engine: List of [prop_name, expression] pairs
+            property_editor_modes: Dict mapping property name to editor mode list
+                e.g., {"HiddenProp": ["Hidden"], "VisibleProp": []}
+            property_groups: Dict mapping property name to group name
+                e.g., {"Shape": "", "Length": "Side1"}
         """
         object.__setattr__(self, "_name", name)
         object.__setattr__(self, "_type_id", type_id)
@@ -49,6 +55,8 @@ class MockFreeCADObject:
         object.__setattr__(self, "_in_list", in_list or [])
         object.__setattr__(self, "_expression_engine", expression_engine or [])
         object.__setattr__(self, "_properties_values", {})
+        object.__setattr__(self, "_property_editor_modes", property_editor_modes or {})
+        object.__setattr__(self, "_property_groups", property_groups or {})
 
     @property
     def Name(self):
@@ -81,6 +89,14 @@ class MockFreeCADObject:
     @property
     def ExpressionEngine(self):
         return object.__getattribute__(self, "_expression_engine")
+
+    def getEditorMode(self, prop_name):
+        modes = object.__getattribute__(self, "_property_editor_modes")
+        return modes.get(prop_name, [])
+
+    def getGroupOfProperty(self, prop_name):
+        groups = object.__getattribute__(self, "_property_groups")
+        return groups.get(prop_name, "")
 
     def __getattr__(self, name):
         props = object.__getattribute__(self, "_properties_values")
@@ -269,6 +285,7 @@ class TestSnapshotExtractor:
             type_id="PartDesign::Pad",
             label="Test Pad",
             properties=["Label", "Length"],
+            property_groups={"Label": "Base", "Length": "Side1"},
         )
         obj.Label = "Test Pad"
         obj.Length = 10.0
@@ -283,8 +300,9 @@ class TestSnapshotExtractor:
 
         assert len(result.root_nodes) == 1
         node = result.root_nodes[0]
-        # Properties should be extracted (may include Label, Length)
-        assert "Label" in node.properties or "Length" in node.properties
+        # Properties should be extracted (with non-empty groups)
+        assert "Label" in node.properties
+        assert "Length" in node.properties
 
     def test_extract_tree_captures_expressions(self):
         """Test that expressions are correctly captured from ExpressionEngine."""
@@ -298,6 +316,7 @@ class TestSnapshotExtractor:
             label="Test Pocket",
             properties=["Label", "Length"],
             expression_engine=[["Length", "Sketch.Length * 0.5"]],
+            property_groups={"Label": "Base", "Length": "Side1"},
         )
         obj.Label = "Test Pocket"
         obj.Length = 10.0
@@ -312,7 +331,7 @@ class TestSnapshotExtractor:
 
         assert len(result.root_nodes) == 1
         node = result.root_nodes[0]
-        # Length property should have expression
+        # Length property should have expression (with non-empty group)
         assert "Length" in node.properties
         length_prop = node.properties["Length"]
         assert length_prop.expression == "Sketch.Length * 0.5"
@@ -530,3 +549,188 @@ class TestSnapshotExtractor:
         child_names = {child.name for child in origin_node.children}
         assert "X_Axis" in child_names
         assert "XY_Plane" in child_names
+
+    def test_extract_tree_filters_hidden_properties_by_editor_mode(self):
+        """Test that properties with ['Hidden'] editor mode are filtered out."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        # Create object with some hidden and visible properties
+        obj = MockFreeCADObject(
+            name="Pad",
+            type_id="PartDesign::Pad",
+            label="Test Pad",
+            properties=["Label", "Length", "BaseFeature", "ExpressionEngine", "Visibility"],
+            # Editor modes: some hidden, some visible
+            property_editor_modes={
+                "BaseFeature": ["Hidden"],
+                "ExpressionEngine": ["Hidden"],
+                "Visibility": ["Hidden"],
+                "Label": [],
+                "Length": [],
+            },
+            # All properties have non-empty groups
+            property_groups={
+                "Label": "Base",
+                "Length": "Side1",
+                "BaseFeature": "Base",
+                "ExpressionEngine": "Base",
+                "Visibility": "Base",
+            },
+        )
+        obj.Label = "Test Pad"
+        obj.Length = 10.0
+
+        mock_doc.Objects = [obj]
+
+        fake_port = FakePortAndLogger()
+        fake_port.set_active_document(mock_doc)
+
+        extractor = SnapshotExtractor()
+        result = extractor.extract_tree(fake_port)
+
+        assert len(result.root_nodes) == 1
+        node = result.root_nodes[0]
+
+        # Visible properties should be present
+        assert "Label" in node.properties
+        assert "Length" in node.properties
+
+        # Hidden properties should be filtered out
+        assert "BaseFeature" not in node.properties
+        assert "ExpressionEngine" not in node.properties
+        assert "Visibility" not in node.properties
+
+    def test_extract_tree_filters_hidden_properties_by_empty_group(self):
+        """Test that properties with empty group are filtered out.
+
+        Properties with getGroupOfProperty() returning empty string are hidden
+        in FreeCAD's property editor (shown only with "show hidden" enabled).
+        """
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        obj = MockFreeCADObject(
+            name="Pad",
+            type_id="PartDesign::Pad",
+            label="Test Pad",
+            properties=["Label", "Length", "Shape", "SuppressedShape", "AddSubShape", "ShapeMaterial"],
+            # Property groups: empty for hidden properties, non-empty for visible
+            property_groups={
+                "Label": "Base",
+                "Length": "Side1",
+                "Shape": "",  # Empty group = hidden
+                "SuppressedShape": "",  # Empty group = hidden
+                "AddSubShape": "",  # Empty group = hidden
+                "ShapeMaterial": "",  # Empty group = hidden
+            },
+        )
+        obj.Label = "Test Pad"
+        obj.Length = 10.0
+        obj.Shape = "shape_data"
+        obj.SuppressedShape = "suppressed"
+        obj.AddSubShape = "subshape"
+        obj.ShapeMaterial = "material"
+
+        mock_doc.Objects = [obj]
+
+        fake_port = FakePortAndLogger()
+        fake_port.set_active_document(mock_doc)
+
+        extractor = SnapshotExtractor()
+        result = extractor.extract_tree(fake_port)
+
+        assert len(result.root_nodes) == 1
+        node = result.root_nodes[0]
+
+        # Visible properties (with non-empty groups) should be present
+        assert "Label" in node.properties
+        assert "Length" in node.properties
+
+        # Properties with empty groups should be filtered out
+        assert "Shape" not in node.properties
+        assert "SuppressedShape" not in node.properties
+        assert "AddSubShape" not in node.properties
+        assert "ShapeMaterial" not in node.properties
+
+    def test_extract_tree_filters_combined_hidden_conditions(self):
+        """Test filtering with both editor mode and empty group conditions."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        obj = MockFreeCADObject(
+            name="Pad",
+            type_id="PartDesign::Pad",
+            label="Test Pad",
+            properties=["Label", "Length", "Shape", "Visibility", "Placement", "_ElementMapVersion"],
+            property_editor_modes={
+                "Visibility": ["Hidden"],
+                "Placement": ["ReadOnly", "Hidden"],
+                "_ElementMapVersion": ["Hidden"],
+            },
+            property_groups={
+                "Label": "Base",
+                "Length": "Side1",
+                "Shape": "",  # Empty group
+            },
+        )
+        obj.Label = "Test Pad"
+        obj.Length = 10.0
+
+        mock_doc.Objects = [obj]
+
+        fake_port = FakePortAndLogger()
+        fake_port.set_active_document(mock_doc)
+
+        extractor = SnapshotExtractor()
+        result = extractor.extract_tree(fake_port)
+
+        assert len(result.root_nodes) == 1
+        node = result.root_nodes[0]
+
+        # Only Label and Length should be present (both visible by editor mode AND group)
+        assert "Label" in node.properties
+        assert "Length" in node.properties
+        assert len(node.properties) == 2
+
+    def test_extract_tree_includes_properties_with_non_empty_group(self):
+        """Test that properties with non-empty groups are included."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        obj = MockFreeCADObject(
+            name="Pad",
+            type_id="PartDesign::Pad",
+            label="Test Pad",
+            properties=["Label", "Length", "Type", "TaperAngle", "Refine"],
+            property_groups={
+                "Label": "Base",
+                "Length": "Side1",
+                "Type": "Side1",
+                "TaperAngle": "Side1",
+                "Refine": "Part Design",
+            },
+        )
+        obj.Label = "Test Pad"
+        obj.Length = 10.0
+        obj.Type = "Length"
+        obj.TaperAngle = 0.0
+        obj.Refine = False
+
+        mock_doc.Objects = [obj]
+
+        fake_port = FakePortAndLogger()
+        fake_port.set_active_document(mock_doc)
+
+        extractor = SnapshotExtractor()
+        result = extractor.extract_tree(fake_port)
+
+        assert len(result.root_nodes) == 1
+        node = result.root_nodes[0]
+
+        # All properties with non-empty groups should be present
+        assert "Label" in node.properties
+        assert "Length" in node.properties
+        assert "Type" in node.properties
+        assert "TaperAngle" in node.properties
+        assert "Refine" in node.properties

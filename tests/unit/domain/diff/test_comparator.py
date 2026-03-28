@@ -258,7 +258,9 @@ class TestCompareNodesByPath:
 
         result = compare_nodes_by_path("Body", old_index, new_index)
 
-        assert result is None
+        assert result is not None
+        assert result.state == DiffState.UNCHANGED
+        assert result.path == "Body"
 
     def test_modified_property(self):
         """Test detecting a modified property."""
@@ -381,8 +383,9 @@ class TestCompareNodesByPath:
 
         result = compare_nodes_by_path("Body/Pad", old_index, new_index)
 
-        # Should return None because only excluded property (TimeStamp) differs
-        assert result is None
+        # Should return UNCHANGED because only excluded property (TimeStamp) differs
+        assert result is not None
+        assert result.state == DiffState.UNCHANGED
 
 
 class TestCreateAddedNodeDiff:
@@ -904,7 +907,8 @@ class TestCompareSnapshots:
         assert result.added_paths == set()
         assert result.deleted_paths == set()
         assert result.common_paths == {"Body"}
-        assert result.node_diffs == []  # No changes means no NodeDiff objects
+        assert len(result.node_diffs) == 1
+        assert result.node_diffs[0].state == DiffState.UNCHANGED
 
     def test_simple_addition(self):
         """Test detecting a simple addition."""
@@ -937,9 +941,13 @@ class TestCompareSnapshots:
 
         assert result.added_paths == {"Cube"}
         assert result.deleted_paths == set()
-        assert len(result.node_diffs) == 1
-        assert result.node_diffs[0].path == "Cube"
-        assert result.node_diffs[0].state == DiffState.ADDED
+        assert len(result.node_diffs) == 2
+        # First node should be the unchanged one
+        unchanged = [n for n in result.node_diffs if n.state == DiffState.UNCHANGED][0]
+        changed = [n for n in result.node_diffs if n.state == DiffState.ADDED][0]
+        assert unchanged.path == "Body"
+        assert changed.path == "Cube"
+        assert changed.state == DiffState.ADDED
 
     def test_simple_deletion(self):
         """Test detecting a simple deletion."""
@@ -972,9 +980,13 @@ class TestCompareSnapshots:
 
         assert result.added_paths == set()
         assert result.deleted_paths == {"Cube"}
-        assert len(result.node_diffs) == 1
-        assert result.node_diffs[0].path == "Cube"
-        assert result.node_diffs[0].state == DiffState.DELETED
+        assert len(result.node_diffs) == 2
+        # First node should be the unchanged one
+        unchanged = [n for n in result.node_diffs if n.state == DiffState.UNCHANGED][0]
+        changed = [n for n in result.node_diffs if n.state == DiffState.DELETED][0]
+        assert unchanged.path == "Body"
+        assert changed.path == "Cube"
+        assert changed.state == DiffState.DELETED
 
     def test_simple_modification(self):
         """Test detecting a simple modification."""

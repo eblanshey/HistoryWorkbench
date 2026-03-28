@@ -269,8 +269,6 @@ class Property:
 
     def __str__(self) -> str:
         """String representation suitable for display."""
-        if self.expression:
-            return f"{self.value} (expr: {self.expression})"
         return str(self.value)
 
     def __eq__(self, other: object) -> bool:

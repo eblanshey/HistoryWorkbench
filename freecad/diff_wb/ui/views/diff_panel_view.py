@@ -192,7 +192,11 @@ class DiffPanelView(QWidget):
         self.properties_table = QTableWidget()
         self.properties_table.setColumnCount(2)
         self.properties_table.setHorizontalHeaderLabels(["Property", "Value"])
-        self.properties_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.properties_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.properties_table.horizontalHeader().setStretchLastSection(True)
+        self.properties_table.horizontalHeader().setDefaultSectionSize(150)
+        self.properties_table.setColumnWidth(0, 150)
+        self.properties_table.setColumnWidth(1, 300)
         # self.properties_table.hide()  # Hide until data available
 
         # Add to splitter
@@ -307,11 +311,30 @@ class DiffPanelView(QWidget):
             item = self._create_tree_item(node)
             self.tree_widget.addTopLevelItem(item)
 
-        # Expand all nodes by default for immediate visibility
-        self.tree_widget.expandAll()
+        # Expand only nodes that have children with changes
+        self._expand_nodes_with_changes(self.tree_widget.invisibleRootItem())
 
         # Ensure tree widget is visible (in case it was hidden)
         self.tree_widget.show()
+
+    def _expand_nodes_with_changes(self, item: QTreeWidgetItem) -> None:
+        """Recursively expand nodes that have descendants with changes.
+
+        Args:
+            item: The tree item to check and expand if needed
+        """
+        child_count = item.childCount()
+        has_changed_descendants = False
+
+        for i in range(child_count):
+            child = item.child(i)
+            has_changes = child.data(0, Qt.ItemDataRole.UserRole + 1)
+            if has_changes:
+                has_changed_descendants = True
+            self._expand_nodes_with_changes(child)
+
+        if has_changed_descendants:
+            item.setExpanded(True)
 
     def _create_tree_item(self, node: NodePresentation) -> QTreeWidgetItem:
         """Recursively create a QTreeWidgetItem from NodePresentation.
@@ -331,6 +354,8 @@ class DiffPanelView(QWidget):
 
         # Store path in UserRole for later property lookup
         item.setData(0, Qt.ItemDataRole.UserRole, node.path)
+        # Store has_changes flag in UserRole+1 for expansion logic
+        item.setData(0, Qt.ItemDataRole.UserRole + 1, node.has_changes)
 
         # Apply color based on state (only for changed nodes)
         if node.state == "ADDED":

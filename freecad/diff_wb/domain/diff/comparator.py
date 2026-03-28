@@ -127,12 +127,12 @@ class TreeComparator:
         old_index: dict[str, TreeNode],
         new_index: dict[str, TreeNode],
         excluded_properties: list[str],
-    ) -> NodeDiff | None:
+    ) -> NodeDiff:
         """Compare two nodes at the same path and produce a NodeDiff.
 
         This function compares the properties of two nodes using the property_diff
         module and determines if they have been modified. If no properties differ
-        (after filtering excluded properties), returns None.
+        (after filtering excluded properties), returns an UNCHANGED NodeDiff.
 
         Args:
             path: The path to compare
@@ -141,28 +141,22 @@ class TreeComparator:
             excluded_properties: List of property names to exclude from comparison
 
         Returns:
-            NodeDiff if properties differ, None otherwise
+            NodeDiff with MODIFIED state if properties differ, UNCHANGED otherwise
         """
         old_node = old_index.get(path)
         new_node = new_index.get(path)
 
+        # Handle case where node exists in only one snapshot - this is a placeholder path
+        # (not an actual added/deleted node, just an ancestor needed for hierarchy)
         if old_node is None or new_node is None:
-            return None
+            return self._create_placeholder(path, old_index, new_index)
 
         # Use property comparator to compare properties with exclusion filtering
         property_diffs = self._property_comparator.compare_properties(
             old_node.properties, new_node.properties, excluded_properties
         )
 
-        # Check if there are any actual changes (excluding unchanged)
-        has_changes = any(diff.state != DiffState.UNCHANGED for diff in property_diffs)
-
-        # If no property differences (all excluded or identical), return None
-        if not has_changes:
-            return None
-
-        # Return NodeDiff with populated property diffs
-        # State will be automatically calculated in __post_init__ based on property_diffs
+        # Return NodeDiff - state will be auto-calculated in __post_init__
         return NodeDiff(
             path=path,
             type_id=new_node.type_id,
@@ -218,6 +212,38 @@ class TreeComparator:
             property_diffs=property_diffs,
             children=[],  # Will be populated recursively
             _force_state=DiffState.DELETED,
+        )
+
+    def _create_placeholder(
+        self,
+        path: str,
+        old_index: dict[str, TreeNode],
+        new_index: dict[str, TreeNode],
+    ) -> NodeDiff:
+        """Create a placeholder NodeDiff for hierarchy.
+
+        This is called for paths that exist in only one snapshot (not added/deleted nodes
+        themselves, but ancestors needed to maintain the tree hierarchy).
+
+        Args:
+            path: The path of the placeholder
+            old_index: Path index for the old snapshot
+            new_index: Path index for the new snapshot
+
+        Returns:
+            NodeDiff with UNCHANGED state
+        """
+        old_node = old_index.get(path)
+        new_node = new_index.get(path)
+        node = new_node if new_node else old_node
+        type_id = node.type_id if node else "Unknown"
+
+        return NodeDiff(
+            path=path,
+            type_id=type_id,
+            property_diffs=[],
+            children=[],
+            _force_state=DiffState.UNCHANGED,
         )
 
     def _get_parent_path(self, child_path: str) -> str:
@@ -351,15 +377,18 @@ class TreeComparator:
                 node = old_index[path]
                 node_diff = self._create_deleted_node_diff(path, node, excluded_properties)
                 Log.info(f"[COMPARATOR]   Created DELETED node: {path}, type={node_diff.type_id}")
-            else:  # common path with changes
-                result = self._compare_nodes_by_path(path, old_index, new_index, excluded_properties)
-                # If no changes, skip (shouldn't happen for common_paths in sorted_paths, but safety check)
-                if result is None:
-                    Log.info(f"[COMPARATOR]   Skipping unchanged path: {path}")
-                    continue
-                node_diff = result
-                prop_count = len(node_diff.property_diffs)
-                Log.info(f"[COMPARATOR]   Created MODIFIED node: {path}, type={node_diff.type_id}, props={prop_count}")
+            else:  # common path
+                node_diff = self._compare_nodes_by_path(path, old_index, new_index, excluded_properties)
+                if node_diff.state == DiffState.MODIFIED:
+                    prop_count = len(node_diff.property_diffs)
+                    Log.info(
+                        f"[COMPARATOR]   Created MODIFIED node: {path}, type={node_diff.type_id}, props={prop_count}"
+                    )
+                elif node_diff.state == DiffState.UNCHANGED:
+                    Log.info(f"[COMPARATOR]   Created UNCHANGED node: {path}, type={node_diff.type_id}")
+                else:
+                    # Placeholder path (node in only one snapshot)
+                    Log.info(f"[COMPARATOR]   Created placeholder: {path}, type={node_diff.type_id}")
 
             # b. ENSURE PARENT EXISTS
             parent_path = self._get_parent_path(path)
@@ -411,8 +440,8 @@ class TreeComparator:
         The algorithm:
         1. Build path indices for both snapshots
         2. Find added, deleted, and common paths
-        3. For common paths, compare nodes and collect those with changes
-        4. Sort all changed paths (ensures parents before children)
+        3. Collect all paths (including unchanged) to show complete tree
+        4. Sort all paths (ensures parents before children)
         5. Single-pass iteration: create diffs, ensure parents exist, link children
         6. Return root nodes (those without parents)
 
@@ -440,14 +469,11 @@ class TreeComparator:
         Log.info(f"[COMPARATOR] Deleted: {deleted_paths}")
         Log.info(f"[COMPARATOR] Common: {len(common_paths)} paths")
 
-        # COLLECT ALL CHANGED PATHS
-        all_paths: set[str] = added_paths | deleted_paths
-        for path in common_paths:
-            node_diff = self._compare_nodes_by_path(path, old_index, new_index, excluded_properties)
-            if node_diff is not None:
-                all_paths.add(path)
+        # COLLECT ALL PATHS (including unchanged nodes)
+        # This ensures the tree shows complete hierarchy with all nodes
+        all_paths: set[str] = added_paths | deleted_paths | common_paths
 
-        Log.info(f"[COMPARATOR] All changed paths ({len(all_paths)}): {sorted(all_paths)}")
+        Log.info(f"[COMPARATOR] All paths ({len(all_paths)}): {sorted(all_paths)}")
 
         # SORT PATHS (ensures parents before children)
         sorted_paths = sorted(all_paths, key=lambda p: p.split("/"))

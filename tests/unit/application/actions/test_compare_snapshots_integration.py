@@ -526,14 +526,13 @@ class TestCompareSnapshotsAction:
         # Assert
         assert result.success is True
         assert result.diff_result is not None
-        # Verify summary counts - note: unchanged nodes are NOT included in the diff
+        # Verify summary counts - unchanged nodes ARE now included in the diff
         assert result.diff_result.summary.added_nodes == 1
         assert result.diff_result.summary.deleted_nodes == 1
         assert result.diff_result.summary.modified_nodes == 1
-        # Unchanged nodes are filtered out by the diff engine
-        assert result.diff_result.summary.unchanged_nodes == 0
-        # Verify specific changes - total node diffs should be 3 (added, deleted, modified)
-        assert len(result.diff_result.node_diffs) == 3
+        assert result.diff_result.summary.unchanged_nodes == 1
+        # Verify specific changes - total node diffs should be 4 (added, deleted, modified, unchanged)
+        assert len(result.diff_result.node_diffs) == 4
         modified_parts = [n for n in result.diff_result.node_diffs if n.path == "ModifiedPart"]
         assert len(modified_parts) == 1
         assert modified_parts[0].state == DiffState.MODIFIED

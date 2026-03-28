@@ -139,16 +139,17 @@ class DiffPresenter:
             new_expr = getattr(prop_diff.new_value, "expression", None) if prop_diff.new_value else None
 
             if old_expr or new_expr:
-                # Expression changed - add second row
-                old_expr_display = f"+{old_expr}" if old_expr else "(none)"
-                new_expr_display = f"+{new_expr}" if new_expr else "(none)"
+                old_expr_display = old_expr if old_expr else "(none)"
+                new_expr_display = new_expr if new_expr else "(none)"
 
-                # Determine expression state
-                expr_state = "MODIFIED"
                 if old_expr and not new_expr:
                     expr_state = "DELETED"
                 elif not old_expr and new_expr:
                     expr_state = "ADDED"
+                elif old_expr == new_expr:
+                    expr_state = "UNCHANGED"
+                else:
+                    expr_state = "MODIFIED"
 
                 presentations.append(
                     PropertyPresentation(

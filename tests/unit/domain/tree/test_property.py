@@ -50,7 +50,7 @@ class TestProperty:
         """Test vector with expression."""
         pv = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch001.X")
         assert pv.expression == "Sketch001.X"
-        assert str(pv) == "(1.0, 2.0, 3.0) (expr: Sketch001.X)"
+        assert str(pv) == "(1.0, 2.0, 3.0)"
 
     def test_placement_creation(self):
         """Test placement property value creation."""
@@ -100,7 +100,7 @@ class TestProperty:
         assert pv.type_ == PropertyType.BOOL
         assert pv.value is True
         assert pv.expression == "Sketch001.Constrain"
-        assert str(pv) == "True (expr: Sketch001.Constrain)"
+        assert str(pv) == "True"
 
     def test_int_with_expression(self):
         """Test integer property with expression."""
@@ -108,7 +108,7 @@ class TestProperty:
         assert pv.type_ == PropertyType.INT
         assert pv.value == 10
         assert pv.expression == "Sketch001.Count"
-        assert str(pv) == "10 (expr: Sketch001.Count)"
+        assert str(pv) == "10"
 
     def test_float_with_expression(self):
         """Test float property with expression."""
@@ -116,7 +116,7 @@ class TestProperty:
         assert pv.type_ == PropertyType.FLOAT
         assert pv.value == 5.5
         assert pv.expression == "Body.Length"
-        assert str(pv) == "5.5 (expr: Body.Length)"
+        assert str(pv) == "5.5"
 
     def test_string_with_expression(self):
         """Test string property with expression."""
@@ -124,7 +124,7 @@ class TestProperty:
         assert pv.type_ == PropertyType.STRING
         assert pv.value == "test"
         assert pv.expression == "Document.Name"
-        assert str(pv) == "test (expr: Document.Name)"
+        assert str(pv) == "test"
 
     def test_equality_same_value_different_expression(self):
         """Test that same values with different expressions are NOT equal."""

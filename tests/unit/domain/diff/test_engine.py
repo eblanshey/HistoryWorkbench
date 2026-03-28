@@ -79,12 +79,9 @@ class TestPropertyDiff:
         new_val = Property.create(PropertyType.FLOAT, 15.0, expression="Sketch002.Y")
         diff = PropertyDiff(property_name="Dimension", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
-        # String format includes property name, values, and expressions
         assert "Dimension:" in str(diff)
         assert "5.0" in str(diff)
         assert "15.0" in str(diff)
-        assert "Sketch001.X" in str(diff)
-        assert "Sketch002.Y" in str(diff)
 
     def test_expression_changed_to_none(self):
         """Test that removing an expression is detected as modified."""

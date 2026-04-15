@@ -78,7 +78,7 @@ Update domain models and logic to support Git paths and snapshot-based compariso
   - If None, then pass the new snapshot to old snapshot as well (same snapshot)
 - Update SnapshotExtractor.extract_tree() to take a DocumentLike required argument instead of port.
   - This should be a sub-phase of its own, as it creates changes to downstream dependency.
-- Update the view that displays the tree nodes to have the top-level item be the DiffResult.new_snapshot.git_path. Then the nodes under it is the same tree view.
+- Update the view tree widget that displays the tree nodes to have the top-level item be the DiffResult.new_snapshot.git_path. Then the nodes under it is the same tree view.
   - With this done, the tree view supports multiple document diffs.
 
 ### Phase 5 - Start of working tree diff implementation

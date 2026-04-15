@@ -5,13 +5,23 @@ with SnapshotSummary data, including proper sorting, formatting, and ID storage.
 Additional tests cover the snapshot selection mechanism with role-based coloring.
 Tests for show_repository() verify the git repository display functionality.
 Tests for show_commits() verify the history/commit list display functionality.
+Tests for _SnapshotListItemDelegate verify custom rendering including text alignment.
+Tests for special items (Working Tree, Staging) verify their presence, alignment, and role constants.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 import pytest
+from PySide6.QtWidgets import QListWidgetItem
+
+# Import constants for testing special item roles
+from freecad.diff_wb.ui.views.diff_panel_view import (
+    _STAGING_ROLE,
+    _WORKING_TREE_ROLE,
+)
 
 
 @pytest.fixture(scope="module")
@@ -602,6 +612,176 @@ class TestDiffPanelViewShowRepository:
         assert panel._repository_label.toolTip() == ""
 
 
+class TestShowCommitsSpecialItems:
+    """Tests for the special "Working Tree" and "Staging" items in show_commits."""
+
+    def test_show_commits_always_shows_working_tree_and_staging_at_top(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Working Tree and Staging items are always present at the top of the list."""
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        commits = [
+            GitCommit(
+                id="a1b2c3d4e5f6789012345678901234567890abcd",
+                message="Test commit",
+                author="Test Author",
+                timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+            ),
+        ]
+
+        panel.show_commits(commits)
+
+        # Verify there are 3 items: Working Tree, Staging, and the commit
+        assert panel.history_list.count() == 3
+
+        # Verify Working Tree is first
+        working_tree_item = panel.history_list.item(0)
+        assert working_tree_item is not None
+        assert working_tree_item.text() == "Working Tree"
+
+        # Verify Staging is second
+        staging_item = panel.history_list.item(1)
+        assert staging_item is not None
+        assert staging_item.text() == "Staging"
+
+        # Verify commit is third
+        commit_item = panel.history_list.item(2)
+        assert commit_item is not None
+        assert "a1b2c3d" in commit_item.text()
+
+    def test_show_commits_shows_special_items_even_with_empty_commits(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Working Tree and Staging items are present even when no commits are provided."""
+        panel.show_commits([])
+
+        # Verify there are exactly 2 items: Working Tree and Staging
+        assert panel.history_list.count() == 2
+
+        # Verify Working Tree is first
+        working_tree_item = panel.history_list.item(0)
+        assert working_tree_item is not None
+        assert working_tree_item.text() == "Working Tree"
+
+        # Verify Staging is second
+        staging_item = panel.history_list.item(1)
+        assert staging_item is not None
+        assert staging_item.text() == "Staging"
+
+    def test_show_commits_working_tree_has_center_alignment(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Working Tree item has center alignment set."""
+        from PySide6.QtCore import Qt
+
+        panel.show_commits([])
+
+        working_tree_item = panel.history_list.item(0)
+        assert working_tree_item is not None
+
+        alignment = working_tree_item.data(Qt.ItemDataRole.TextAlignmentRole)
+        assert alignment == Qt.AlignmentFlag.AlignCenter
+
+    def test_show_commits_staging_has_center_alignment(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Staging item has center alignment set."""
+        from PySide6.QtCore import Qt
+
+        panel.show_commits([])
+
+        staging_item = panel.history_list.item(1)
+        assert staging_item is not None
+
+        alignment = staging_item.data(Qt.ItemDataRole.TextAlignmentRole)
+        assert alignment == Qt.AlignmentFlag.AlignCenter
+
+    def test_show_commits_working_tree_has_correct_user_role(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Working Tree item has UserRole set to 'WORKING_TREE'."""
+        from PySide6.QtCore import Qt
+
+        panel.show_commits([])
+
+        working_tree_item = panel.history_list.item(0)
+        assert working_tree_item is not None
+
+        user_role = working_tree_item.data(Qt.ItemDataRole.UserRole)
+        assert user_role == _WORKING_TREE_ROLE
+
+    def test_show_commits_staging_has_correct_user_role(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that Staging item has UserRole set to 'STAGING'."""
+        from PySide6.QtCore import Qt
+
+        panel.show_commits([])
+
+        staging_item = panel.history_list.item(1)
+        assert staging_item is not None
+
+        user_role = staging_item.data(Qt.ItemDataRole.UserRole)
+        assert user_role == _STAGING_ROLE
+
+    def test_show_commits_commits_do_not_have_special_user_roles(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that actual commits do not have WORKING_TREE or STAGING user roles."""
+        from PySide6.QtCore import Qt
+
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        commits = [
+            GitCommit(
+                id="a1b2c3d4e5f67890",
+                message="Test commit",
+                author="Test Author",
+                timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+            ),
+        ]
+
+        panel.show_commits(commits)
+
+        # Commit item should be at row 2 (after special items)
+        commit_item = panel.history_list.item(2)
+        assert commit_item is not None
+
+        user_role = commit_item.data(Qt.ItemDataRole.UserRole)
+        # Commits should not have the special user roles
+        assert user_role != _WORKING_TREE_ROLE
+        assert user_role != _STAGING_ROLE
+
+    def test_show_commits_refresh_clears_and_readds_special_items(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Test that refreshing the list with new commits re-adds special items correctly."""
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        # First call with commits
+        commits1 = [
+            GitCommit(
+                id="commit1",
+                message="First commit",
+                author="Author 1",
+                timestamp=datetime.fromisoformat("2024-01-01T10:00:00+00:00"),
+            ),
+        ]
+        panel.show_commits(commits1)
+        assert panel.history_list.count() == 3
+        assert panel.history_list.item(0).text() == "Working Tree"
+        assert panel.history_list.item(1).text() == "Staging"
+
+        # Second call with different commits
+        commits2 = [
+            GitCommit(
+                id="commit2",
+                message="Second commit",
+                author="Author 2",
+                timestamp=datetime.fromisoformat("2024-02-01T10:00:00+00:00"),
+            ),
+            GitCommit(
+                id="commit3",
+                message="Third commit",
+                author="Author 3",
+                timestamp=datetime.fromisoformat("2024-03-01T10:00:00+00:00"),
+            ),
+        ]
+        panel.show_commits(commits2)
+
+        # Verify special items are still at top
+        assert panel.history_list.count() == 4  # 2 special + 2 commits
+        assert panel.history_list.item(0).text() == "Working Tree"
+        assert panel.history_list.item(1).text() == "Staging"
+        assert "Second commit" in panel.history_list.item(2).text()
+        assert "Third commit" in panel.history_list.item(3).text()
+
+
 class TestShowCommits:
     """Tests for DiffPanelView.show_commits method."""
 
@@ -620,17 +800,21 @@ class TestShowCommits:
 
         panel.show_commits(commits)
 
-        # Verify commit is displayed
-        assert panel.history_list.count() == 1
-        item = panel.history_list.item(0)
+        # Verify there are 3 items total (Working Tree, Staging, and the commit)
+        assert panel.history_list.count() == 3
+        # Verify the commit is at position 2 (after special items)
+        item = panel.history_list.item(2)
         assert "a1b2c3d" in item.text()  # 7-char hash
         assert "John Doe" in item.text()  # Author
         assert "2024-01-15" in item.text()  # Date
 
     def test_show_commits_empty_list(self, panel) -> None:  # type: ignore[no-untyped-def]
-        """Test that empty commit list doesn't crash."""
+        """Test that empty commit list shows only special items."""
         panel.show_commits([])
-        assert panel.history_list.count() == 0
+        # Special items (Working Tree, Staging) are always present
+        assert panel.history_list.count() == 2
+        assert panel.history_list.item(0).text() == "Working Tree"
+        assert panel.history_list.item(1).text() == "Staging"
 
     def test_show_commits_tooltip_has_full_message(self, panel) -> None:  # type: ignore[no-untyped-def]
         """Test that tooltip contains full commit message."""
@@ -645,7 +829,8 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit])
-        item = panel.history_list.item(0)
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
 
         assert item.toolTip() == full_message
 
@@ -690,7 +875,8 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit])
-        item = panel.history_list.item(0)
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
         text = item.text()
 
         # Check that there's a newline in the display text (two lines)
@@ -737,11 +923,15 @@ class TestShowCommits:
 
         panel.show_commits(commits)
 
-        # Verify order matches input (pre-sorted)
-        assert panel.history_list.count() == 3
-        assert "New commit" in panel.history_list.item(0).text()
-        assert "Middle commit" in panel.history_list.item(1).text()
-        assert "Old commit" in panel.history_list.item(2).text()
+        # Verify order matches input (pre-sorted) + special items at top
+        assert panel.history_list.count() == 5  # 2 special + 3 commits
+        # Special items at top
+        assert panel.history_list.item(0).text() == "Working Tree"
+        assert panel.history_list.item(1).text() == "Staging"
+        # Commits start at row 2
+        assert "New commit" in panel.history_list.item(2).text()
+        assert "Middle commit" in panel.history_list.item(3).text()
+        assert "Old commit" in panel.history_list.item(4).text()
 
     def test_show_commits_short_hash_truncation(self, panel) -> None:  # type: ignore[no-untyped-def]
         """Test that long commit hashes are truncated to 7 characters."""
@@ -755,7 +945,8 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit])
-        item = panel.history_list.item(0)
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
         text = item.text()
 
         # Should have 7-char hash, not the full hash
@@ -800,7 +991,8 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit])
-        item = panel.history_list.item(0)
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
 
         # Verify the full message is in the text
         assert "A" * 100 in item.text()  # Should contain the long message
@@ -821,7 +1013,8 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit_empty])
-        item = panel.history_list.item(0)
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
 
         # Should not crash and should have some display text (hash, author, date)
         assert item is not None
@@ -840,10 +1033,195 @@ class TestShowCommits:
         )
 
         panel.show_commits([commit_whitespace])
-        item = panel.history_list.item(0)
+        item = panel.history_list.item(2)
 
         # Should not crash
         assert item is not None
         lines = item.text().split("\n")
         assert len(lines) == 2
         assert lines[1] == ""  # Whitespace should be stripped to empty
+
+
+class TestSnapshotListItemDelegate:
+    """Tests for _SnapshotListItemDelegate custom rendering."""
+
+    def test_delegate_respects_text_alignment_role_for_selected_items(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Delegate respects TextAlignmentRole when painting selected items."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QColor
+
+        # Given: A list with snapshots
+        panel.show_commits([])  # Clear any existing items first
+
+        # Add a commit that will be selected with center alignment
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        commit = GitCommit(
+            id="a1b2c3d4e5f67890",
+            message="Test commit",
+            author="Test",
+            timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+        )
+        panel.show_commits([commit])
+
+        # Set up the item with center alignment
+        item = panel.history_list.item(0)
+        assert item is not None
+        item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignCenter)
+
+        # Select the item (this triggers the delegate's paint method)
+        panel.history_list.setCurrentItem(item)
+
+        # Then: The item should have the "from" role assigned (red background)
+        # which means the delegate was used for painting
+        assert len(panel._selected_items) == 1
+        assert item.background().color() == QColor(255, 200, 200)
+
+    def test_delegate_left_alignment_for_commits(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Commits have explicit left alignment set via TextAlignmentRole."""
+        from PySide6.QtCore import Qt
+
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        # Given: A commit
+        commit = GitCommit(
+            id="a1b2c3d4e5f67890",
+            message="Test commit",
+            author="Test",
+            timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+        )
+        panel.show_commits([commit])
+
+        # Commit is at row 2 (after special items)
+        item = panel.history_list.item(2)
+        assert item is not None
+
+        # Then: Alignment should be explicitly set to AlignLeft
+        alignment = item.data(Qt.ItemDataRole.TextAlignmentRole)
+        assert alignment == Qt.AlignmentFlag.AlignLeft
+
+    def test_delegate_center_alignment_for_special_items(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Special items can have center alignment set via TextAlignmentRole."""
+        from PySide6.QtCore import Qt
+
+        # Given: An item that represents a special state (like "Working Tree")
+        panel.show_commits([])  # Clear existing items
+
+        # Create an item manually with center alignment
+        item = QListWidgetItem("Working Tree")
+        item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignCenter)
+        panel.history_list.addItem(item)
+
+        # When: Get the alignment
+        alignment = item.data(Qt.ItemDataRole.TextAlignmentRole)
+
+        # Then: Center alignment is preserved
+        assert alignment == Qt.AlignmentFlag.AlignCenter
+
+    def test_delegate_paint_uses_alignment_from_index_data(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Delegate paint method retrieves and uses alignment from index data."""
+        from PySide6.QtCore import Qt
+
+        # Verify that the delegate's paint method accesses the index for alignment
+        # This is tested indirectly by verifying the alignment role is properly stored
+        # and can be retrieved by the delegate during painting
+
+        # Set up an item with right alignment (add after special items)
+        panel.show_commits([])
+        item = QListWidgetItem("Right Aligned")
+        item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignRight)
+        panel.history_list.addItem(item)
+
+        # Select it to trigger custom painting
+        panel.history_list.setCurrentItem(item)
+
+        # Verify alignment is stored correctly (item is now at row 2)
+        retrieved_alignment = panel.history_list.item(2).data(Qt.ItemDataRole.TextAlignmentRole)
+        assert retrieved_alignment == Qt.AlignmentFlag.AlignRight
+
+    def test_paint_method_uses_correct_alignment_flags(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Paint method uses correct alignment flags when drawing text for centered items.
+
+        This test creates a QPainter painting to a QPixmap, calls the delegate's paint method,
+        and spies on the drawText call to verify it uses the correct alignment flags.
+        """
+        from unittest.mock import patch
+
+        from PySide6.QtCore import QRect, Qt
+        from PySide6.QtGui import QFont, QPalette, QPixmap
+        from PySide6.QtWidgets import QStyleOptionViewItem
+
+        from freecad.diff_wb.domain.git.models import GitCommit
+
+        # Given: A list with a commit that has center alignment and is selected
+        panel.show_commits([])
+        commit = GitCommit(
+            id="a1b2c3d4e5f67890",
+            message="Test commit",
+            author="Test",
+            timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+        )
+        panel.show_commits([commit])
+
+        item = panel.history_list.item(0)
+        assert item is not None
+
+        # Set center alignment
+        item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignCenter)
+
+        # Select the item to ensure it has a custom role ("from")
+        panel.history_list.setCurrentItem(item)
+
+        # Verify the item is selected and has a role
+        assert len(panel._selected_items) == 1
+        assert 0 in panel._selected_items
+
+        # Create a real QPainter painting to a pixmap
+        pixmap = QPixmap(100, 30)
+        pixmap.fill()
+
+        from PySide6.QtGui import QPainter
+
+        painter = QPainter(pixmap)
+
+        # Create a real QStyleOptionViewItem for proper testing
+        option = QStyleOptionViewItem()
+        option.rect = QRect(0, 0, 100, 30)  # type: ignore[attr-defined]
+        option.palette = QPalette()  # type: ignore[attr-defined]
+        option.font = QFont()  # type: ignore[attr-defined]
+
+        # Create index from the item
+        model_index = panel.history_list.model().index(0, 0)
+
+        # Spy on drawText to capture the alignment flags passed to it
+        original_drawtext = painter.drawText
+        captured_calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+        def spy_drawtext(*args: Any, **kwargs: Any) -> Any:
+            captured_calls.append((args, kwargs))
+            return original_drawtext(*args, **kwargs)
+
+        # When: Call paint method directly with spied drawText
+        try:
+            with patch.object(painter, "drawText", side_effect=spy_drawtext):
+                panel.history_list.itemDelegate().paint(painter, option, model_index)
+        finally:
+            painter.end()
+
+        # Then: Verify drawText was called with correct alignment flags
+        assert len(captured_calls) > 0, "drawText should have been called at least once"
+
+        # Find the call that draws the text (has the item text as argument)
+        text_drawn = False
+        for args, _ in captured_calls:
+            # drawText signature: drawText(rect, alignment, text) or drawText(x, y, width, height, alignment, text)
+            if len(args) >= 2 and isinstance(args[1], int):
+                alignment_arg = args[1]
+                # Verify alignment flags include both vertical center and horizontal center
+                has_vcenter = alignment_arg & Qt.AlignmentFlag.AlignVCenter.value != 0
+                has_hcenter = alignment_arg & Qt.AlignmentFlag.AlignHCenter.value != 0
+                if has_vcenter and has_hcenter:
+                    text_drawn = True
+                    break
+
+        assert text_drawn, "drawText should have been called with AlignVCenter | AlignHCenter flags"

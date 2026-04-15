@@ -51,6 +51,12 @@ from ..translation_strings import (
 )
 
 
+# Constants for special history list item roles
+# These identify the "Working Tree" and "Staging" items that appear at the top of the commit history
+_WORKING_TREE_ROLE = "WORKING_TREE"
+_STAGING_ROLE = "STAGING"
+
+
 def _camelcase_to_spaces(name: str) -> str:
     """Insert spaces before uppercase letters and digits, matching FreeCAD display.
 
@@ -162,12 +168,14 @@ class _SnapshotListItemDelegate(QStyledItemDelegate):
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.fillRect(option.rect, QBrush(selection_color))
 
-                # Get text and draw it
+                # Get text and draw it with custom alignment from TextAlignmentRole
                 item = self._parent.item(row)
                 if item:
                     text_rect = option.rect.adjusted(4, 0, -4, 0)  # Add some padding
                     painter.setPen(option.palette.color(QPalette.ColorRole.Text))
-                    painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, item.text())
+                    # Get alignment from item's TextAlignmentRole
+                    alignment = index.data(Qt.ItemDataRole.TextAlignmentRole)
+                    painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | alignment, item.text())
                 painter.restore()
                 return
 
@@ -429,6 +437,11 @@ class DiffPanelView(QWidget):
     def show_commits(self, commits: list[GitCommit]) -> None:
         """Display git commits in the history list.
 
+        The list always starts with two special items: "Working Tree" and "Staging"
+        when displaying git commits, which allow users to compare the current working
+        tree or staging area against a selected commit. These items are centered and
+        marked with UserRole values to distinguish them from actual GitCommits.
+
         Args:
             commits: List of GitCommit objects to display. Commits are shown
                 in DESC order (newest first) with 7-char hash, author, timestamp
@@ -439,7 +452,22 @@ class DiffPanelView(QWidget):
         self.history_list.clear()
         self._selected_items = {}  # Reset selection tracking
 
-        # Guard: no commits to display
+        # Add special items first: "Working Tree" and "Staging"
+        # These are always present, even if no commits are provided
+
+        # Add "Working Tree" item
+        working_tree_item = QListWidgetItem("Working Tree")
+        working_tree_item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignCenter)
+        working_tree_item.setData(Qt.ItemDataRole.UserRole, _WORKING_TREE_ROLE)
+        self.history_list.addItem(working_tree_item)
+
+        # Add "Staging" item
+        staging_item = QListWidgetItem("Staging")
+        staging_item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignCenter)
+        staging_item.setData(Qt.ItemDataRole.UserRole, _STAGING_ROLE)
+        self.history_list.addItem(staging_item)
+
+        # Guard: no commits to display after adding special items
         if not commits:
             return
 
@@ -466,6 +494,9 @@ class DiffPanelView(QWidget):
 
             # Set tooltip to full commit message
             item.setToolTip(commit.message)
+
+            # Set left alignment for commits
+            item.setData(Qt.ItemDataRole.TextAlignmentRole, Qt.AlignmentFlag.AlignLeft)
 
             # Add to list
             self.history_list.addItem(item)

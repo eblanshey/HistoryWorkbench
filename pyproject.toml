@@ -52,7 +52,6 @@ warn_unreachable = true
 strict_equality = true
 exclude = [
     '^freecad/diff_wb/init_gui\\.py$',
-    '^freecad/diff_wb/ui/.*\\.py$',
     '^freecad/diff_wb/entrypoints/.*\\.py$',
 ]
 explicit_package_bases = true
@@ -69,10 +68,16 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "freecad.diff_wb.init_gui",
-    "freecad.diff_wb.ui.*",
     "freecad.diff_wb.entrypoints.*",
 ]
 ignore_errors = true
+
+# UI layer: Enable type checking but disable Qt-specific errors
+# Qt stubs have incomplete/incorrect signatures, so we skip those checks
+# Runtime protocol compliance tests (tests/unit/ui/protocols/) validate interface contracts
+[[tool.mypy.overrides]]
+module = ["freecad.diff_wb.ui.*"]
+disable_error_code = ["override", "attr-defined", "no-untyped-def"]
 
 [[tool.mypy.overrides]]
 module = [

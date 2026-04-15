@@ -107,11 +107,11 @@ class _SnapshotListItemDelegate(QStyledItemDelegate):
     FROM_COLOR = QColor(255, 200, 200)  # Light red
     TO_COLOR = QColor(200, 255, 200)  # Light green
 
-    def __init__(self, parent: QListWidget, get_item_role_callback: Callable[[int], str | None]) -> None:
+    def __init__(self, parent: QListWidget | None, get_item_role_callback: Callable[[int], str | None]) -> None:
         """Initialize the delegate.
 
         Args:
-            parent: The QListWidget this delegate belongs to.
+            parent: The QListWidget this delegate belongs to (can be None initially, set later).
             get_item_role_callback: A callable that takes a row number and returns
                 the role ("from" or "to") if the item is selected, or None otherwise.
         """
@@ -131,6 +131,10 @@ class _SnapshotListItemDelegate(QStyledItemDelegate):
         row = index.row()
 
         # Check if this item is selected by checking the widget's selection
+        if self._parent is None:
+            super().paint(painter, option, index)
+            return
+
         is_selected = self._parent.item(row).isSelected() if self._parent.item(row) else False
 
         # If selected and we have a custom role, use custom color
@@ -228,9 +232,19 @@ class DiffPanelView(QWidget):
     - Middle: QTreeWidget for diff tree (hidden/empty)
     - Right: QTableWidget for properties (hidden/empty)
 
-    Note: This class implements the DiffView and SnapshotView protocols through
-    structural subtyping (duck typing) rather than explicit inheritance to avoid
-    metaclass conflicts between QWidget and Protocol classes.
+    Protocol Implementation:
+        This class implements the DiffView and SnapshotView protocols through
+        structural subtyping (duck typing) rather than explicit inheritance to avoid
+        metaclass conflicts between QWidget and Protocol classes.
+
+        Implemented protocols:
+        - DiffView (freecad.diff_wb.ui.protocols.diff_view): show_loading, show_diff_tree,
+          show_summary, show_error, show_properties, show_repository
+        - SnapshotView (freecad.diff_wb.ui.protocols.snapshot_view): show_success,
+          show_error, show_loading, show_snapshots
+
+        Protocol compliance is validated at runtime by tests in:
+        tests/unit/ui/protocols/test_protocol_compliance.py
     """
 
     # Color palette for diff tree states

@@ -61,6 +61,8 @@ class SnapshotPresenter:
             result: SnapshotResult from TakeSnapshotAction.execute()
         """
         if result.success:
+            # snapshot_name is guaranteed to be set on success (enforced by take_snapshot action)
+            assert result.snapshot_name is not None, "snapshot_name must be set on success"
             # Log success message (presenter handles logging, not the view)
             Log.info(f"Snapshot '{result.snapshot_name}' created successfully")
             # Pass raw snapshot_name - view handles translation and formatting
@@ -84,6 +86,12 @@ class SnapshotPresenter:
         Any exceptions from the action are caught and passed to
         view.show_error() for user notification.
         """
+        if self._list_snapshots_action is None:
+            error_msg = "Snapshot list action not configured"
+            Log.error(error_msg)
+            self._view.show_error(error_msg)
+            return
+
         try:
             snapshots = self._list_snapshots_action.execute()
             self._view.show_snapshots(snapshots)

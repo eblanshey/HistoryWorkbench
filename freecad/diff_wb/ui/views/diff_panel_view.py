@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from PySide6.QtCore import QCoreApplication, Qt
-from PySide6.QtGui import QBrush, QColor, QPainter, QPalette
+from PySide6.QtCore import QCoreApplication, QSize, Qt
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QPushButton,
     QSplitter,
     QStyledItemDelegate,
     QStyleOptionViewItem,
@@ -24,6 +25,17 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+# Module-level icon loading for refresh button
+# This is done once at import time rather than per-instance to avoid repeated imports
+try:
+    import FreeCADGui as Gui
+
+    _REFRESH_ICON: QIcon | None = Gui.getIcon("view-refresh.svg")
+except (ImportError, AttributeError):
+    # FreeCADGui not available (e.g., during unit tests or non-GUI environments)
+    _REFRESH_ICON = None
 
 from ...application.actions.result_models import SnapshotSummary
 from ...domain.diff.models import DiffState
@@ -256,6 +268,7 @@ class DiffPanelView(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
         self._selected_items: dict[int, _SelectedItem] = {}  # row -> _SelectedItem
+        self._on_refresh_callback: Callable[[], None] | None = None
         # Create the custom delegate for rendering selection colors
         self._delegate = _SnapshotListItemDelegate(None, self._get_item_role)
         # Create the delegate for property value double-click editing (for copying)
@@ -284,9 +297,23 @@ class DiffPanelView(QWidget):
         self._repository_label = QLabel("")
         self._repository_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._repository_label.setStyleSheet("font-size: 11px; color: gray; font-style: italic;")
+        # Refresh button with module-level cached icon
+        self._refresh_button = QPushButton()
+        if _REFRESH_ICON is not None:
+            self._refresh_button.setIcon(_REFRESH_ICON)
+            self._refresh_button.setIconSize(QSize(16, 24))
+        self._refresh_button.setToolTip("Refresh git repository detection")
+        # Create header layout with repository label on left and refresh button on right
+        repository_header_layout = QHBoxLayout()
+        repository_header_layout.addWidget(self._repository_label)
+        repository_header_layout.addStretch()
+        repository_header_layout.addWidget(self._refresh_button)
+        repository_header_container = QWidget()
+        repository_header_container.setLayout(repository_header_layout)
+        # Reorder widgets: repository header FIRST, then placeholder, then snapshot list
         snapshot_layout = QVBoxLayout()
+        snapshot_layout.addWidget(repository_header_container)
         snapshot_layout.addWidget(snapshot_placeholder)
-        snapshot_layout.addWidget(self._repository_label)
         snapshot_layout.addWidget(self.snapshot_list)
         snapshot_container = QWidget()
         snapshot_container.setLayout(snapshot_layout)
@@ -347,6 +374,15 @@ class DiffPanelView(QWidget):
         self.setMinimumSize(450, 200)
 
         layout.addWidget(splitter)
+
+    def set_refresh_callback(self, callback: Callable[[], None]) -> None:
+        """Set the callback to invoke when refresh button is clicked.
+
+        Args:
+            callback: A no-argument callable to invoke on refresh.
+        """
+        self._on_refresh_callback = callback
+        self._refresh_button.clicked.connect(callback)
 
     # SnapshotView protocol methods
     def show_snapshots(self, snapshots: list[SnapshotSummary]) -> None:
@@ -583,15 +619,19 @@ class DiffPanelView(QWidget):
         if repo is None:
             text = QCoreApplication.translate("Common", REPOSITORY_NO_REPO_MESSAGE)
             self._repository_label.setText(text)
+            self._repository_label.setToolTip("")
             self._repository_label.setStyleSheet("font-size: 11px; color: gray; font-style: italic;")
         else:
             name = repo.name
             path = repo.absolute_path
             template = QCoreApplication.translate("Common", REPOSITORY_INFO_TEMPLATE)
-            # Replace Qt-style placeholders (%1, %2, etc.) with actual values
-            text = template.replace("%1", name).replace("%2", path)
+            # Replace Qt-style placeholders (%1) with repository name
+            text = template.replace("%1", name)
             self._repository_label.setText(text)
-            self._repository_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+            # Set tooltip with full directory path
+            self._repository_label.setToolTip(path)
+            # Style with underline to indicate clickable/tooltip
+            self._repository_label.setStyleSheet("font-size: 11px; font-weight: bold; text-decoration: underline;")
 
     def _create_group_header_item(self, group_name: str) -> QTreeWidgetItem:
         """Create a non-selectable group header item with gray background.

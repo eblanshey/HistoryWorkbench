@@ -6,6 +6,7 @@
 
 from ...domain.freecad_ports import FreeCadPort
 from ...domain.git.git_service import GitService
+from ...utils import Log
 from .result_models import Result
 
 
@@ -61,4 +62,5 @@ class FindActiveGitRepositoryAction:
         if repo is None:
             return Result.failure("No git repository found for open documents")
 
+        Log.info(f"Git repository detected: {repo.name} ({repo.absolute_path})")
         return Result.success(repo)

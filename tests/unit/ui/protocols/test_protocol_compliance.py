@@ -13,7 +13,7 @@ The tests verify:
 
 from __future__ import annotations
 
-import pytest
+from collections.abc import Callable
 
 from freecad.diff_wb.ui.protocols.diff_view import DiffView
 from freecad.diff_wb.ui.protocols.snapshot_view import SnapshotView
@@ -46,9 +46,9 @@ class TestDiffViewProtocolCompliance:
 
     def test_show_loading_signature_compatibility(self) -> None:
         """show_loading should accept at least no arguments (protocol contract)."""
-        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
-
         import inspect
+
+        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
         sig = inspect.signature(DiffPanelView.show_loading)
         params = list(sig.parameters.values())
@@ -68,9 +68,9 @@ class TestDiffViewProtocolCompliance:
 
     def test_show_diff_tree_accepts_list(self) -> None:
         """show_diff_tree must accept list parameter."""
-        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
-
         import inspect
+
+        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
         sig = inspect.signature(DiffPanelView.show_diff_tree)
         params = list(sig.parameters.values())
@@ -84,9 +84,9 @@ class TestDiffViewProtocolCompliance:
 
     def test_show_summary_accepts_three_integers(self) -> None:
         """show_summary must accept added, deleted, modified integers."""
-        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
-
         import inspect
+
+        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
         sig = inspect.signature(DiffPanelView.show_summary)
         params = list(sig.parameters.values())
@@ -125,9 +125,9 @@ class TestSnapshotViewProtocolCompliance:
 
     def test_show_success_signature(self) -> None:
         """show_success must accept snapshot_name string."""
-        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
-
         import inspect
+
+        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
         sig = inspect.signature(DiffPanelView.show_success)
         params = list(sig.parameters.values())
@@ -141,9 +141,9 @@ class TestSnapshotViewProtocolCompliance:
 
     def test_show_snapshots_accepts_list(self) -> None:
         """show_snapshots must accept list of SnapshotSummary."""
-        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
-
         import inspect
+
+        from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
         sig = inspect.signature(DiffPanelView.show_snapshots)
         params = list(sig.parameters.values())
@@ -193,6 +193,9 @@ class TestProtocolValidationUtility:
                 pass
 
             def show_repository(self, repo: object | None) -> None:
+                pass
+
+            def set_refresh_callback(self, callback: Callable[[], None]) -> None:
                 pass
 
         violations = validate_protocol_compliance(CompliantView, DiffView, raise_on_error=False)

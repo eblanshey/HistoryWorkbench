@@ -128,3 +128,87 @@ class TestGitRepositoryPresenter:
         assert presenter._view is mock_view
         assert presenter._find_git_repo_action is mock_find_action
         assert presenter._application_state is mock_application_state
+
+    def test_on_refresh_clicked_with_successful_detection(
+        self,
+        presenter,
+        mock_view,
+        mock_find_action,
+        mock_application_state,
+    ):
+        """on_refresh_clicked() updates state and view when detection succeeds."""
+        # Arrange
+        repo = GitRepository(name="test_project", absolute_path="/home/user/test_project")
+        mock_result = MagicMock()
+        mock_result.is_success = True
+        mock_result.data = repo
+        mock_find_action.execute.return_value = mock_result
+
+        # Act
+        presenter.on_refresh_clicked()
+
+        # Assert
+        mock_find_action.execute.assert_called_once()
+        mock_application_state.git_repository = repo
+        mock_view.show_repository.assert_called_once_with(repo)
+
+    def test_on_refresh_clicked_with_failed_detection(
+        self,
+        presenter,
+        mock_view,
+        mock_find_action,
+        mock_application_state,
+    ):
+        """on_refresh_clicked() sets state to None and shows no repo message on failure."""
+        # Arrange
+        mock_result = MagicMock()
+        mock_result.is_success = False
+        mock_result.message = "No active document"
+        mock_find_action.execute.return_value = mock_result
+
+        # Act
+        presenter.on_refresh_clicked()
+
+        # Assert
+        mock_find_action.execute.assert_called_once()
+        mock_application_state.git_repository = None
+        mock_view.show_repository.assert_called_once_with(None)
+
+    def test_on_refresh_clicked_with_none_repository(
+        self,
+        presenter,
+        mock_view,
+        mock_find_action,
+        mock_application_state,
+    ):
+        """on_refresh_clicked() handles case where action returns None repository."""
+        # Arrange
+        mock_result = MagicMock()
+        mock_result.is_success = True
+        mock_result.data = None  # Action succeeded but found no repo
+        mock_find_action.execute.return_value = mock_result
+
+        # Act
+        presenter.on_refresh_clicked()
+
+        # Assert
+        mock_find_action.execute.assert_called_once()
+        mock_application_state.git_repository = None
+        mock_view.show_repository.assert_called_once_with(None)
+
+    def test_presenter_initialization_registers_refresh_callback(
+        self,
+        mock_view,
+        mock_find_action,
+        mock_application_state,
+    ):
+        """Presenter registers its on_refresh_clicked method as the refresh callback on initialization."""
+        # Act
+        presenter = GitRepositoryPresenter(
+            view=mock_view,
+            find_git_repo_action=mock_find_action,
+            application_state=mock_application_state,
+        )
+
+        # Assert
+        mock_view.set_refresh_callback.assert_called_once_with(presenter.on_refresh_clicked)

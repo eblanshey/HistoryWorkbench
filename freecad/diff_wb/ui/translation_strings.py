@@ -104,15 +104,16 @@ No placeholders. This is a static message.
 # Context: "Common"
 # These strings are used for displaying git repository information in the UI.
 
-REPOSITORY_INFO_TEMPLATE = "%1 (%2)"
+REPOSITORY_INFO_TEMPLATE = "Repository: %1"
 """Template for displaying git repository info.
 
 Placeholders:
     %1 - Repository name (str)
-    %2 - Repository absolute path (str)
+
+The absolute path is stored separately for use as a tooltip.
 
 Example:
-    "my_project (/home/user/documents)"
+    "Repository: my_project"
 """
 
 REPOSITORY_NO_REPO_MESSAGE = "No git repository detected"

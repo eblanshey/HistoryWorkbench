@@ -19,6 +19,7 @@ Translation Strategy for Summary:
             self._modifiedLabel.setText(f"{modified_label} {modified}")
 """
 
+from collections.abc import Callable
 from typing import Protocol
 
 from ...domain.git.models import GitRepository
@@ -87,4 +88,11 @@ class DiffView(Protocol):
             repo: GitRepository object if detected, or None if no repository found.
                   The view should display repository name and path when available,
                   or a "no repository" message when None.
+        """
+
+    def set_refresh_callback(self, callback: Callable[[], None]) -> None:
+        """Set the callback to invoke when refresh button is clicked.
+
+        Args:
+            callback: A no-argument callable to invoke on refresh.
         """

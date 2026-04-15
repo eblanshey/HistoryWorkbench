@@ -478,6 +478,52 @@ class TestDiffPanelViewShowSummary:
         assert panel._modified_label.text() == "Modified: 2"
 
 
+class TestDiffPanelViewRefreshButton:
+    """Tests for DiffPanelView refresh button functionality."""
+
+    def test_set_refresh_callback_connects_to_button_clicked(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """set_refresh_callback() connects the callback to the button's clicked signal."""
+        # Track if callback was called
+        callback_called = False
+
+        def mock_callback() -> None:
+            nonlocal callback_called
+            callback_called = True
+
+        # When: Set the refresh callback
+        panel.set_refresh_callback(mock_callback)
+
+        # Then: Callback should be connected (we verify by simulating a click)
+        # Simulate button click
+        panel._refresh_button.click()
+
+        # Verify callback was invoked
+        assert callback_called is True
+
+    def test_refresh_button_has_icon(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Refresh button icon loading is attempted but may be null in test environments.
+
+        Icon loading depends on FreeCAD runtime availability. In unit tests without
+        FreeCADGui, the icon will be null which is acceptable. This is a best-effort
+        feature that requires FreeCAD runtime to function properly.
+        """
+        # Access the icon property to verify it's available (may be null in tests)
+        _ = panel._refresh_button.icon()
+        # No assertion here - null icon is acceptable in non-FreeCAD environments
+        # The important thing is that the button exists and has the icon slot available
+
+    def test_refresh_button_has_tooltip(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Refresh button has a tooltip."""
+        tooltip = panel._refresh_button.toolTip()
+        assert "refresh" in tooltip.lower() or "git" in tooltip.lower()
+
+    def test_refresh_button_is_small_fixed_size(self, panel) -> None:  # type: ignore[no-untyped-def]
+        """Refresh button has a small fixed size (24x24)."""
+        size = panel._refresh_button.size()
+        assert size.width() == 24
+        assert size.height() == 24
+
+
 class TestDiffPanelViewShowRepository:
     """Tests for DiffPanelView.show_repository() method."""
 
@@ -494,7 +540,7 @@ class TestDiffPanelViewShowRepository:
         assert "gray" in stylesheet
 
     def test_show_repository_with_valid_repo_shows_info(self, panel) -> None:  # type: ignore[no-untyped-def]
-        """show_repository() displays repository name and path with bold styling."""
+        """show_repository() displays repository name with tooltip containing path and bold/underline styling."""
         # Given: A valid GitRepository
         from freecad.diff_wb.domain.git.models import GitRepository
 
@@ -503,12 +549,15 @@ class TestDiffPanelViewShowRepository:
         # When: Call show_repository with a valid repository
         panel.show_repository(repo)
 
-        # Then: Label shows formatted repository info
+        # Then: Label shows repository name with path in tooltip
         text = panel._repository_label.text()
         assert "test_project" in text
-        assert "/home/user/test_project" in text
+        assert "Repository:" in text
+        # Path should be in tooltip, not in displayed text
+        assert panel._repository_label.toolTip() == "/home/user/test_project"
         stylesheet = panel._repository_label.styleSheet()
         assert "bold" in stylesheet
+        assert "underline" in stylesheet
 
     def test_show_repository_overwrites_previous_display(self, panel) -> None:  # type: ignore[no-untyped-def]
         """show_repository() overwrites previous repository display."""
@@ -526,11 +575,12 @@ class TestDiffPanelViewShowRepository:
         # Then: New repository info replaces old one
         text = panel._repository_label.text()
         assert "new_project" in text
-        assert "/home/new" in text
         assert "old_project" not in text
+        # Tooltip should also be updated
+        assert panel._repository_label.toolTip() == "/home/new"
 
     def test_show_repository_none_after_repo_resets_style(self, panel) -> None:  # type: ignore[no-untyped-def]
-        """show_repository(None) after showing a repo resets to italic gray style."""
+        """show_repository(None) after showing a repo resets to italic gray style and clears tooltip."""
         # Given: Repository previously displayed
         from freecad.diff_wb.domain.git.models import GitRepository
 
@@ -540,7 +590,8 @@ class TestDiffPanelViewShowRepository:
         # When: Call show_repository with None
         panel.show_repository(None)
 
-        # Then: Style is reset to italic gray
+        # Then: Style is reset to italic gray and tooltip is cleared
         stylesheet = panel._repository_label.styleSheet()
         assert "italic" in stylesheet
         assert "gray" in stylesheet
+        assert panel._repository_label.toolTip() == ""

@@ -39,12 +39,25 @@ class GitRepositoryPresenter:
         self._view = view
         self._find_git_repo_action = find_git_repo_action
         self._application_state = application_state
+        self._view.set_refresh_callback(self.on_refresh_clicked)
 
     def on_workbench_activated(self) -> None:
         """Detect and display git repository when workbench activates.
 
         This method is called when the workbench is activated to detect
         the current git repository and display it in the UI.
+        """
+        self._detect_git_repository()
+
+    def on_refresh_clicked(self) -> None:
+        """Re-detect and display git repository when refresh is clicked."""
+        self._detect_git_repository()
+
+    def _detect_git_repository(self) -> None:
+        """Detect git repository and update UI and application state.
+
+        This protected method encapsulates the common logic for git repository
+        detection used by both workbench activation and refresh button clicks.
         """
         result = self._find_git_repo_action.execute()
 

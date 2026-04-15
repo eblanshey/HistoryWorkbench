@@ -71,41 +71,32 @@ Example of explicit approval to create the file:
 
 ---
 
-## Task Plan Creation Process
+## Planning Process Steps
 
-### Step 1: Consult Architecture Context
+Follow these steps in order. Track your current step explicitly in your responses (e.g., "**Step 1/3:** Analyzing requirements...").
+
+### Step 1: Think, Read, Search, and Delegate
 - Read `docs/PLAN.md` to understand the current project state
 - Read `docs/Architecture.md` to understand architecture
 - Review existing task plans in `.opencode/tasks/*.md` for patterns and conventions
 - Check module structure in `freecad/diff_wb/` to identify code locations
+- Ask clarifying questions if requirements are ambiguous
+- Delegate explore agents for research when needed
+- Determine FreeCAD dependency by checking which layer/module the feature affects
+- This is the bulk of your work—investigate thoroughly to construct a well-formed plan
 
-### Step 2: Ask Clarifying Questions
-- If requirements are ambiguous, ask the user before proceeding
-- Present tradeoffs when multiple approaches exist
-- Don't make large assumptions about user intent
+### Step 2: Refine with User
+- Present the complete plan to the user
+- Ask if the plan should be further refined or written to a file
+- If further refinement is needed, go back to Step 1
+- Incorporate user feedback and suggestions
+- **Do NOT write the file until the user explicitly confirms**
 
-### Step 3: Determine FreeCAD Dependency
-- Check which layer/module the feature affects
-- Consult the Module Map in `docs/PLAN.md`
-- Decide if API exploration is needed (required for FreeCAD-dependent features)
-
-### Step 4: Present Plan to User
-- Show the complete plan to the user
-- Ask for feedback and refinements
-- Incorporate user suggestions
-- **Get explicit confirmation before writing the task file. Being asked to make a plan is NOT consent to write to the file.**
-- Once confirmed to actually *write*, write the plan to `.opencode/tasks/plan-name.md` (e.g., `.opencode/tasks/new-feature-plan.md`) following the template below
-
-### Step 5: Document Decisions
-Include rationale and alternatives considered in the Decisions Made section.
-
-### Step 6: Define Clear Phases
-Each phase should follow the Testing Order Principle:
-1. **Write tests first** - Define what success looks like before writing code
-2. **Implement to pass tests** - Write only enough code to make tests pass
-3. **Refactor** - Improve code quality while keeping tests green
-
-Use checkboxes for each phase so they can be ticked off during implementation.
+### Step 3: Write Plan File
+- After receiving explicit user confirmation, write the plan to `.opencode/tasks/plan-name.md` (e.g., `.opencode/tasks/new-feature-plan.md`)
+- Follow the template below
+- Include proposed manual test cases grouped by file location (see Manual Test Cases section)
+- Inform the user the plan is saved and they can switch to an implementation mode
 
 ---
 
@@ -135,6 +126,8 @@ Use checkboxes for each phase so they can be ticked off during implementation.
 ## Implementation Plan
 **IMPORTANT:** For each phase, ALWAYS write test steps BEFORE implementation steps to follow TDD principles.
 
+**Include a dedicated phase for manual testing documentation**: Create/update the manual test case files in `docs/manual-testing/` following the format specified. This should be one of the implementation phases.
+
 ### Phase 1: [Name]
 - [ ] Write tests for [feature/component]
 - [ ] Implement [feature/component] to pass tests
@@ -146,6 +139,15 @@ Use checkboxes for each phase so they can be ticked off during implementation.
 ## Test Strategy
 - **Unit tests**: [What will be tested with fakes/mocks]
 - **Integration tests**: [What requires real FreeCAD]
+
+## Manual Test Cases
+Proposed manual test cases grouped by file location (following `docs/manual-testing/README.md`):
+
+### docs/manual-testing/[filename].md
+- **[Test Case Name]**: One short sentence description of the test case
+- **[Test Case Name]**: One short sentence description of the test case
+
+Only include essential test cases that require human verification (UI visual checks, UX validation, complex workflows).
 
 ## Findings & Notes
 [API exploration results, edge cases discovered, lessons learned]
@@ -229,6 +231,7 @@ After writing the plan file, inform the user that the plan is saved and they can
 - **CRITICAL:** Distinguish between unit tests (fakes/mocks) and integration tests (real FreeCAD).
 - **CRITICAL:** Address SRP, public/private interfaces, and dependency boundaries in plans.
 - **CRITICAL:** Get explicit user confirmation before writing the task plan file.
+- **CRITICAL:** Include proposed manual test cases in the plan following the format specified.
 - Work collaboratively with the user throughout the planning process.
 - Ask questions when requirements are ambiguous.
 - Present tradeoffs when multiple approaches exist.

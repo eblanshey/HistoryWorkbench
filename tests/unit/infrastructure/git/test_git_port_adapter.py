@@ -531,3 +531,270 @@ class TestGitPortAdapterIsPathInRepository:
 
         result = self.adapter.is_path_in_repository("/home/user/project", "/home/user/Project/file.py")
         assert result is False
+
+
+class TestGitPortAdapterGetStagedPaths:
+    """Tests for the get_staged_paths method of GitPortAdapter."""
+
+    def setup_method(self) -> None:
+        """Set up test fixtures before each test method."""
+        self.adapter = GitPortAdapter()
+
+    def test_get_staged_paths_returns_staged_fcstd_files(self) -> None:
+        """Test that staged .FCStd files are returned correctly.
+
+        Given a git repo with a staged .FCStd file, when get_staged_paths is called,
+        then it returns the relative path of the staged file.
+        """
+        # Simulate git status --porcelain output with staged .FCStd file
+        # Format: "<index_status><wt_status> <path>"
+        # "A " means added/staged
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout="A  path/to/document.FCStd\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result) as mock_run:
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            mock_run.assert_called_once_with(
+                ["git", "status", "--porcelain"],
+                cwd="/path/to/repo",
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            assert result == ["path/to/document.FCStd"]
+
+    def test_get_staged_paths_filters_non_fcstd_files(self) -> None:
+        """Test that non-.FCStd files are filtered out.
+
+        Given a git repo with staged .txt and .FCStd files, when get_staged_paths is called,
+        then only .FCStd files are returned.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout="A  readme.txt\nA  document.FCStd\nM  notes.md\nA  another.FCStd\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            assert result == ["document.FCStd", "another.FCStd"]
+
+    def test_get_staged_paths_returns_empty_when_nothing_staged(self) -> None:
+        """Test that empty list is returned when nothing is staged.
+
+        Given a git repo with no staged files, when get_staged_paths is called,
+        then it returns an empty list.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            assert result == []
+
+    def test_get_staged_paths_ignores_modified_not_staged(self) -> None:
+        """Test that modified but unstaged files are ignored.
+
+        Given a git repo with modified but unstaged files, when get_staged_paths is called,
+        then those files are not returned.
+
+        In porcelain format, " M file" means modified in working tree but NOT staged
+        (index position is space). Only files where index position is not space are staged.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout=" M path/to/modified.FCStd\n?? untracked.FCStd\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            # " M" means modified but NOT staged (index is space)
+            # "??" means untracked (not staged)
+            # Both should be filtered out
+            assert result == []
+
+    def test_get_staged_paths_handles_mixed_staged_and_unstaged(self) -> None:
+        """Test handling of mixed staged and unstaged files.
+
+        Given a mix of staged and unstaged files, only staged .FCStd files should be returned.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout="M  staged.FCStd\n M modified.FCStd\nA  added.FCStd\n?? new.FCStd\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            # "M " and "A " are staged, " M" and "??" are not
+            assert result == ["staged.FCStd", "added.FCStd"]
+
+    def test_get_staged_paths_timeout(self) -> None:
+        """Test handling of subprocess timeout."""
+        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            assert result == []
+
+    def test_get_staged_paths_git_not_found(self) -> None:
+        """Test handling of git command not found."""
+        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            assert result == []
+
+    def test_get_staged_paths_non_zero_exit_code(self) -> None:
+        """Test handling of non-zero exit code from git."""
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain"],
+            returncode=128,
+            stdout="",
+            stderr="fatal: not a git repository",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_staged_paths("/path/to/repo")
+
+            assert result == []
+
+
+class TestGitPortAdapterGetFileContents:
+    """Tests for the get_file_contents method of GitPortAdapter."""
+
+    def setup_method(self) -> None:
+        """Set up test fixtures before each test method."""
+        self.adapter = GitPortAdapter()
+
+    def test_get_file_contents_from_index(self) -> None:
+        """Test getting file contents from the index (staged version).
+
+        Given a git repo with a staged file, when get_file_contents is called with commit=None,
+        then it returns the file contents from the index.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "show", ":path/to/file.FCStd"],
+            returncode=0,
+            stdout="yaml content here\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result) as mock_run:
+            result = self.adapter.get_file_contents("/path/to/repo", None, "path/to/file.FCStd")
+
+            mock_run.assert_called_once_with(
+                ["git", "show", ":path/to/file.FCStd"],
+                cwd="/path/to/repo",
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            assert result == "yaml content here\n"
+
+    def test_get_file_contents_from_commit(self) -> None:
+        """Test getting file contents from a specific commit.
+
+        Given a git repo with a committed file, when get_file_contents is called with a valid commit hash,
+        then it returns the file contents from that commit.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "show", "abc123:path/to/file.FCStd"],
+            returncode=0,
+            stdout="commit content here\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result) as mock_run:
+            result = self.adapter.get_file_contents("/path/to/repo", "abc123", "path/to/file.FCStd")
+
+            mock_run.assert_called_once_with(
+                ["git", "show", "abc123:path/to/file.FCStd"],
+                cwd="/path/to/repo",
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            assert result == "commit content here\n"
+
+    def test_get_file_contents_returns_none_for_nonexistent_file(self) -> None:
+        """Test that None is returned for nonexistent file.
+
+        Given a valid git repo, when get_file_contents is called for a nonexistent file,
+        then it returns None.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "show", ":nonexistent.FCStd"],
+            returncode=128,
+            stdout="",
+            stderr="fatal: path 'nonexistent.FCStd' does not exist in index",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_file_contents("/path/to/repo", None, "nonexistent.FCStd")
+
+            assert result is None
+
+    def test_get_file_contents_returns_none_for_invalid_commit(self) -> None:
+        """Test that None is returned for invalid commit.
+
+        Given a valid git repo, when get_file_contents is called with an invalid commit,
+        then it returns None.
+        """
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "show", "invalid_commit:path/to/file.FCStd"],
+            returncode=128,
+            stdout="",
+            stderr="fatal: Invalid revision name",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_file_contents("/path/to/repo", "invalid_commit", "path/to/file.FCStd")
+
+            assert result is None
+
+    def test_get_file_contents_timeout(self) -> None:
+        """Test handling of subprocess timeout."""
+        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
+            result = self.adapter.get_file_contents("/path/to/repo", None, "path/to/file.FCStd")
+
+            assert result is None
+
+    def test_get_file_contents_git_not_found(self) -> None:
+        """Test handling of git command not found."""
+        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+            result = self.adapter.get_file_contents("/path/to/repo", None, "path/to/file.FCStd")
+
+            assert result is None
+
+    def test_get_file_contents_with_head_commit(self) -> None:
+        """Test getting file contents from HEAD commit."""
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "show", "HEAD:path/to/file.FCStd"],
+            returncode=0,
+            stdout="head content\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result):
+            result = self.adapter.get_file_contents("/path/to/repo", "HEAD", "path/to/file.FCStd")
+
+            assert result == "head content\n"

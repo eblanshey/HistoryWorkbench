@@ -306,3 +306,87 @@ class GitPortAdapter(GitPort):
         except FileNotFoundError:
             Log.warning("Git command not found")
             return False
+
+    def get_staged_paths(self, git_root: str) -> list[str]:
+        """Get staged FCStd file paths using git status --porcelain.
+
+        Filters for files that are staged in the index (position 0 status is not space).
+        Only returns files with .FCStd extension.
+
+        Args:
+            git_root: Absolute path to git repository root.
+
+        Returns:
+            List of relative paths (from git root) that are staged and are FCStd files.
+        """
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=git_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0:
+                return []
+
+            staged_paths = []
+            for line in result.stdout.split("\n"):
+                line = line.rstrip()
+                if not line:
+                    continue
+
+                # Parse porcelain format: "<index_status><wt_status> <path>"
+                if len(line) < 4:
+                    continue
+
+                index_status = line[0]
+                rel_path = line[3:].strip()
+
+                # Check if staged (index_status is not space and not untracked "?") and is FCStd file
+                if index_status not in (" ", "?") and rel_path.endswith(".FCStd"):
+                    staged_paths.append(rel_path)
+
+            return staged_paths
+
+        except subprocess.TimeoutExpired:
+            Log.warning("Git status command timed out")
+            return []
+        except FileNotFoundError:
+            Log.warning("Git command not found")
+            return []
+
+    def get_file_contents(self, git_root: str, commit: str | None, git_path: str) -> str | None:
+        """Get file contents using git show.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference or None for index.
+            git_path: Relative path within repository.
+
+        Returns:
+            File contents as string, or None if not found or error.
+        """
+        try:
+            # Get from index using :<path> syntax, or from specific commit
+            cmd = ["git", "show", f":{git_path}"] if commit is None else ["git", "show", f"{commit}:{git_path}"]
+
+            result = subprocess.run(
+                cmd,
+                cwd=git_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode == 0:
+                return result.stdout
+            return None
+
+        except subprocess.TimeoutExpired:
+            Log.warning(f"Git show command timed out for {git_path}")
+            return None
+        except FileNotFoundError:
+            Log.warning("Git command not found")
+            return None

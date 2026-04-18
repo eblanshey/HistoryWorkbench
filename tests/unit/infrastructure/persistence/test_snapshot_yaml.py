@@ -139,7 +139,7 @@ objects:
             yaml_path = Path(tmpdir) / "snapshot.yaml"
             yaml_path.write_text(yaml_content)
 
-            snapshot = SnapshotYamlSerializer.from_yaml(yaml_path)
+            snapshot = SnapshotYamlSerializer.from_yaml_file(yaml_path)
 
             # Verify snapshot metadata
             assert snapshot.snapshot_id == "test-uuid-1234"
@@ -186,7 +186,7 @@ objects:
             first_output = yaml_path.read_text()
 
             # Deserialize
-            restored_snapshot = SnapshotYamlSerializer.from_yaml(yaml_path)
+            restored_snapshot = SnapshotYamlSerializer.from_yaml_file(yaml_path)
 
             # Re-serialize
             SnapshotYamlSerializer.to_yaml(restored_snapshot, yaml_path)
@@ -236,7 +236,7 @@ objects:
             yaml_path = Path(tmpdir) / "snapshot.yaml"
             yaml_path.write_text(yaml_content)
 
-            snapshot = SnapshotYamlSerializer.from_yaml(yaml_path)
+            snapshot = SnapshotYamlSerializer.from_yaml_file(yaml_path)
 
             # Verify it's a flat list (no hierarchical children)
             assert snapshot.node_count == 4
@@ -293,7 +293,7 @@ objects: []
             yaml_path = Path(tmpdir) / "snapshot.yaml"
             yaml_path.write_text(yaml_content)
 
-            snapshot = SnapshotYamlSerializer.from_yaml(yaml_path)
+            snapshot = SnapshotYamlSerializer.from_yaml_file(yaml_path)
 
             assert snapshot.snapshot_id == "empty-uuid"
             assert snapshot.node_count == 0
@@ -341,7 +341,7 @@ objects:
             yaml_path = Path(tmpdir) / "snapshot.yaml"
             yaml_path.write_text(yaml_content)
 
-            snapshot = SnapshotYamlSerializer.from_yaml(yaml_path)
+            snapshot = SnapshotYamlSerializer.from_yaml_file(yaml_path)
             node = snapshot.nodes[0]
 
             # Verify path is stored (not parent)
@@ -474,3 +474,99 @@ objects:
             # Old object should be completely gone
             assert new_data["objects"][0]["id"] != 999
             assert "OldProp" not in new_data["objects"][0].get("properties", {})
+
+
+class TestSnapshotYamlSerializerFromYaml:
+    """Tests for refactored from_yaml (string-based) and from_yaml_file methods."""
+
+    def test_from_yaml_deserializes_from_string(self) -> None:
+        """Test: from_yaml deserializes Snapshot from YAML string."""
+        yaml_content = """v: 1
+timestamp: 2024-01-15T10:30:00+00:00
+uid: test-uuid-string
+objects:
+- id: 1
+  name: Body
+  type_id: PartDesign::Body
+  label: Body
+  path: Body
+  after: null
+  properties: {}
+- id: 2
+  name: Sketch
+  type_id: Sketcher::SketchObject
+  label: Sketch
+  path: Body/Sketch
+  after: Body
+  properties: {}
+"""
+        snapshot = SnapshotYamlSerializer.from_yaml(yaml_content)
+
+        # Verify snapshot metadata
+        assert snapshot.snapshot_id == "test-uuid-string"
+        assert snapshot.document_name == ""
+        assert snapshot.timestamp == datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC)
+
+        # Verify nodes
+        assert len(snapshot.nodes) == 2
+        body_node = snapshot.find_node_by_path("Body")
+        assert body_node is not None
+        assert body_node.id == 1
+        assert body_node.name == "Body"
+
+        sketch_node = snapshot.find_node_by_path("Body/Sketch")
+        assert sketch_node is not None
+        assert sketch_node.id == 2
+        assert sketch_node.after == "Body"
+
+    def test_from_yaml_handles_missing_timestamp(self) -> None:
+        """Test: from_yaml uses current time when timestamp is missing."""
+        yaml_content = """v: 1
+uid: no-timestamp-uuid
+objects: []
+"""
+        snapshot = SnapshotYamlSerializer.from_yaml(yaml_content)
+
+        # Should have a timestamp (current time)
+        assert snapshot.timestamp is not None
+        assert snapshot.snapshot_id == "no-timestamp-uuid"
+
+    def test_from_yaml_file_calls_from_yaml_equivalently(self) -> None:
+        """Test: from_yaml_file reads file and produces same result as from_yaml with content."""
+        yaml_content = """v: 1
+timestamp: 2024-02-20T14:00:00+00:00
+uid: file-test-uuid
+objects:
+- id: 5
+  name: TestObject
+  type_id: Part::Feature
+  label: Test
+  path: TestObject
+  after: null
+  properties:
+    Length:
+      type_: FLOAT
+      value: 42.5
+      expression: null
+      group: Base
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "snapshot.yaml"
+            yaml_path.write_text(yaml_content)
+
+            # Load using from_yaml_file
+            snapshot_from_file = SnapshotYamlSerializer.from_yaml_file(yaml_path)
+
+            # Load using from_yaml with same content
+            snapshot_from_string = SnapshotYamlSerializer.from_yaml(yaml_content)
+
+            # Both should produce equivalent snapshots
+            assert snapshot_from_file.snapshot_id == snapshot_from_string.snapshot_id
+            assert snapshot_from_file.timestamp == snapshot_from_string.timestamp
+            assert len(snapshot_from_file.nodes) == len(snapshot_from_string.nodes)
+
+            file_obj = snapshot_from_file.find_node_by_path("TestObject")
+            string_obj = snapshot_from_string.find_node_by_path("TestObject")
+            assert file_obj is not None
+            assert string_obj is not None
+            assert file_obj.id == string_obj.id

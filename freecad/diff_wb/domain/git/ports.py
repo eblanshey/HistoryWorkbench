@@ -96,3 +96,33 @@ class GitPort(Protocol):
             Empty list if repo is clean or not a git repo.
         """
         ...
+
+    def get_staged_paths(self, git_root: str) -> list[str]:
+        """Get list of staged file paths (relative from git root).
+
+        Filters for FCStd files only (files with .FCStd extension).
+
+        Args:
+            git_root: Absolute path to git repository root.
+
+        Returns:
+            List of relative paths (from git root) that are staged.
+            Empty list if no FCStd files are staged or not a git repo.
+        """
+        ...
+
+    def get_file_contents(self, git_root: str, commit: str | None, git_path: str) -> str | None:
+        """Get file contents from git at a specific commit or index.
+
+        Uses `git show` command to retrieve file contents.
+        If commit is None, retrieves from the index (staged version).
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference (hash, "HEAD", "HEAD~2", etc.) or None for index.
+            git_path: Relative path of the file within the repository.
+
+        Returns:
+            File contents as string, or None if file doesn't exist or error.
+        """
+        ...

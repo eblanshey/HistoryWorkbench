@@ -1,61 +1,51 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Tests for the get_snapshot_directory_for_document function
-# which calculates the .snapshots directory path for a given document file.
-"""Tests for snapshot path calculation."""
+# File responsibility: Unit tests for snapshot path computation functions.
+"""Unit tests for snapshot YAML path computation."""
 
 from pathlib import Path
 
-from freecad.diff_wb.domain.snapshots import get_snapshot_directory_for_document
+from freecad.diff_wb.domain.snapshots import get_snapshot_yaml_path_for_document
 
 
-def test_get_snapshot_directory_returns_correct_path():
-    """Test that get_snapshot_directory_for_document returns the correct path.
+class TestGetSnapshotYamlPathForDocument:
+    """Tests for get_snapshot_yaml_path_for_document function."""
 
-    Given a path "/home/user/project/path/to/doc.FCStd"
-    When get_snapshot_directory_for_document is called
-    Then it returns Path("/home/user/project/path/to/.snapshots")
-    """
-    # Given
-    document_path = "/home/user/project/path/to/doc.FCStd"
+    def test_returns_yaml_path_not_directory(self) -> None:
+        """Test: Returns YAML path, not directory path."""
+        document_path = "/home/user/project/path/to/mydoc.FCStd"
+        result = get_snapshot_yaml_path_for_document(document_path)
 
-    # When
-    result = get_snapshot_directory_for_document(document_path)
+        # Should return the full YAML path, not just the directory
+        expected = Path("/home/user/project/path/to/.snapshots/mydoc.yaml")
+        assert result == expected
 
-    # Then
-    assert result == Path("/home/user/project/path/to/.snapshots")
+    def test_yaml_path_in_root_directory(self) -> None:
+        """Test: Works when document is in root directory."""
+        document_path = "mydoc.FCStd"
+        result = get_snapshot_yaml_path_for_document(document_path)
 
+        expected = Path(".snapshots/mydoc.yaml")
+        assert result == expected
 
-def test_get_snapshot_directory_strips_filename():
-    """Test that the filename is stripped from the path.
+    def test_removes_extension_and_adds_yaml(self) -> None:
+        """Test: Removes original extension and adds .yaml."""
+        document_path = "/path/to/document.FCStd"
+        result = get_snapshot_yaml_path_for_document(document_path)
 
-    Given "path/to/mydoc.FCStd"
-    When get_snapshot_directory_for_document is called
-    Then the result is "path/to/.snapshots" not "path/to/mydoc.FCStd/.snapshots"
-    """
-    # Given
-    document_path = "path/to/mydoc.FCStd"
+        assert result.name == "document.yaml"
+        assert result.suffix == ".yaml"
 
-    # When
-    result = get_snapshot_directory_for_document(document_path)
+    def test_handles_nested_directories(self) -> None:
+        """Test: Handles deeply nested directory structures."""
+        document_path = "/a/b/c/d/e/f/document.FCStd"
+        result = get_snapshot_yaml_path_for_document(document_path)
 
-    # Then
-    assert result == Path("path/to/.snapshots")
-    # Ensure it's not treating the filename as a directory
-    assert "mydoc.FCStd" not in str(result)
+        expected = Path("/a/b/c/d/e/f/.snapshots/document.yaml")
+        assert result == expected
 
+    def test_preserves_document_name_with_spaces(self) -> None:
+        """Test: Preserves document name with spaces."""
+        document_path = "/path/to/my document.FCStd"
+        result = get_snapshot_yaml_path_for_document(document_path)
 
-def test_get_snapshot_directory_file_in_root():
-    """Test handling of files in root directory.
-
-    Given "mydoc.FCStd" (no directory component)
-    When get_snapshot_directory_for_document is called
-    Then it returns ".snapshots" (in current directory)
-    """
-    # Given
-    document_path = "mydoc.FCStd"
-
-    # When
-    result = get_snapshot_directory_for_document(document_path)
-
-    # Then
-    assert result == Path(".snapshots")
+        assert result.name == "my document.yaml"

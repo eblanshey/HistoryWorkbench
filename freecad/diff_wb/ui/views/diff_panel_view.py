@@ -581,9 +581,6 @@ class DiffPanelView(QWidget):
             # Build top-level text (no emoji - icon will be shown separately)
             top_level_text = diff.git_path or "Unnamed Document"
 
-            # Prepare warning text for tooltip (newline-separated)
-            warning_tooltip = "\n".join(diff.warnings) if diff.warnings else ""
-
             # Create root item
             root_item = QTreeWidgetItem([top_level_text])
             # Store git_path in root item's UserRole for later retrieval when children are clicked
@@ -597,12 +594,8 @@ class DiffPanelView(QWidget):
             # Add text label
             layout.addWidget(QLabel(top_level_text))
 
-            # Add warning icon label if warnings exist
-            if diff.warnings and _WARNING_ICON is not None:
-                warning_icon_label = QLabel()
-                warning_icon_label.setPixmap(_WARNING_ICON.pixmap(16, 16))
-                warning_icon_label.setToolTip(warning_tooltip)
-                layout.addWidget(warning_icon_label)
+            # Add warning indicators
+            self._add_warning_indicators(layout, diff.warnings, not diff.nodes)
 
             layout.addStretch()
 
@@ -628,7 +621,7 @@ class DiffPanelView(QWidget):
             self.tree_widget.addTopLevelItem(root_item)
             self.tree_widget.setItemWidget(root_item, 0, container)
 
-            # Add child nodes from hierarchy
+            # Add child nodes from hierarchy (if any)
             for node in diff.nodes:
                 item = self._create_tree_item(node)
                 root_item.addChild(item)
@@ -638,6 +631,34 @@ class DiffPanelView(QWidget):
 
         # Ensure tree widget is visible
         self.tree_widget.show()
+
+    def _add_warning_indicators(self, layout: QHBoxLayout, warnings: list[str], show_text: bool) -> None:
+        """Add warning icon and optionally text to the layout.
+
+        Args:
+            layout: The QHBoxLayout to add widgets to.
+            warnings: List of warning strings to display.
+            show_text: If True, display warning text prominently (for flat items).
+        """
+        if not warnings:
+            return
+
+        # Prepare warning text for tooltip (newline-separated)
+        warning_tooltip = "\n".join(warnings)
+
+        # Add warning icon if available
+        if _WARNING_ICON is not None:
+            warning_icon_label = QLabel()
+            warning_icon_label.setPixmap(_WARNING_ICON.pixmap(16, 16))
+            warning_icon_label.setToolTip(warning_tooltip)
+            layout.addWidget(warning_icon_label)
+
+        # For flat warning items (empty nodes), display warning text prominently
+        if show_text:
+            for warning in warnings:
+                warning_label = QLabel(warning)
+                warning_label.setStyleSheet("color: orange; font-style: italic;")
+                layout.addWidget(warning_label)
 
     def _on_add_button_clicked(self, git_path: str) -> None:
         """Handle '+ Stage' button click by invoking the callback.

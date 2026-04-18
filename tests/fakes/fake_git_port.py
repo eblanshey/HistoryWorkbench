@@ -20,6 +20,8 @@ class FakeGitPort:
     Attributes:
         _git_roots: Dictionary mapping paths to their git root paths.
         _commits: Dictionary mapping repo paths to lists of GitCommit objects.
+        _staged_paths: List of staged paths for get_staged_paths.
+        _file_contents: Mapping of (commit, git_path) to file contents.
     """
 
     def __init__(self, fail_stage: bool = False) -> None:
@@ -34,6 +36,10 @@ class FakeGitPort:
         self._commits: dict[str, list[GitCommit]] = {}
         # Flag to simulate staging failures
         self._fail_stage = fail_stage
+        # Staged paths for get_staged_paths
+        self._staged_paths: list[str] = []
+        # File contents mapping: (commit, git_path) -> content
+        self._file_contents: dict[tuple[str | None, str], str] = {}
 
     def add_git_repo(self, root_path: str) -> None:
         """Add a simulated git repository root.
@@ -212,3 +218,30 @@ class FakeGitPort:
             Empty list (simulating a clean repository).
         """
         return []
+
+    def get_staged_paths(self, git_root: str) -> list[str]:
+        """Fake implementation of get_staged_paths for testing.
+
+        Args:
+            git_root: Absolute path to git repository root.
+
+        Returns:
+            List of staged paths configured via _staged_paths.
+        """
+        return self._staged_paths
+
+    def get_file_contents(self, git_root: str, commit: str | None, git_path: str) -> str | None:
+        """Fake implementation of get_file_contents for testing.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference or None for index.
+            git_path: Relative path within repository.
+
+        Returns:
+            File contents if configured, None otherwise.
+        """
+        key = (commit, git_path)
+        if key in self._file_contents:
+            return self._file_contents[key]
+        return None

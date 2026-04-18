@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Application action for creating snapshot from a git commit (STUB).
-# This module provides the CreateDocumentSnapshotForCommitAction which is a placeholder
-# for creating Snapshots from documents at specific git commits. Currently returns None
-# and will be fully implemented in Phase 7.
-"""Application action for creating snapshot from a git commit (STUB)."""
+# File responsibility: Application action for creating snapshot from git commit or index.
+"""Application action for creating snapshot from a git commit or index."""
 
 from ...domain.git.git_service import GitService
 from ...domain.git.models import GitRepository
+from ...domain.snapshots import get_snapshot_yaml_path_for_document
+from ...infrastructure.persistence.snapshot_yaml import SnapshotYamlSerializer
 from ...utils import Log
 from .result_models import Result
 
@@ -15,36 +14,50 @@ __all__ = ["CreateDocumentSnapshotForCommitAction"]
 
 
 class CreateDocumentSnapshotForCommitAction:
-    """Create a snapshot from a document at a specific git commit.
+    """Create a snapshot from a document at a specific git commit or from the index.
 
-    This is a stub implementation that currently returns None. Phase 7 will implement
-    the full functionality to extract a document from a git commit by:
-    - Checking out the file content at the specified commit
-    - Loading it into a temporary FreeCAD document
-    - Extracting a Snapshot using the SnapshotExtractor
+    This extracts the YAML snapshot file from git (either from the index or a specific
+    commit) and deserializes it to create a Snapshot object.
     """
 
     def __init__(self, git_service: GitService) -> None:
-        """Initialize the action with a GitService.
-
-        Note: GitService is injected but not used in this stub. It will be required
-        in Phase 7 for checking out files from git commits.
+        """Initialize with GitService.
 
         Args:
-            git_service: GitService instance for git operations (Phase 7).
+            git_service: GitService for git operations.
         """
         self._git_service = git_service
 
-    def execute(self, repo: GitRepository, commit: str | None, git_path: str) -> Result:
-        """STUB: Always returns None until Phase 7 implementation.
+    def execute(self, repo: GitRepository, commit: str | None, fcstd_git_path: str) -> Result:
+        """Create a snapshot from a git commit or index.
+
+        When `commit` is None, retrieves the YAML snapshot from the git index.
+        When `commit` is specified, retrieves from that commit.
+
+        The `fcstd_git_path` is the path to the FCStd file (e.g., "path/to/mydoc.FCStd").
+        This action computes the corresponding YAML snapshot path internally.
 
         Args:
             repo: GitRepository containing the document.
-            commit: Git commit hash to extract the document from. None for working tree.
-            git_path: Relative path of the document within the repository.
+            commit: Git commit reference or None for index.
+            fcstd_git_path: Relative path of the FCStd file within the repository.
 
         Returns:
-            Result containing None (stub implementation).
+            Result containing Snapshot if found, None if file doesn't exist.
         """
-        Log.debug(f"CreateDocumentSnapshotForCommitAction stub invoked for {git_path}")
-        return Result.success(None)
+        # Compute the YAML snapshot path from the FCStd git_path
+        yaml_git_path = str(get_snapshot_yaml_path_for_document(fcstd_git_path))
+
+        # Get file contents from git
+        yaml_contents = self._git_service.get_file_contents(repo, commit, yaml_git_path)
+
+        if yaml_contents is None:
+            Log.debug(f"No snapshot found in index for {yaml_git_path}")
+            return Result.success(None)
+
+        try:
+            snapshot = SnapshotYamlSerializer.from_yaml(yaml_contents)
+            return Result.success(snapshot)
+        except Exception as e:
+            Log.exception(f"Failed to deserialize snapshot for {yaml_git_path}: {e}")
+            return Result.failure(f"Failed to deserialize snapshot: {e}")

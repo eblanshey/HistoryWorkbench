@@ -6,11 +6,10 @@
 """Application action for staging documents to git."""
 
 import os
-from pathlib import Path
 
 from ...domain.git.git_service import GitService
 from ...domain.git.models import GitRepository
-from ...domain.snapshots import get_snapshot_directory_for_document
+from ...domain.snapshots import get_snapshot_yaml_path_for_document
 from ...domain.snapshots.models import Snapshot
 from ...infrastructure.persistence.snapshot_yaml import SnapshotYamlSerializer
 from ...utils import Log
@@ -53,23 +52,17 @@ class StageDocumentsAction:
                 Log.warning(f"Snapshot has no git_path, cannot stage: {snapshot.document_name}")
                 continue
 
-            # Compute full path to the FCStd file
-            fcstd_path = Path(repo.absolute_path) / git_path
+            # Get the yaml path (relative to git_path) and make it absolute
+            yaml_path_relative = get_snapshot_yaml_path_for_document(git_path)
+            yaml_path = repo.absolute_path / yaml_path_relative
 
-            # Get the snapshot directory using the pure function
-            snapshot_dir = get_snapshot_directory_for_document(str(fcstd_path))
-
-            # Create snapshot directory if it doesn't exist
+            # Create snapshot directory if it doesn't exist (use parent of yaml path)
+            snapshot_dir = yaml_path.parent
             try:
                 snapshot_dir.mkdir(parents=True, exist_ok=True)
             except OSError as e:
                 Log.exception(f"Failed to create snapshot directory {snapshot_dir}: {e}")
                 return Result.failure(f"Failed to create snapshot directory: {e}")
-
-            # Determine YAML filename (use document name without extension)
-            doc_name = os.path.splitext(os.path.basename(git_path))[0]
-            yaml_filename = f"{doc_name}.yaml"
-            yaml_path = snapshot_dir / yaml_filename
 
             # Persist snapshot to YAML
             try:
@@ -81,8 +74,8 @@ class StageDocumentsAction:
 
             # Collect paths to stage (relative to git root)
             all_paths_to_stage.append(git_path)  # The FCStd file
-            # The YAML path is absolute, convert to relative
-            yaml_relative = str(yaml_path)[len(repo.absolute_path) :].lstrip("/")
+            # Convert yaml_path to relative from repo root
+            yaml_relative = os.path.relpath(yaml_path, repo.absolute_path)
             all_paths_to_stage.append(yaml_relative)
 
         # Stage all files

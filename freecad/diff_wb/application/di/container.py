@@ -27,6 +27,7 @@ from ..actions.find_active_git_repository import FindActiveGitRepositoryAction
 from ..actions.get_commits import GetCommitsAction
 from ..actions.get_dirty_documents import GetDirtyDocumentsAction
 from ..actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
+from ..actions.get_staged_file_paths import GetStagedFilePathsAction
 from ..actions.queries.list_snapshots import ListSnapshotsAction
 from ..actions.stage_documents import StageDocumentsAction
 
@@ -64,6 +65,7 @@ class ApplicationContainer:
     create_diff_action: CreateDiffAction
     stage_documents_action: StageDocumentsAction
     get_dirty_documents_action: GetDirtyDocumentsAction
+    get_staged_file_paths_action: GetStagedFilePathsAction
 
     # Git components (domain layer)
     git_port: GitPort
@@ -162,6 +164,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
     create_diff_action = CreateDiffAction(diff_engine=diff_engine)
     stage_documents_action = StageDocumentsAction(git_service=git_service)
     get_dirty_documents_action = GetDirtyDocumentsAction(git_service=git_service)
+    get_staged_file_paths_action = GetStagedFilePathsAction(git_service=git_service)
 
     return ApplicationContainer(
         _freecad_port=freecad_port,
@@ -175,6 +178,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         create_diff_action=create_diff_action,
         stage_documents_action=stage_documents_action,
         get_dirty_documents_action=get_dirty_documents_action,
+        get_staged_file_paths_action=get_staged_file_paths_action,
         git_port=git_port,
         git_service=git_service,
         find_active_git_repository_action=find_active_git_repository_action,

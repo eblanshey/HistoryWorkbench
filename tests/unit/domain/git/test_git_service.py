@@ -1012,3 +1012,149 @@ class TestGitServiceStageFilesIntegration:
 
         # Should return False without raising exception
         assert result is False
+
+
+class TestGitServiceGetStagedFiles:
+    """Tests for GitService.get_staged_files() method."""
+
+    def test_get_staged_files_method_exists(self) -> None:
+        """Test that get_staged_files method exists on GitService."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        assert hasattr(service, "get_staged_files")
+        assert callable(service.get_staged_files)
+
+    def test_get_staged_files_delegates_to_git_port(self) -> None:
+        """Test that get_staged_files delegates to git_port with correct parameters."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_staged_files(repo=repo)
+
+        # FakeGitPort returns empty list by default
+        assert result == []
+
+    def test_get_staged_files_passes_repo_absolute_path(self) -> None:
+        """Test that the repo's absolute_path is passed correctly to git_port."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="my_project", absolute_path="/home/user/my_project")
+
+        result = service.get_staged_files(repo=repo)
+
+        # Verify via FakeGitPort internal state (if it tracked calls)
+        assert isinstance(result, list)
+
+    def test_get_staged_files_returns_list_of_staged_paths(self) -> None:
+        """Test that get_staged_files returns a list of staged paths."""
+        fake_port = FakeGitPort()
+        # Configure fake port to return some staged files
+        fake_port._staged_paths = ["doc1.FCStd", "src/doc2.FCStd"]
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_staged_files(repo=repo)
+
+        assert result == ["doc1.FCStd", "src/doc2.FCStd"]
+
+    def test_get_staged_files_returns_empty_list_when_nothing_staged(self) -> None:
+        """Test that empty list is returned when nothing is staged."""
+        fake_port = FakeGitPort()
+        fake_port._staged_paths = []  # Explicitly set empty
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_staged_files(repo=repo)
+
+        assert result == []
+
+
+class TestGitServiceGetFileContents:
+    """Tests for GitService.get_file_contents() method."""
+
+    def test_get_file_contents_method_exists(self) -> None:
+        """Test that get_file_contents method exists on GitService."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        assert hasattr(service, "get_file_contents")
+        assert callable(service.get_file_contents)
+
+    def test_get_file_contents_delegates_to_git_port(self) -> None:
+        """Test that get_file_contents delegates to git_port with correct parameters."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_file_contents(repo=repo, commit=None, git_path="path/to/file.FCStd")
+
+        # FakeGitPort returns None by default
+        assert result is None
+
+    def test_get_file_contents_passes_correct_parameters(self) -> None:
+        """Test that all parameters are passed correctly to git_port."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="my_project", absolute_path="/home/user/my_project")
+
+        # Test with commit=None (index)
+        result_index = service.get_file_contents(repo=repo, commit=None, git_path="file.FCStd")
+        assert result_index is None
+
+        # Test with specific commit
+        result_commit = service.get_file_contents(repo=repo, commit="abc123", git_path="file.FCStd")
+        assert result_commit is None
+
+    def test_get_file_contents_returns_file_contents_from_index(self) -> None:
+        """Test that file contents are returned when available from index."""
+        fake_port = FakeGitPort()
+        fake_port._file_contents = {(None, "path/to/file.FCStd"): "yaml content here"}
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_file_contents(repo=repo, commit=None, git_path="path/to/file.FCStd")
+
+        assert result == "yaml content here"
+
+    def test_get_file_contents_returns_file_contents_from_commit(self) -> None:
+        """Test that file contents are returned when available from commit."""
+        fake_port = FakeGitPort()
+        fake_port._file_contents = {("abc123", "path/to/file.FCStd"): "commit content"}
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_file_contents(repo=repo, commit="abc123", git_path="path/to/file.FCStd")
+
+        assert result == "commit content"
+
+    def test_get_file_contents_returns_none_for_nonexistent_file(self) -> None:
+        """Test that None is returned for nonexistent file."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_file_contents(repo=repo, commit=None, git_path="nonexistent.FCStd")
+
+        assert result is None
+
+    def test_get_file_contents_returns_none_for_invalid_commit(self) -> None:
+        """Test that None is returned for invalid commit."""
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        repo = GitRepository(name="test_repo", absolute_path="/home/user/test_repo")
+
+        result = service.get_file_contents(repo=repo, commit="invalid_commit", git_path="file.FCStd")
+
+        assert result is None

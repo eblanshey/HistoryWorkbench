@@ -124,3 +124,27 @@ class GitService:
             True if staging succeeded, False otherwise.
         """
         return self._git_port.stage_files(repo.absolute_path, paths)
+
+    def get_staged_files(self, repo: GitRepository) -> list[str]:
+        """Get list of staged FCStd file paths.
+
+        Args:
+            repo: GitRepository to check.
+
+        Returns:
+            List of relative paths (from git root) of staged FCStd files.
+        """
+        return self._git_port.get_staged_paths(repo.absolute_path)
+
+    def get_file_contents(self, repo: GitRepository, commit: str | None, git_path: str) -> str | None:
+        """Get file contents from git at a specific commit or index.
+
+        Args:
+            repo: GitRepository to get file from.
+            commit: Commit reference or None for index.
+            git_path: Relative path within repository.
+
+        Returns:
+            File contents as string, or None if not found.
+        """
+        return self._git_port.get_file_contents(repo.absolute_path, commit, git_path)

@@ -1,59 +1,108 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Unit tests for CreateDocumentSnapshotForCommitAction stub implementation.
-# Tests verify that the stub action returns Result with None and accepts the correct parameters.
+# File responsibility: Unit tests for CreateDocumentSnapshotForCommitAction application action.
 """Unit tests for CreateDocumentSnapshotForCommitAction."""
+
+from unittest.mock import MagicMock
 
 from freecad.diff_wb.application.actions.create_document_snapshot_commit import (
     CreateDocumentSnapshotForCommitAction,
 )
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.domain.git.models import GitRepository
-from tests.fakes.fake_git_port import FakeGitPort
+from freecad.diff_wb.domain.snapshots import Snapshot
 
 
-class TestCreateDocumentSnapshotForCommitActionStub:
-    """Tests for the stub implementation of CreateDocumentSnapshotForCommitAction."""
+class TestCreateDocumentSnapshotForCommitAction:
+    """Tests for CreateDocumentSnapshotForCommitAction class."""
 
-    def test_execute_returns_result_with_none_for_stub(self) -> None:
-        """Test that action returns Result with None (for stub implementation)."""
-        # Setup
-        fake_git_port = FakeGitPort()
-        git_service = GitService(fake_git_port)
-        repo = GitRepository(name="my_project", absolute_path="/home/user/my_project")
-        action = CreateDocumentSnapshotForCommitAction(git_service)
+    def test_execute_with_commit_none_returns_index_snapshot(self) -> None:
+        """Test: Execute with commit=None returns snapshot from index."""
+        # Given a GitService that returns YAML content from index
+        mock_git_service = MagicMock(spec=GitService)
+        yaml_content = """v: 1
+timestamp: 2024-01-15T10:30:00+00:00
+uid: test-uuid-index
+objects:
+- id: 1
+  name: Body
+  type_id: PartDesign::Body
+  label: Body
+  path: Body
+  after: null
+  properties: {}
+"""
+        mock_git_service.get_file_contents.return_value = yaml_content
 
-        # Execute
-        result = action.execute(repo, "abc123", "src/doc.FCStd")
+        action = CreateDocumentSnapshotForCommitAction(git_service=mock_git_service)
+        repo = GitRepository(name="test-repo", absolute_path="/path/to/repo")
 
-        # Assert
+        # When execute is called with commit=None and fcstd_git_path
+        result = action.execute(repo, None, "path/to/doc.FCStd")
+
+        # Then the snapshot is created from the index content
+        assert result.is_success is True
+        assert result.data is not None
+        assert isinstance(result.data, Snapshot)
+        assert result.data.snapshot_id == "test-uuid-index"
+        assert len(result.data.nodes) == 1
+
+    def test_execute_with_commit_hash_returns_commit_snapshot(self) -> None:
+        """Test: Execute with commit hash returns snapshot from that commit."""
+        # Given a GitService that returns YAML content from HEAD
+        mock_git_service = MagicMock(spec=GitService)
+        yaml_content = """v: 1
+timestamp: 2024-02-20T14:00:00+00:00
+uid: test-uuid-commit
+objects:
+- id: 2
+  name: Sketch
+  type_id: Sketcher::SketchObject
+  label: Sketch
+  path: Body/Sketch
+  after: Body
+  properties: {}
+"""
+        mock_git_service.get_file_contents.return_value = yaml_content
+
+        action = CreateDocumentSnapshotForCommitAction(git_service=mock_git_service)
+        repo = GitRepository(name="test-repo", absolute_path="/path/to/repo")
+
+        # When execute is called with commit="HEAD"
+        result = action.execute(repo, "HEAD", "path/to/doc.FCStd")
+
+        # Then the snapshot is created from that commit's content
+        assert result.is_success is True
+        assert result.data is not None
+        assert result.data.snapshot_id == "test-uuid-commit"
+
+    def test_execute_returns_none_when_no_content(self) -> None:
+        """Test: Execute returns None when file doesn't exist in git."""
+        # Given a GitService that returns None
+        mock_git_service = MagicMock(spec=GitService)
+        mock_git_service.get_file_contents.return_value = None
+
+        action = CreateDocumentSnapshotForCommitAction(git_service=mock_git_service)
+        repo = GitRepository(name="test-repo", absolute_path="/path/to/repo")
+
+        # When execute is called
+        result = action.execute(repo, None, "path/to/nonexistent.FCStd")
+
+        # Then Result.success(None) is returned
         assert result.is_success is True
         assert result.data is None
-        assert result.message is None
 
-    def test_action_signature_accepts_repo_commit_git_path_parameters(self) -> None:
-        """Test that action signature accepts repo, commit, git_path parameters."""
-        # Setup
-        fake_git_port = FakeGitPort()
-        git_service = GitService(fake_git_port)
-        repo = GitRepository(name="my_project", absolute_path="/home/user/my_project")
-        action = CreateDocumentSnapshotForCommitAction(git_service)
+    def test_execute_returns_failure_on_deserialization_error(self) -> None:
+        """Test: Execute returns failure when YAML deserialization fails."""
+        # Given a GitService that returns invalid YAML
+        mock_git_service = MagicMock(spec=GitService)
+        mock_git_service.get_file_contents.return_value = "invalid: yaml: content: ["
 
-        # Execute - verify all parameters are accepted
-        result = action.execute(repo=repo, commit="def456", git_path="path/to/file.FCStd")
+        action = CreateDocumentSnapshotForCommitAction(git_service=mock_git_service)
+        repo = GitRepository(name="test-repo", absolute_path="/path/to/repo")
 
-        # Assert - should return success with None data
-        assert result.is_success is True
-        assert result.data is None
+        # When execute is called
+        result = action.execute(repo, None, "path/to/doc.FCStd")
 
-
-class TestCreateDocumentSnapshotForCommitActionDependencies:
-    """Tests for action dependency injection and initialization."""
-
-    def test_action_accepts_and_stores_git_service_dependency(self) -> None:
-        """Test that action can be initialized with and stores GitService dependency."""
-        fake_git_port = FakeGitPort()
-        git_service = GitService(fake_git_port)
-
-        action = CreateDocumentSnapshotForCommitAction(git_service)
-
-        assert action._git_service is git_service
+        # Then Result.failure is returned
+        assert result.is_success is False
+        assert "Failed to deserialize snapshot" in result.message

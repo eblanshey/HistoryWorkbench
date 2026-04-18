@@ -68,18 +68,42 @@ class SnapshotYamlSerializer:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @staticmethod
-    def from_yaml(path: Path) -> Snapshot:
-        """Deserialize a Snapshot from YAML format.
+    def from_yaml_file(path: Path) -> Snapshot:
+        """Deserialize a Snapshot from a YAML file.
 
         Args:
-            path: The path to read the YAML file from
+            path: The path to read the YAML file from.
 
         Returns:
-            The deserialized Snapshot object
+            The deserialized Snapshot object.
         """
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
+        return SnapshotYamlSerializer._from_data(data)
 
+    @staticmethod
+    def from_yaml(yaml_string: str) -> Snapshot:
+        """Deserialize a Snapshot from a YAML string.
+
+        Args:
+            yaml_string: The YAML content as a string.
+
+        Returns:
+            The deserialized Snapshot object.
+        """
+        data = yaml.safe_load(yaml_string)
+        return SnapshotYamlSerializer._from_data(data)
+
+    @staticmethod
+    def _from_data(data: dict[str, Any]) -> Snapshot:
+        """Deserialize a Snapshot from parsed YAML data.
+
+        Args:
+            data: The parsed YAML dictionary.
+
+        Returns:
+            The deserialized Snapshot object.
+        """
         # Parse timestamp (yaml.safe_load may parse ISO strings as datetime objects)
         timestamp_raw = data.get("timestamp")
         if isinstance(timestamp_raw, datetime):

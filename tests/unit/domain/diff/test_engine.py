@@ -23,7 +23,7 @@ from freecad.diff_wb.domain.tree.node import TreeNode
 class TestDiffState:
     """Tests for the DiffState enum."""
 
-    def test_states_exist(self):
+    def test_states_exist(self) -> None:
         """Test that all states exist."""
         assert DiffState.ADDED is not None
         assert DiffState.DELETED is not None
@@ -34,21 +34,21 @@ class TestDiffState:
 class TestPropertyDiff:
     """Tests for the PropertyDiff class."""
 
-    def test_added_property(self):
+    def test_added_property(self) -> None:
         """Test added property diff - state auto-calculated."""
         new_val = Property.create(PropertyType.FLOAT, 10.0)
         diff = PropertyDiff(property_name="Length", old_value=None, new_value=new_val)
         assert diff.state == DiffState.ADDED
         assert "+10.0" in str(diff)
 
-    def test_deleted_property(self):
+    def test_deleted_property(self) -> None:
         """Test deleted property diff - state auto-calculated."""
         old_val = Property.create(PropertyType.FLOAT, 5.0)
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=None)
         assert diff.state == DiffState.DELETED
         assert "-5.0" in str(diff)
 
-    def test_modified_property(self):
+    def test_modified_property(self) -> None:
         """Test modified property diff - state auto-calculated."""
         old_val = Property.create(PropertyType.FLOAT, 5.0)
         new_val = Property.create(PropertyType.FLOAT, 10.0)
@@ -56,7 +56,7 @@ class TestPropertyDiff:
         assert diff.state == DiffState.MODIFIED
         assert "5.0 -> 10.0" in str(diff)
 
-    def test_unchanged_property(self):
+    def test_unchanged_property(self) -> None:
         """Test unchanged property diff - state auto-calculated."""
         val = Property.create(PropertyType.FLOAT, 10.0)
         diff = PropertyDiff(property_name="Length", old_value=val, new_value=val)
@@ -66,14 +66,14 @@ class TestPropertyDiff:
     # Expression Change Tests in PropertyDiff
     # =====================================================================
 
-    def test_expression_only_change_detected(self):
+    def test_expression_only_change_detected(self) -> None:
         """Test that expression-only change shows as UNCHANGED (expression tracked separately)."""
         old_val = Property.create(PropertyType.FLOAT, 10.0)
         new_val = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch001.X")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
-    def test_value_only_change_detected(self):
+    def test_value_only_change_detected(self) -> None:
         """Test that value-only change is detected as modified."""
         old_val = Property.create(PropertyType.INT, 10, expression="Sketch001.Count")
         new_val = Property.create(PropertyType.INT, 20, expression="Sketch001.Count")
@@ -84,7 +84,7 @@ class TestPropertyDiff:
         assert "10" in str(diff)
         assert "20" in str(diff)
 
-    def test_both_expression_and_value_change(self):
+    def test_both_expression_and_value_change(self) -> None:
         """Test that both expression and value change is detected."""
         old_val = Property.create(PropertyType.FLOAT, 5.0, expression="Sketch001.X")
         new_val = Property.create(PropertyType.FLOAT, 15.0, expression="Sketch002.Y")
@@ -94,21 +94,21 @@ class TestPropertyDiff:
         assert "5.0" in str(diff)
         assert "15.0" in str(diff)
 
-    def test_expression_changed_to_none(self):
+    def test_expression_changed_to_none(self) -> None:
         """Test that removing expression with same value shows UNCHANGED."""
         old_val = Property.create(PropertyType.STRING, "test", expression="Doc.Name")
         new_val = Property.create(PropertyType.STRING, "test")
         diff = PropertyDiff(property_name="Name", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
-    def test_expression_added_from_none(self):
+    def test_expression_added_from_none(self) -> None:
         """Test that adding expression with same value shows UNCHANGED."""
         old_val = Property.create(PropertyType.INT, 42)
         new_val = Property.create(PropertyType.INT, 42, expression="Some.Expr")
         diff = PropertyDiff(property_name="Value", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
-    def test_different_expressions_same_value(self):
+    def test_different_expressions_same_value(self) -> None:
         """Test different expressions with same value shows UNCHANGED."""
         old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch001.X")
         new_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch002.X")
@@ -119,14 +119,14 @@ class TestPropertyDiff:
 class TestNodeDiff:
     """Tests for the NodeDiff class."""
 
-    def test_creation(self):
+    def test_creation(self) -> None:
         """Test node diff creation - state auto-calculated from empty property_diffs and children."""
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad")
         assert diff.path == "Body/Pad"
         # With no property diffs or children, state should be UNCHANGED
         assert diff.state == DiffState.UNCHANGED
 
-    def test_state_auto_calculated_from_property_diffs(self):
+    def test_state_auto_calculated_from_property_diffs(self) -> None:
         """Test that state is auto-calculated based on property diffs."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -138,13 +138,13 @@ class TestNodeDiff:
         assert diff.state == DiffState.MODIFIED
         assert diff.has_changes is True
 
-    def test_state_auto_calculated_unchanged(self):
+    def test_state_auto_calculated_unchanged(self) -> None:
         """Test that state is UNCHANGED when no property diffs."""
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[])
         assert diff.state == DiffState.UNCHANGED
         assert diff.has_changes is False
 
-    def test_has_changes_with_property_diffs(self):
+    def test_has_changes_with_property_diffs(self) -> None:
         """Test has_changes when there are property diffs."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -154,7 +154,7 @@ class TestNodeDiff:
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
         assert diff.has_changes is True
 
-    def test_changed_properties(self):
+    def test_changed_properties(self) -> None:
         """Test getting only changed properties."""
         changed = PropertyDiff(
             property_name="Length",
@@ -175,7 +175,7 @@ class TestNodeDiff:
 class TestDiffResult:
     """Tests for the DiffResult class."""
 
-    def test_creation_with_snapshots(self):
+    def test_creation_with_snapshots(self) -> None:
         """Test DiffResult created with old_snapshot and new_snapshot parameters."""
         old_snapshot = Snapshot(
             snapshot_id="old-id",
@@ -193,7 +193,7 @@ class TestDiffResult:
         assert diff.old_snapshot is old_snapshot
         assert diff.new_snapshot is new_snapshot
 
-    def test_warnings_initialized_empty_by_default(self):
+    def test_warnings_initialized_empty_by_default(self) -> None:
         """Test warnings list is initialized empty by default."""
         old_snapshot = Snapshot(
             snapshot_id="old-id",
@@ -210,7 +210,7 @@ class TestDiffResult:
         diff = DiffResult(old_snapshot=old_snapshot, new_snapshot=new_snapshot)
         assert diff.warnings == []
 
-    def test_same_snapshot_instance_has_no_warning(self):
+    def test_same_snapshot_instance_has_no_warning(self) -> None:
         """Test same snapshot instance for old/new does not trigger warning."""
         snapshot = Snapshot(
             snapshot_id="same-id",
@@ -221,7 +221,7 @@ class TestDiffResult:
         diff = DiffResult(old_snapshot=snapshot, new_snapshot=snapshot)
         assert len(diff.warnings) == 0
 
-    def test_warnings_can_contain_multiple_strings(self):
+    def test_warnings_can_contain_multiple_strings(self) -> None:
         """Test warnings can contain multiple strings."""
         old_snapshot = Snapshot(
             snapshot_id="old-id",
@@ -244,7 +244,7 @@ class TestDiffResult:
         assert "Warning 1" in diff.warnings
         assert "Warning 2" in diff.warnings
 
-    def test_has_changes_false(self):
+    def test_has_changes_false(self) -> None:
         """Test has_changes when no changes."""
         old_snapshot = Snapshot(
             snapshot_id="old-id",
@@ -261,7 +261,7 @@ class TestDiffResult:
         diff = DiffResult(old_snapshot=old_snapshot, new_snapshot=new_snapshot)
         assert diff.has_changes is False
 
-    def test_has_changes_true(self):
+    def test_has_changes_true(self) -> None:
         """Test has_changes when there are changes."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -286,7 +286,7 @@ class TestDiffResult:
         diff = DiffResult(old_snapshot=old_snapshot, new_snapshot=new_snapshot, hierarchy=hierarchy)
         assert diff.has_changes is True
 
-    def test_get_all_changed_paths(self):
+    def test_get_all_changed_paths(self) -> None:
         """Test getting all changed paths."""
         child_prop = PropertyDiff(
             property_name="Width",
@@ -327,7 +327,7 @@ class TestDiffResult:
 class TestDiffEngineComputeDiff:
     """Tests for DiffEngine.compute_diff() with flat Snapshot structure."""
 
-    def test_compute_diff_with_empty_snapshots(self):
+    def test_compute_diff_with_empty_snapshots(self) -> None:
         """Test compute_diff with empty snapshots returns empty result."""
         old_snapshot = Snapshot(
             snapshot_id=str(uuid.uuid4()),
@@ -350,7 +350,7 @@ class TestDiffEngineComputeDiff:
         assert result.hierarchy.roots == []
         assert result.has_changes is False
 
-    def test_compute_diff_detect_added_node(self):
+    def test_compute_diff_detect_added_node(self) -> None:
         """Test compute_diff detects added nodes with flat structure."""
         old_snapshot = Snapshot(
             snapshot_id=str(uuid.uuid4()),
@@ -381,7 +381,7 @@ class TestDiffEngineComputeDiff:
         # The new node should appear as added
         assert len(result.hierarchy.roots) > 0
 
-    def test_compute_diff_detect_deleted_node(self):
+    def test_compute_diff_detect_deleted_node(self) -> None:
         """Test compute_diff detects deleted nodes with flat structure."""
         old_node = TreeNode(
             id=1,
@@ -410,7 +410,7 @@ class TestDiffEngineComputeDiff:
 
         assert result.has_changes is True
 
-    def test_compute_diff_detect_modified_node(self):
+    def test_compute_diff_detect_modified_node(self) -> None:
         """Test compute_diff detects modified nodes with flat structure."""
         from freecad.diff_wb.domain import Property
 
@@ -453,7 +453,7 @@ class TestDiffEngineComputeDiff:
         node_diff = result.hierarchy.roots[0]
         assert len(node_diff.property_diffs) > 0
 
-    def test_compute_diff_with_nested_flat_nodes(self):
+    def test_compute_diff_with_nested_flat_nodes(self) -> None:
         """Test compute_diff with flat nested nodes structure."""
         # Old snapshot with parent and child
         old_parent = TreeNode(
@@ -513,7 +513,7 @@ class TestDiffEngineComputeDiff:
         # No changes expected
         assert result.has_changes is False
 
-    def test_compute_diff_filters_excluded_types(self):
+    def test_compute_diff_filters_excluded_types(self) -> None:
         """Test compute_diff filters out excluded node types."""
 
         class MockSettingsRepo:
@@ -555,7 +555,7 @@ class TestDiffEngineComputeDiff:
 class TestDiffEngineComputeDiffWithNone:
     """Tests for DiffEngine.compute_diff() when old snapshot is None."""
 
-    def test_compute_diff_with_none_old_snapshot(self):
+    def test_compute_diff_with_none_old_snapshot(self) -> None:
         """Test compute_diff with None for old snapshot adds appropriate warning."""
         new_snapshot = Snapshot(
             snapshot_id=str(uuid.uuid4()),
@@ -578,7 +578,7 @@ class TestDiffEngineComputeDiffWithNone:
 class TestDiffEngineComputeDiffWithSettings:
     """Tests for DiffEngine.compute_diff() with custom settings."""
 
-    def test_compute_diff_with_custom_excluded_types(self):
+    def test_compute_diff_with_custom_excluded_types(self) -> None:
         """Test compute_diff with custom excluded types filters correctly."""
         old_node = TreeNode(
             id=1,
@@ -616,7 +616,7 @@ class TestDiffEngineComputeDiffWithSettings:
         # With excluded type, should not report changes
         assert result.has_changes is False
 
-    def test_compute_diff_with_custom_excluded_properties(self):
+    def test_compute_diff_with_custom_excluded_properties(self) -> None:
         """Test compute_diff with custom excluded properties filters correctly."""
         from freecad.diff_wb.domain import Property
 

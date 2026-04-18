@@ -9,7 +9,7 @@ from freecad.diff_wb.domain import Property, PropertyType, TreeNode
 class TestTreeNode:
     """Tests for the TreeNode class."""
 
-    def test_creation_with_all_new_required_fields(self):
+    def test_creation_with_all_new_required_fields(self) -> None:
         """Test creating TreeNode with all new required fields (id, path, after)."""
         node = TreeNode(
             id=1,
@@ -26,7 +26,7 @@ class TestTreeNode:
         assert node.path == "Body/Pad"
         assert node.after == "Sketch"
 
-    def test_creation_with_after_none_first_child(self):
+    def test_creation_with_after_none_first_child(self) -> None:
         """Test creating TreeNode with after=None (first child in siblings or root)."""
         # First child - after should be None
         node = TreeNode(
@@ -53,7 +53,7 @@ class TestTreeNode:
         )
         assert child_node.after is None
 
-    def test_creation_with_after_set_to_sibling_name(self):
+    def test_creation_with_after_set_to_sibling_name(self) -> None:
         """Test creating TreeNode with after set to sibling name."""
         # Second child - after should be set to the previous sibling's name
         node = TreeNode(
@@ -66,7 +66,7 @@ class TestTreeNode:
         )
         assert node.after == "Pad"
 
-    def test_creation_with_properties(self):
+    def test_creation_with_properties(self) -> None:
         """Test tree node with properties."""
         prop = Property.create(PropertyType.FLOAT, 10.0)
         node = TreeNode(
@@ -81,7 +81,7 @@ class TestTreeNode:
         assert "Length" in node.properties
         assert node.properties["Length"].value == 10.0
 
-    def test_serialization_to_dict_includes_all_new_fields(self):
+    def test_serialization_to_dict_includes_all_new_fields(self) -> None:
         """Test serializing TreeNode to dict includes id, path, after fields."""
         node = TreeNode(
             id=6,
@@ -104,7 +104,7 @@ class TestTreeNode:
         assert node_dict["after"] == "Origin"
         assert "name" in node_dict
 
-    def test_no_children_field_in_new_structure(self):
+    def test_no_children_field_in_new_structure(self) -> None:
         """Test verifying no children field exists in new structure."""
         node = TreeNode(
             id=7,
@@ -119,7 +119,7 @@ class TestTreeNode:
         # Verify no is_root attribute exists
         assert not hasattr(node, "is_root")
 
-    def test_path_change_detection_for_move_detection(self):
+    def test_path_change_detection_for_move_detection(self) -> None:
         """Test path change detection for move detection."""
         # Old node (in previous snapshot)
         old_node = TreeNode(
@@ -145,7 +145,7 @@ class TestTreeNode:
         # The paths are different, indicating a move
         assert old_node.path != new_node.path
 
-    def test_string_representation(self):
+    def test_string_representation(self) -> None:
         """Test string representation includes path and type_id."""
         node = TreeNode(
             id=9,
@@ -158,7 +158,7 @@ class TestTreeNode:
         assert "Body/Pad" in str(node)
         assert "PartDesign::Pad" in str(node)
 
-    def test_root_node_has_path_equal_to_name(self):
+    def test_root_node_has_path_equal_to_name(self) -> None:
         """Test that root nodes have path equal to their name."""
         root_node = TreeNode(
             id=10,
@@ -170,7 +170,7 @@ class TestTreeNode:
         )
         assert root_node.path == root_node.name
 
-    def test_non_root_node_has_path_with_separator(self):
+    def test_non_root_node_has_path_with_separator(self) -> None:
         """Test that non-root nodes have paths with / separator."""
         child_node = TreeNode(
             id=11,

@@ -15,14 +15,14 @@ from tests.fakes.fake_git_port import FakeGitPort
 class TestGitServiceInitialization:
     """Tests for GitService initialization and dependency injection."""
 
-    def test_initialization_with_git_port(self):
+    def test_initialization_with_git_port(self) -> None:
         """Test that GitService can be initialized with a GitPort."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
 
         assert service is not None
 
-    def test_git_port_is_stored(self):
+    def test_git_port_is_stored(self) -> None:
         """Test that the GitPort is stored in the service."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -33,7 +33,7 @@ class TestGitServiceInitialization:
 class TestGitServiceGetRepository:
     """Tests for GitService.get_repository() method."""
 
-    def test_get_repository_returns_none_for_nonexistent_repo(self):
+    def test_get_repository_returns_none_for_nonexistent_repo(self) -> None:
         """Test that get_repository returns None when path is not in a git repo."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -42,7 +42,7 @@ class TestGitServiceGetRepository:
 
         assert result is None
 
-    def test_get_repository_returns_repository_when_path_is_git_root(self):
+    def test_get_repository_returns_repository_when_path_is_git_root(self) -> None:
         """Test that get_repository returns GitRepository when path IS the git root."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -55,7 +55,7 @@ class TestGitServiceGetRepository:
         assert result.name == "my_project"
         assert result.absolute_path == "/home/user/my_project"
 
-    def test_get_repository_returns_repository_for_subdirectory(self):
+    def test_get_repository_returns_repository_for_subdirectory(self) -> None:
         """Test that get_repository returns GitRepository when path is a subdirectory."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -68,7 +68,7 @@ class TestGitServiceGetRepository:
         assert result.name == "my_project"
         assert result.absolute_path == "/home/user/my_project"
 
-    def test_get_repository_returns_repository_for_nested_subdirectory(self):
+    def test_get_repository_returns_repository_for_nested_subdirectory(self) -> None:
         """Test that get_repository works with deeply nested paths."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -81,7 +81,7 @@ class TestGitServiceGetRepository:
         assert result.name == "my_project"
         assert result.absolute_path == "/home/user/my_project"
 
-    def test_get_repository_returns_repository_for_file_in_repo(self):
+    def test_get_repository_returns_repository_for_file_in_repo(self) -> None:
         """Test that get_repository works for files within the repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -94,7 +94,7 @@ class TestGitServiceGetRepository:
         assert result.name == "my_project"
         assert result.absolute_path == "/home/user/my_project"
 
-    def test_get_repository_handles_trailing_slash(self):
+    def test_get_repository_handles_trailing_slash(self) -> None:
         """Test that get_repository handles trailing slashes correctly."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -106,7 +106,7 @@ class TestGitServiceGetRepository:
         assert result.name == "my_project"
         assert result.absolute_path == "/home/user/my_project"
 
-    def test_get_repository_with_multiple_repos(self):
+    def test_get_repository_with_multiple_repos(self) -> None:
         """Test behavior when multiple git repos are configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project_a")
@@ -127,7 +127,7 @@ class TestGitServiceGetRepository:
 class TestGitServiceGetRepositoryEdgeCases:
     """Tests for edge cases in GitService.get_repository()."""
 
-    def test_get_repository_with_empty_path(self):
+    def test_get_repository_with_empty_path(self) -> None:
         """Test handling of empty path."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -136,7 +136,7 @@ class TestGitServiceGetRepositoryEdgeCases:
 
         assert result is None
 
-    def test_get_repository_with_root_directory(self):
+    def test_get_repository_with_root_directory(self) -> None:
         """Test handling of root directory."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -145,7 +145,7 @@ class TestGitServiceGetRepositoryEdgeCases:
 
         assert result is None
 
-    def test_get_repository_with_single_character_path(self):
+    def test_get_repository_with_single_character_path(self) -> None:
         """Test handling of single character path."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -154,7 +154,7 @@ class TestGitServiceGetRepositoryEdgeCases:
 
         assert result is None
 
-    def test_get_repository_with_special_characters_in_name(self):
+    def test_get_repository_with_special_characters_in_name(self) -> None:
         """Test handling of repository names with special characters."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my-project_v2.0")
@@ -166,7 +166,7 @@ class TestGitServiceGetRepositoryEdgeCases:
         assert result.name == "my-project_v2.0"
         assert result.absolute_path == "/home/user/my-project_v2.0"
 
-    def test_get_repository_with_relative_path(self):
+    def test_get_repository_with_relative_path(self) -> None:
         """Test handling of relative paths (should return None)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -181,7 +181,7 @@ class TestGitServiceGetRepositoryEdgeCases:
 class TestGitServiceGetRepositoryIntegration:
     """Integration tests for GitService with realistic scenarios."""
 
-    def test_workflow_detect_active_repository(self):
+    def test_workflow_detect_active_repository(self) -> None:
         """Test the complete workflow of detecting an active repository."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/workbench_project")
@@ -195,7 +195,7 @@ class TestGitServiceGetRepositoryIntegration:
         assert repo.name == "workbench_project"
         assert repo.absolute_path == "/home/user/workbench_project"
 
-    def test_workflow_no_repository_for_unsaved_document(self):
+    def test_workflow_no_repository_for_unsaved_document(self) -> None:
         """Test workflow when document is not in a git repo."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -206,7 +206,7 @@ class TestGitServiceGetRepositoryIntegration:
 
         assert repo is None
 
-    def test_get_repository_returns_frozen_dataclass(self):
+    def test_get_repository_returns_frozen_dataclass(self) -> None:
         """Test that returned GitRepository is immutable (frozen)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project")
@@ -226,7 +226,7 @@ class TestGitServiceGetRepositoryIntegration:
 class TestGitServiceWithRealPathOperations:
     """Tests that verify GitService correctly uses os.path operations."""
 
-    def test_get_repository_uses_os_path_basename(self):
+    def test_get_repository_uses_os_path_basename(self) -> None:
         """Test that service correctly extracts name using os.path.basename."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/test-repo")
@@ -239,7 +239,7 @@ class TestGitServiceWithRealPathOperations:
         assert result is not None
         assert result.name == expected_name
 
-    def test_get_repository_preserves_absolute_path(self):
+    def test_get_repository_preserves_absolute_path(self) -> None:
         """Test that service preserves the absolute path as-is."""
         fake_port = FakeGitPort()
         test_path = "/absolute/path/to/repository"
@@ -255,7 +255,7 @@ class TestGitServiceWithRealPathOperations:
 class TestGitServiceGetCommitsInitialization:
     """Tests for GitService.get_commits() initialization."""
 
-    def test_get_commits_method_exists(self):
+    def test_get_commits_method_exists(self) -> None:
         """Test that get_commits method exists on GitService."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -263,7 +263,7 @@ class TestGitServiceGetCommitsInitialization:
         assert hasattr(service, "get_commits")
         assert callable(service.get_commits)
 
-    def test_get_commits_method_signature(self):
+    def test_get_commits_method_signature(self) -> None:
         """Test that get_commits has correct signature with limit parameter."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -281,7 +281,7 @@ class TestGitServiceGetCommitsInitialization:
 class TestGitServiceGetCommitsWithEmptyCommits:
     """Tests for GitService.get_commits() with empty commit lists."""
 
-    def test_get_commits_returns_empty_list_when_no_commits(self):
+    def test_get_commits_returns_empty_list_when_no_commits(self) -> None:
         """Test that get_commits returns empty list when repo has no commits."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -295,7 +295,7 @@ class TestGitServiceGetCommitsWithEmptyCommits:
         assert result == []
         assert isinstance(result, list)
 
-    def test_get_commits_returns_empty_list_for_nonexistent_repo(self):
+    def test_get_commits_returns_empty_list_for_nonexistent_repo(self) -> None:
         """Test that get_commits returns empty list for non-existent repository."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -311,7 +311,7 @@ class TestGitServiceGetCommitsWithEmptyCommits:
 class TestGitServiceGetCommitsWithSingleCommit:
     """Tests for GitService.get_commits() with a single commit."""
 
-    def test_get_commits_returns_single_commit(self):
+    def test_get_commits_returns_single_commit(self) -> None:
         """Test that get_commits returns one commit when only one exists."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -339,7 +339,7 @@ class TestGitServiceGetCommitsWithSingleCommit:
 class TestGitServiceGetCommitsWithMultipleCommits:
     """Tests for GitService.get_commits() with multiple commits."""
 
-    def test_get_commits_returns_all_commits(self):
+    def test_get_commits_returns_all_commits(self) -> None:
         """Test that get_commits returns all commits when limit is high enough."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -373,7 +373,7 @@ class TestGitServiceGetCommitsWithMultipleCommits:
 
         assert len(result) == 3
 
-    def test_get_commits_returns_all_commit_properties(self):
+    def test_get_commits_returns_all_commit_properties(self) -> None:
         """Test that all commit properties are accessible from returned commits."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -403,7 +403,7 @@ class TestGitServiceGetCommitsWithMultipleCommits:
 class TestGitServiceGetCommitsLimitParameter:
     """Tests for GitService.get_commits() limit parameter."""
 
-    def test_get_commits_respects_limit_parameter(self):
+    def test_get_commits_respects_limit_parameter(self) -> None:
         """Test that get_commits respects the limit parameter."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -434,7 +434,7 @@ class TestGitServiceGetCommitsLimitParameter:
         result_zero = service.get_commits(repo=repo, limit=0)
         assert result_zero == []
 
-    def test_get_commits_default_limit_is_20(self):
+    def test_get_commits_default_limit_is_20(self) -> None:
         """Test that the default limit is 20 commits."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -461,7 +461,7 @@ class TestGitServiceGetCommitsLimitParameter:
 class TestGitServiceGetCommitsDESCOrder:
     """Tests for GitService.get_commits() DESC order."""
 
-    def test_get_commits_returns_commits_in_desc_order(self):
+    def test_get_commits_returns_commits_in_desc_order(self) -> None:
         """Test that get_commits returns commits in DESC order (newest first)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -499,7 +499,7 @@ class TestGitServiceGetCommitsDESCOrder:
         assert result[1].id == "middle"
         assert result[2].id == "oldest"
 
-    def test_get_commits_limit_applied_after_reversing(self):
+    def test_get_commits_limit_applied_after_reversing(self) -> None:
         """Test that limit is applied after reversing for DESC order."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -542,7 +542,7 @@ class TestGitServiceGetCommitsDESCOrder:
 class TestGitServiceGetCommitsIntegration:
     """Integration tests for GitService.get_commits()."""
 
-    def test_workflow_get_commits_for_realistic_scenario(self):
+    def test_workflow_get_commits_for_realistic_scenario(self) -> None:
         """Test complete workflow of getting commits for a project."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/freecad_workbench")
@@ -597,7 +597,7 @@ class MockDocument:
 class TestGitServiceGetEligibleDocsInitialization:
     """Tests for GitService.get_eligible_docs() initialization."""
 
-    def test_get_eligible_docs_method_exists(self):
+    def test_get_eligible_docs_method_exists(self) -> None:
         """Test that get_eligible_docs method exists on GitService."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -605,7 +605,7 @@ class TestGitServiceGetEligibleDocsInitialization:
         assert hasattr(service, "get_eligible_docs")
         assert callable(service.get_eligible_docs)
 
-    def test_get_eligible_docs_method_signature(self):
+    def test_get_eligible_docs_method_signature(self) -> None:
         """Test that get_eligible_docs has correct signature."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -622,7 +622,7 @@ class TestGitServiceGetEligibleDocsInitialization:
 class TestGitServiceGetEligibleDocsEmptyCases:
     """Tests for GitService.get_eligible_docs() with empty inputs."""
 
-    def test_get_eligible_docs_returns_empty_list_for_empty_documents(self):
+    def test_get_eligible_docs_returns_empty_list_for_empty_documents(self) -> None:
         """Test that get_eligible_docs returns empty list when no documents provided."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -636,7 +636,7 @@ class TestGitServiceGetEligibleDocsEmptyCases:
         assert result == []
         assert isinstance(result, list)
 
-    def test_get_eligible_docs_returns_empty_list_when_no_documents_in_repo(self):
+    def test_get_eligible_docs_returns_empty_list_when_no_documents_in_repo(self) -> None:
         """Test that empty list is returned when no documents are in git repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -655,7 +655,7 @@ class TestGitServiceGetEligibleDocsEmptyCases:
 
         assert result == []
 
-    def test_get_eligible_docs_filters_out_documents_outside_git_repo(self):
+    def test_get_eligible_docs_filters_out_documents_outside_git_repo(self) -> None:
         """Test that documents outside git repo are filtered out."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -679,7 +679,7 @@ class TestGitServiceGetEligibleDocsEmptyCases:
 class TestGitServiceGetEligibleDocsWithValidDocuments:
     """Tests for GitService.get_eligible_docs() with valid documents."""
 
-    def test_get_eligible_docs_returns_only_documents_within_git_repo(self):
+    def test_get_eligible_docs_returns_only_documents_within_git_repo(self) -> None:
         """Test that get_eligible_docs returns only documents within git repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -699,7 +699,7 @@ class TestGitServiceGetEligibleDocsWithValidDocuments:
         assert len(result) == 3
         assert all(doc.FileName.startswith("/home/user/my_project") for doc in result)
 
-    def test_get_eligible_docs_works_with_mixed_documents(self):
+    def test_get_eligible_docs_works_with_mixed_documents(self) -> None:
         """Test that it works with mixed documents (some in, some out)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -722,7 +722,7 @@ class TestGitServiceGetEligibleDocsWithValidDocuments:
         assert "/home/user/my_project/in_repo.FCStd" in filenames
         assert "/home/user/my_project/src/also_in.FCStd" in filenames
 
-    def test_get_eligible_docs_filters_documents_without_filename(self):
+    def test_get_eligible_docs_filters_documents_without_filename(self) -> None:
         """Test that documents without FileName are filtered out."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -745,7 +745,7 @@ class TestGitServiceGetEligibleDocsWithValidDocuments:
         assert len(result) == 2
         assert all(hasattr(doc, "FileName") for doc in result)
 
-    def test_get_eligible_docs_filters_documents_with_empty_filename(self):
+    def test_get_eligible_docs_filters_documents_with_empty_filename(self) -> None:
         """Test that documents with empty FileName are filtered out."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -769,7 +769,7 @@ class TestGitServiceGetEligibleDocsWithValidDocuments:
 class TestGitServiceGetEligibleDocsEdgeCases:
     """Tests for edge cases in GitService.get_eligible_docs()."""
 
-    def test_get_eligible_docs_handles_trailing_slash_in_git_root(self):
+    def test_get_eligible_docs_handles_trailing_slash_in_git_root(self) -> None:
         """Test that trailing slash in git root is handled correctly."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -788,7 +788,7 @@ class TestGitServiceGetEligibleDocsEdgeCases:
 
         assert len(result) == 1
 
-    def test_get_eligible_docs_preserves_document_order(self):
+    def test_get_eligible_docs_preserves_document_order(self) -> None:
         """Test that the order of eligible documents is preserved."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -810,7 +810,7 @@ class TestGitServiceGetEligibleDocsEdgeCases:
         assert result[0].FileName == "/home/user/my_project/second_in.FCStd"
         assert result[1].FileName == "/home/user/my_project/fourth_in.FCStd"
 
-    def test_get_eligible_docs_with_special_characters_in_path(self):
+    def test_get_eligible_docs_with_special_characters_in_path(self) -> None:
         """Test handling of paths with special characters."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my-project_v2.0")
@@ -833,7 +833,7 @@ class TestGitServiceGetEligibleDocsEdgeCases:
 class TestGitServiceGetEligibleDocsIntegration:
     """Integration tests for GitService.get_eligible_docs()."""
 
-    def test_workflow_filter_documents_for_realistic_scenario(self):
+    def test_workflow_filter_documents_for_realistic_scenario(self) -> None:
         """Test complete workflow of filtering documents for a project."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/freecad_workbench")
@@ -859,7 +859,7 @@ class TestGitServiceGetEligibleDocsIntegration:
         assert all("freecad_workbench" in f for f in filenames)
         assert all(not f.startswith("/tmp") and not f.startswith("/home/user/downloads") for f in filenames)
 
-    def test_workflow_all_documents_outside_repo(self):
+    def test_workflow_all_documents_outside_repo(self) -> None:
         """Test workflow when all documents are outside the git repository."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project")
@@ -883,7 +883,7 @@ class TestGitServiceGetEligibleDocsIntegration:
 class TestGitServiceStageFilesDelegation:
     """Tests for GitService.stage_files() delegation to git_port."""
 
-    def test_stage_files_delegates_to_git_port_with_correct_parameters(self):
+    def test_stage_files_delegates_to_git_port_with_correct_parameters(self) -> None:
         """Test that stage_files delegates to git_port with correct parameters."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -896,7 +896,7 @@ class TestGitServiceStageFilesDelegation:
         # FakeGitPort always returns True by default
         assert result is True
 
-    def test_stage_files_passes_repo_absolute_path_to_git_port(self):
+    def test_stage_files_passes_repo_absolute_path_to_git_port(self) -> None:
         """Test that the repo's absolute_path is passed correctly to git_port."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -914,7 +914,7 @@ class TestGitServiceStageFilesDelegation:
 class TestGitServiceStageFilesEmptyPaths:
     """Tests for GitService.stage_files() with empty paths list."""
 
-    def test_stage_files_returns_true_for_empty_paths_list(self):
+    def test_stage_files_returns_true_for_empty_paths_list(self) -> None:
         """Test that stage_files returns True immediately for empty paths."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -927,7 +927,7 @@ class TestGitServiceStageFilesEmptyPaths:
         # Empty paths should return True immediately (nothing to stage)
         assert result is True
 
-    def test_stage_files_returns_true_for_none_like_empty_behavior(self):
+    def test_stage_files_returns_true_for_none_like_empty_behavior(self) -> None:
         """Test behavior with various empty-like inputs."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -942,7 +942,7 @@ class TestGitServiceStageFilesEmptyPaths:
 class TestGitServiceStageFilesFailurePropagation:
     """Tests for GitService.stage_files() failure handling."""
 
-    def test_stage_files_propagates_failure_from_git_port(self):
+    def test_stage_files_propagates_failure_from_git_port(self) -> None:
         """Test that failure from git_port propagates correctly as False."""
         # Create FakeGitPort configured to fail
         fake_port = FakeGitPort(fail_stage=True)
@@ -956,7 +956,7 @@ class TestGitServiceStageFilesFailurePropagation:
         # Should propagate the failure
         assert result is False
 
-    def test_stage_files_returns_false_when_git_port_fails_with_multiple_files(self):
+    def test_stage_files_returns_false_when_git_port_fails_with_multiple_files(self) -> None:
         """Test failure propagation with multiple files to stage."""
         fake_port = FakeGitPort(fail_stage=True)
         service = GitService(git_port=fake_port)
@@ -968,7 +968,7 @@ class TestGitServiceStageFilesFailurePropagation:
 
         assert result is False
 
-    def test_stage_files_succeeds_when_git_port_succeeds(self):
+    def test_stage_files_succeeds_when_git_port_succeeds(self) -> None:
         """Test that success from git_port propagates correctly as True."""
         fake_port = FakeGitPort(fail_stage=False)
         service = GitService(git_port=fake_port)
@@ -984,7 +984,7 @@ class TestGitServiceStageFilesFailurePropagation:
 class TestGitServiceStageFilesIntegration:
     """Integration tests for GitService.stage_files()."""
 
-    def test_workflow_stage_files_in_realistic_scenario(self):
+    def test_workflow_stage_files_in_realistic_scenario(self) -> None:
         """Test complete workflow of staging files in a realistic scenario."""
         fake_port = FakeGitPort()
         service = GitService(git_port=fake_port)
@@ -1000,7 +1000,7 @@ class TestGitServiceStageFilesIntegration:
 
         assert result is True
 
-    def test_workflow_stage_files_handles_failure_gracefully(self):
+    def test_workflow_stage_files_handles_failure_gracefully(self) -> None:
         """Test that failures are handled gracefully in workflow."""
         fake_port = FakeGitPort(fail_stage=True)
         service = GitService(git_port=fake_port)

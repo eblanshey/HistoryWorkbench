@@ -4,12 +4,12 @@ support, performs version checks, provides runtime context, and registers the Di
 class with FreeCAD. No container creation, no command registration, no global state manipulation."""
 
 try:
-    import FreeCADGui as Gui
+    import FreeCADGui as Gui  # type: ignore[name-defined]
 except Exception as e:
     from .utils import Log
 
     Log.exception(f"Failed to import FreeCADGui: {e}")
-    Gui = None
+    Gui = None  # type: ignore[assignment]
 
 if Gui is not None:
     from .entrypoints.workbench import DiffWorkbench

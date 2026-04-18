@@ -198,3 +198,17 @@ class FakeGitPort:
             True if not configured to fail, False otherwise.
         """
         return not self._fail_stage
+
+    def get_dirty_paths(self, git_root: str) -> list[str]:
+        """Fake implementation of get_dirty_paths for testing.
+
+        This fake implementation returns an empty list by default. Tests can
+        override this behavior by subclassing or using a different fake.
+
+        Args:
+            git_root: Absolute path to git repository root.
+
+        Returns:
+            Empty list (simulating a clean repository).
+        """
+        return []

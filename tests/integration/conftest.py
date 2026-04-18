@@ -103,7 +103,7 @@ def freecad_gui(freecad_app: Any) -> object | None:
     try:
         import FreeCADGui
 
-        return FreeCADGui  # type: ignore[return-value]
+        return FreeCADGui
     except ImportError:
         return None
 

@@ -18,7 +18,7 @@ from tests.fakes.fake_snapshot_view import FakeSnapshotView
 class TestSnapshotPresenter:
     """Tests for SnapshotPresenter."""
 
-    def test_present_result_success_calls_view(self):
+    def test_present_result_success_calls_view(self) -> None:
         """Calls view.show_success() and auto-refreshes on successful snapshot."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -45,7 +45,7 @@ class TestSnapshotPresenter:
         second_call = fake_view._call_log[1]
         assert second_call["method"] == "show_snapshots"
 
-    def test_present_result_error_calls_view(self):
+    def test_present_result_error_calls_view(self) -> None:
         """Calls view.show_error() on failed snapshot."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -66,7 +66,7 @@ class TestSnapshotPresenter:
         assert last_call["method"] == "show_error"
         assert last_call["error_message"] == "Disk space insufficient"
 
-    def test_passes_raw_snapshot_name_without_formatting(self):
+    def test_passes_raw_snapshot_name_without_formatting(self) -> None:
         """Presenter passes raw snapshot_name - view handles formatting."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -90,7 +90,7 @@ class TestSnapshotPresenter:
         # No pre-formatted message - that's the view's responsibility
         assert "message" not in first_call or "created successfully" not in str(first_call.get("message", ""))
 
-    def test_passes_error_message_as_is(self):
+    def test_passes_error_message_as_is(self) -> None:
         """Error message passed through without modification."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -109,7 +109,7 @@ class TestSnapshotPresenter:
         last_call = fake_view._last_call
         assert last_call["error_message"] == "Permission denied"
 
-    def test_load_snapshots_calls_action_and_view(self):
+    def test_load_snapshots_calls_action_and_view(self) -> None:
         """load_snapshots calls action.execute() and passes result to view.show_snapshots()."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -131,7 +131,7 @@ class TestSnapshotPresenter:
         assert last_call["method"] == "show_snapshots"
         assert last_call["snapshots"] == snapshots
 
-    def test_load_snapshots_with_empty_list_shows_placeholder(self):
+    def test_load_snapshots_with_empty_list_shows_placeholder(self) -> None:
         """load_snapshots handles empty list correctly (view shows placeholder)."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -149,7 +149,7 @@ class TestSnapshotPresenter:
         assert last_call["method"] == "show_snapshots"
         assert last_call["snapshots"] == []
 
-    def test_load_snapshots_handles_action_exception(self):
+    def test_load_snapshots_handles_action_exception(self) -> None:
         """load_snapshots catches exceptions from action and passes to view.show_error()."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -167,7 +167,7 @@ class TestSnapshotPresenter:
         assert last_call["method"] == "show_error"
         assert "Database connection failed" in last_call["error_message"]
 
-    def test_refresh_snapshots_is_alias_for_load_snapshots(self):
+    def test_refresh_snapshots_is_alias_for_load_snapshots(self) -> None:
         """refresh_snapshots is an alias for load_snapshots."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -185,7 +185,7 @@ class TestSnapshotPresenter:
         last_call = fake_view._last_call
         assert last_call["method"] == "show_snapshots"
 
-    def test_present_result_success_triggers_auto_refresh(self):
+    def test_present_result_success_triggers_auto_refresh(self) -> None:
         """After successful snapshot, load_snapshots() is called to refresh the list."""
         # Arrange
         fake_view = FakeSnapshotView()
@@ -218,7 +218,7 @@ class TestSnapshotPresenter:
         assert second_call["snapshots"] == snapshots_after_refresh
         mock_action.execute.assert_called_once()
 
-    def test_present_result_error_does_not_trigger_refresh(self):
+    def test_present_result_error_does_not_trigger_refresh(self) -> None:
         """On failed snapshot, load_snapshots() is NOT called - only error shown."""
         # Arrange
         fake_view = FakeSnapshotView()

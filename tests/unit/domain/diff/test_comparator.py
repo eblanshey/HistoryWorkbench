@@ -11,8 +11,8 @@ from freecad.diff_wb.config import EXCLUDED_PROPERTIES
 from freecad.diff_wb.domain.diff.comparator import PropertyComparator, TreeComparator
 from freecad.diff_wb.domain.diff.models import DiffState, NodeDiff, PropertyDiff
 from freecad.diff_wb.domain.snapshots.models import Snapshot
-from freecad.diff_wb.domain.tree import Property, PropertyType
 from freecad.diff_wb.domain.tree.node import TreeNode
+from freecad.diff_wb.domain.tree.property import Property, PropertyType
 
 
 # Test fixtures - create comparator instances
@@ -20,7 +20,10 @@ _tree_comparator = TreeComparator()
 _property_comparator = PropertyComparator()
 
 
-def compare_properties(old_props, new_props):
+def compare_properties(
+    old_props: dict[str, Property],
+    new_props: dict[str, Property],
+) -> list[PropertyDiff]:
     """Wrapper with default excluded_properties."""
     return _property_comparator.compare_properties(old_props, new_props, EXCLUDED_PROPERTIES)
 
@@ -32,42 +35,42 @@ values_are_equal = _property_comparator._values_are_equal
 class TestGetParentPath:
     """Tests for _get_parent_path method."""
 
-    def test_parent_with_leading_slash(self):
+    def test_parent_with_leading_slash(self) -> None:
         """Test extracting parent from path with leading slash."""
         result = _tree_comparator._get_parent_path("/Body/Pad")
         assert result == "/Body"
 
-    def test_parent_without_leading_slash(self):
+    def test_parent_without_leading_slash(self) -> None:
         """Test extracting parent from path without leading slash."""
         result = _tree_comparator._get_parent_path("Body/Pad")
         assert result == "Body"
 
-    def test_root_with_leading_slash_returns_empty(self):
+    def test_root_with_leading_slash_returns_empty(self) -> None:
         """Test that root node with leading slash returns empty string."""
         result = _tree_comparator._get_parent_path("/Part")
         assert result == ""
 
-    def test_root_without_leading_slash_returns_empty(self):
+    def test_root_without_leading_slash_returns_empty(self) -> None:
         """Test that root node without leading slash returns empty string."""
         result = _tree_comparator._get_parent_path("Part")
         assert result == ""
 
-    def test_deep_nesting_with_leading_slash(self):
+    def test_deep_nesting_with_leading_slash(self) -> None:
         """Test extracting parent from deeply nested path with leading slash."""
         result = _tree_comparator._get_parent_path("/A/B/C/D")
         assert result == "/A/B/C"
 
-    def test_deep_nesting_without_leading_slash(self):
+    def test_deep_nesting_without_leading_slash(self) -> None:
         """Test extracting parent from deeply nested path without leading slash."""
         result = _tree_comparator._get_parent_path("A/B/C/D")
         assert result == "A/B/C"
 
-    def test_two_level_path_with_leading_slash(self):
+    def test_two_level_path_with_leading_slash(self) -> None:
         """Test extracting parent from two-level path with leading slash."""
         result = _tree_comparator._get_parent_path("/Body/Pad/Sketch")
         assert result == "/Body/Pad"
 
-    def test_two_level_path_without_leading_slash(self):
+    def test_two_level_path_without_leading_slash(self) -> None:
         """Test extracting parent from two-level path without leading slash."""
         result = _tree_comparator._get_parent_path("Body/Pad/Sketch")
         assert result == "Body/Pad"
@@ -76,99 +79,99 @@ class TestGetParentPath:
 class TestValuesAreEqual:
     """Tests for values_are_equal function."""
 
-    def test_both_none(self):
+    def test_both_none(self) -> None:
         """Test that None vs None returns True."""
         assert values_are_equal(None, None) is True
 
-    def test_old_none_new_value(self):
+    def test_old_none_new_value(self) -> None:
         """Test that None vs value returns False."""
         new_val = Property.create(PropertyType.STRING, "test")
         assert values_are_equal(None, new_val) is False
 
-    def test_old_value_new_none(self):
+    def test_old_value_new_none(self) -> None:
         """Test that value vs None returns False."""
         old_val = Property.create(PropertyType.STRING, "test")
         assert values_are_equal(old_val, None) is False
 
-    def test_identical_bool_values(self):
+    def test_identical_bool_values(self) -> None:
         """Test BOOL type with same values."""
         old_val = Property.create(PropertyType.BOOL, True)
         new_val = Property.create(PropertyType.BOOL, True)
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_bool_values(self):
+    def test_different_bool_values(self) -> None:
         """Test BOOL type with different values."""
         old_val = Property.create(PropertyType.BOOL, True)
         new_val = Property.create(PropertyType.BOOL, False)
         assert values_are_equal(old_val, new_val) is False
 
-    def test_identical_int_values(self):
+    def test_identical_int_values(self) -> None:
         """Test INT type with same values."""
         old_val = Property.create(PropertyType.INT, 42)
         new_val = Property.create(PropertyType.INT, 42)
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_int_values(self):
+    def test_different_int_values(self) -> None:
         """Test INT type with different values."""
         old_val = Property.create(PropertyType.INT, 42)
         new_val = Property.create(PropertyType.INT, 43)
         assert values_are_equal(old_val, new_val) is False
 
-    def test_identical_float_values(self):
+    def test_identical_float_values(self) -> None:
         """Test FLOAT type with same values."""
         old_val = Property.create(PropertyType.FLOAT, 3.14)
         new_val = Property.create(PropertyType.FLOAT, 3.14)
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_float_values(self):
+    def test_different_float_values(self) -> None:
         """Test FLOAT type with different values."""
         old_val = Property.create(PropertyType.FLOAT, 3.14)
         new_val = Property.create(PropertyType.FLOAT, 2.71)
         assert values_are_equal(old_val, new_val) is False
 
-    def test_float_within_tolerance(self):
+    def test_float_within_tolerance(self) -> None:
         """Test FLOAT type with values within tolerance (1e-9)."""
         old_val = Property.create(PropertyType.FLOAT, 1.0)
         new_val = Property.create(PropertyType.FLOAT, 1.0 + 1e-10)
         assert values_are_equal(old_val, new_val) is True
 
-    def test_float_exceeds_tolerance(self):
+    def test_float_exceeds_tolerance(self) -> None:
         """Test FLOAT type with values exceeding tolerance (1e-9)."""
         old_val = Property.create(PropertyType.FLOAT, 1.0)
         new_val = Property.create(PropertyType.FLOAT, 1.0 + 1e-8)
         assert values_are_equal(old_val, new_val) is False
 
-    def test_identical_string_values(self):
+    def test_identical_string_values(self) -> None:
         """Test STRING type with same values."""
         old_val = Property.create(PropertyType.STRING, "hello")
         new_val = Property.create(PropertyType.STRING, "hello")
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_string_values(self):
+    def test_different_string_values(self) -> None:
         """Test STRING type with different values."""
         old_val = Property.create(PropertyType.STRING, "hello")
         new_val = Property.create(PropertyType.STRING, "world")
         assert values_are_equal(old_val, new_val) is False
 
-    def test_identical_vector_values(self):
+    def test_identical_vector_values(self) -> None:
         """Test VECTOR type with same values."""
         old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
         new_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_vector_values(self):
+    def test_different_vector_values(self) -> None:
         """Test VECTOR type with different values."""
         old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
         new_val = Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0))
         assert values_are_equal(old_val, new_val) is False
 
-    def test_vector_within_tolerance(self):
+    def test_vector_within_tolerance(self) -> None:
         """Test VECTOR type with components within tolerance."""
         old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
         new_val = Property.create(PropertyType.VECTOR, (1.0 + 1e-10, 2.0, 3.0))
         assert values_are_equal(old_val, new_val) is True
 
-    def test_identical_placement_values(self):
+    def test_identical_placement_values(self) -> None:
         """Test PLACEMENT type with same values."""
         old_val = Property.create(
             PropertyType.PLACEMENT,
@@ -180,7 +183,7 @@ class TestValuesAreEqual:
         )
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_placement_values(self):
+    def test_different_placement_values(self) -> None:
         """Test PLACEMENT type with different values."""
         old_val = Property.create(
             PropertyType.PLACEMENT,
@@ -192,19 +195,19 @@ class TestValuesAreEqual:
         )
         assert values_are_equal(old_val, new_val) is False
 
-    def test_identical_expression_values(self):
+    def test_identical_expression_values(self) -> None:
         """Test STRING type with same values and identical expressions."""
         old_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
         new_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
         assert values_are_equal(old_val, new_val) is True
 
-    def test_different_expression_values(self):
+    def test_different_expression_values(self) -> None:
         """Test STRING type with different values and different expressions."""
         old_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
         new_val = Property.create(PropertyType.STRING, "Cube.Size", expression="Cube.Size")
         assert values_are_equal(old_val, new_val) is False
 
-    def test_same_value_different_expression(self):
+    def test_same_value_different_expression(self) -> None:
         """Test that same value with different expression returns False."""
         old_val = Property.create(PropertyType.FLOAT, 10.0, expression="Body.Length")
         new_val = Property.create(PropertyType.FLOAT, 10.0, expression="Cube.Size")
@@ -214,7 +217,7 @@ class TestValuesAreEqual:
 class TestPropertyDiffState:
     """Tests for PropertyDiff state calculation."""
 
-    def test_state_added(self):
+    def test_state_added(self) -> None:
         """Test ADDED state when old_value is None."""
         prop_diff = PropertyDiff(
             property_name="NewProperty",
@@ -223,7 +226,7 @@ class TestPropertyDiffState:
         )
         assert prop_diff.state == DiffState.ADDED
 
-    def test_state_deleted(self):
+    def test_state_deleted(self) -> None:
         """Test DELETED state when new_value is None."""
         prop_diff = PropertyDiff(
             property_name="OldProperty",
@@ -232,7 +235,7 @@ class TestPropertyDiffState:
         )
         assert prop_diff.state == DiffState.DELETED
 
-    def test_state_modified(self):
+    def test_state_modified(self) -> None:
         """Test MODIFIED state when values differ."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -241,7 +244,7 @@ class TestPropertyDiffState:
         )
         assert prop_diff.state == DiffState.MODIFIED
 
-    def test_state_unchanged(self):
+    def test_state_unchanged(self) -> None:
         """Test UNCHANGED state when values are equal."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -250,7 +253,7 @@ class TestPropertyDiffState:
         )
         assert prop_diff.state == DiffState.UNCHANGED
 
-    def test_state_unchanged_same_value_different_expression(self):
+    def test_state_unchanged_same_value_different_expression(self) -> None:
         """Test UNCHANGED state when values are same (expression tracked separately)."""
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -263,12 +266,12 @@ class TestPropertyDiffState:
 class TestCompareProperties:
     """Tests for compare_properties function."""
 
-    def test_empty_dictionaries(self):
+    def test_empty_dictionaries(self) -> None:
         """Test comparing empty property dictionaries."""
         result = compare_properties({}, {})
         assert result == []
 
-    def test_only_additions(self):
+    def test_only_additions(self) -> None:
         """Test when all properties are new (added)."""
         old_props = {}
         new_props = {
@@ -280,7 +283,7 @@ class TestCompareProperties:
         for prop_diff in result:
             assert prop_diff.state == DiffState.ADDED
 
-    def test_only_deletions(self):
+    def test_only_deletions(self) -> None:
         """Test when all properties are removed (deleted)."""
         old_props = {
             "OldProp1": Property.create(PropertyType.STRING, "value1"),
@@ -292,7 +295,7 @@ class TestCompareProperties:
         for prop_diff in result:
             assert prop_diff.state == DiffState.DELETED
 
-    def test_only_modifications(self):
+    def test_only_modifications(self) -> None:
         """Test when all properties are modified."""
         old_props = {
             "Prop1": Property.create(PropertyType.FLOAT, 10.0),
@@ -307,7 +310,7 @@ class TestCompareProperties:
         for prop_diff in result:
             assert prop_diff.state == DiffState.MODIFIED
 
-    def test_only_unchanged_included(self):
+    def test_only_unchanged_included(self) -> None:
         """Test that unchanged properties are included in result."""
         old_props = {
             "Prop1": Property.create(PropertyType.FLOAT, 10.0),
@@ -322,7 +325,7 @@ class TestCompareProperties:
         for prop_diff in result:
             assert prop_diff.state == DiffState.UNCHANGED
 
-    def test_mixed_changes(self):
+    def test_mixed_changes(self) -> None:
         """Test combination of added, deleted, modified and unchanged properties."""
         old_props = {
             "DeletedProp": Property.create(PropertyType.STRING, "gone"),
@@ -343,7 +346,7 @@ class TestCompareProperties:
         assert states["ModifiedProp"] == DiffState.MODIFIED
         assert states["UnchangedProp"] == DiffState.UNCHANGED
 
-    def test_excludes_time_stamp(self):
+    def test_excludes_time_stamp(self) -> None:
         """Test that TimeStamp property is filtered out."""
         old_props = {
             "TimeStamp": Property.create(PropertyType.STRING, "2024-01-01T00:00:00"),
@@ -359,7 +362,7 @@ class TestCompareProperties:
         assert result[0].property_name == "Length"
         assert result[0].state == DiffState.UNCHANGED
 
-    def test_excludes_label2(self):
+    def test_excludes_label2(self) -> None:
         """Test that Label2 property is filtered out."""
         old_props = {
             "Label2": Property.create(PropertyType.STRING, "AutoLabel"),
@@ -374,7 +377,7 @@ class TestCompareProperties:
         assert result[0].property_name == "Length"
         assert not any(p.property_name == "Label2" for p in result)
 
-    def test_all_property_types(self):
+    def test_all_property_types(self) -> None:
         """Test comparison of all property types in a single call."""
         old_props = {
             "BoolProp": Property.create(PropertyType.BOOL, True),
@@ -410,7 +413,7 @@ class TestCompareProperties:
         # Verify IntProp is unchanged
         assert next(p for p in result if p.property_name == "IntProp").state == DiffState.UNCHANGED
 
-    def test_float_tolerance_edge_cases(self):
+    def test_float_tolerance_edge_cases(self) -> None:
         """Test float tolerance with various edge cases."""
         # Very small difference within tolerance
         old_props = {
@@ -431,7 +434,7 @@ class TestCompareProperties:
         assert len(result_exceed) == 1
         assert result_exceed[0].state == DiffState.MODIFIED
 
-    def test_property_diff_string_representation(self):
+    def test_property_diff_string_representation(self) -> None:
         """Test string representation of PropertyDiff objects."""
         # ADDED
         added = PropertyDiff(
@@ -459,7 +462,7 @@ class TestCompareProperties:
         assert "20.0" in str(modified)
         assert "->" in str(modified)
 
-    def test_same_value_different_expression_is_unchanged(self):
+    def test_same_value_different_expression_is_unchanged(self) -> None:
         """Test that same value with different expression returns UNCHANGED."""
         old_props = {
             "Length": Property.create(PropertyType.FLOAT, 10.0, expression="Body.Length"),
@@ -480,7 +483,7 @@ class TestPropertyDiffChildrenAutoComputed:
     This is Phase 3 of the refactor-diff-architecture task.
     """
 
-    def test_placement_property_diff_has_position_and_rotation_children(self):
+    def test_placement_property_diff_has_position_and_rotation_children(self) -> None:
         """Test that PropertyDiff for Placement has Position and Rotation children."""
         # Create two Placement properties that differ in position
         old_props = {
@@ -509,7 +512,7 @@ class TestPropertyDiffChildrenAutoComputed:
         assert "Position" in child_names
         assert "Rotation" in child_names
 
-    def test_placement_property_diff_position_child_has_correct_state(self):
+    def test_placement_property_diff_position_child_has_correct_state(self) -> None:
         """Test that Position child of Placement diff has MODIFIED state when position changes."""
         # Create two Placement properties with different positions
         old_props = {
@@ -532,7 +535,7 @@ class TestPropertyDiffChildrenAutoComputed:
         position_child = next(child for child in prop_diff.children if child.property_name == "Position")
         assert position_child.state == DiffState.MODIFIED
 
-    def test_placement_property_diff_rotation_child_has_correct_state(self):
+    def test_placement_property_diff_rotation_child_has_correct_state(self) -> None:
         """Test that Rotation child of Placement diff has MODIFIED state when rotation changes."""
         # Create two Placement properties with different rotations
         old_props = {
@@ -555,7 +558,7 @@ class TestPropertyDiffChildrenAutoComputed:
         rotation_child = next(child for child in prop_diff.children if child.property_name == "Rotation")
         assert rotation_child.state == DiffState.MODIFIED
 
-    def test_unchanged_placement_has_unchanged_children(self):
+    def test_unchanged_placement_has_unchanged_children(self) -> None:
         """Test that unchanged Placement has UNCHANGED children."""
         # Create identical Placement properties
         old_props = {
@@ -580,7 +583,7 @@ class TestPropertyDiffChildrenAutoComputed:
         for child in prop_diff.children:
             assert child.state == DiffState.UNCHANGED
 
-    def test_primitive_property_has_empty_children(self):
+    def test_primitive_property_has_empty_children(self) -> None:
         """Test that primitive property (e.g., FLOAT) has empty children list."""
         old_props = {
             "Length": Property.create(PropertyType.FLOAT, 10.0),
@@ -596,7 +599,7 @@ class TestPropertyDiffChildrenAutoComputed:
         # Primitive types have no children
         assert len(prop_diff.children) == 0
 
-    def test_vector_property_has_x_y_z_children(self):
+    def test_vector_property_has_x_y_z_children(self) -> None:
         """Test that VECTOR property has x, y, z children."""
         old_props = {
             "Position": Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0)),
@@ -614,7 +617,7 @@ class TestPropertyDiffChildrenAutoComputed:
         child_names = {child.property_name for child in prop_diff.children}
         assert child_names == {"x", "y", "z"}
 
-    def test_added_placement_has_children(self):
+    def test_added_placement_has_children(self) -> None:
         """Test that added Placement has Position and Rotation children with ADDED state."""
         old_props: dict[str, Property] = {}
         new_props = {
@@ -633,7 +636,7 @@ class TestPropertyDiffChildrenAutoComputed:
         for child in prop_diff.children:
             assert child.state == DiffState.ADDED
 
-    def test_deleted_placement_has_children(self):
+    def test_deleted_placement_has_children(self) -> None:
         """Test that deleted Placement has Position and Rotation children with DELETED state."""
         old_props = {
             "Placement": Property.create(
@@ -656,7 +659,7 @@ class TestPropertyDiffChildrenAutoComputed:
 class TestCompareNodesById:
     """Tests for ID-based node comparison."""
 
-    def test_identical_nodes_returns_unchanged(self):
+    def test_identical_nodes_returns_unchanged(self) -> None:
         """Test comparing identical nodes returns UNCHANGED."""
         props = {
             "Label": Property.create(PropertyType.STRING, "Body"),
@@ -688,7 +691,7 @@ class TestCompareNodesById:
         assert result is not None
         assert result.state == DiffState.UNCHANGED
 
-    def test_modified_property_returns_modified(self):
+    def test_modified_property_returns_modified(self) -> None:
         """Test detecting a modified property returns MODIFIED."""
         old_props = {
             "Length": Property.create(PropertyType.FLOAT, 10.0),
@@ -723,7 +726,7 @@ class TestCompareNodesById:
         assert result is not None
         assert result.state == DiffState.MODIFIED
 
-    def test_includes_old_and_new_path_in_result(self):
+    def test_includes_old_and_new_path_in_result(self) -> None:
         """Test that NodeDiff includes old_path and new_path."""
         old_node = TreeNode(
             id=1,
@@ -751,7 +754,7 @@ class TestCompareNodesById:
         assert result.old_path == "Body/Pad"
         assert result.new_path == "Body/Pad"
 
-    def test_includes_old_and_new_after_in_result(self):
+    def test_includes_old_and_new_after_in_result(self) -> None:
         """Test that NodeDiff includes old_after and new_after."""
         old_node = TreeNode(
             id=1,
@@ -783,7 +786,7 @@ class TestCompareNodesById:
 class TestIdBasedCompareSnapshots:
     """Tests for ID-based snapshot comparison (end-to-end)."""
 
-    def test_compare_two_flat_node_lists_by_id(self):
+    def test_compare_two_flat_node_lists_by_id(self) -> None:
         """Test comparing two flat node lists by ID."""
         # Old snapshot has ID 1 only
         old_node = TreeNode(
@@ -832,7 +835,7 @@ class TestIdBasedCompareSnapshots:
         assert result.deleted_count == 0
         assert result.modified_count == 0
 
-    def test_detect_added_nodes(self):
+    def test_detect_added_nodes(self) -> None:
         """Test detecting ADDED nodes (in new, not in old)."""
         # Old snapshot: only ID 1
         old_node = TreeNode(
@@ -880,7 +883,7 @@ class TestIdBasedCompareSnapshots:
         assert result.deleted_count == 0
         assert result.modified_count == 0
 
-    def test_detect_deleted_nodes(self):
+    def test_detect_deleted_nodes(self) -> None:
         """Test detecting DELETED nodes (in old, not in new)."""
         # Old snapshot: ID 1 and ID 2
         old_node1 = TreeNode(
@@ -928,7 +931,7 @@ class TestIdBasedCompareSnapshots:
         assert result.deleted_count == 1
         assert result.modified_count == 0
 
-    def test_detect_modified_nodes(self):
+    def test_detect_modified_nodes(self) -> None:
         """Test detecting MODIFIED nodes (in both, properties differ)."""
         # Old snapshot: ID 1 with Length=10
         old_node = TreeNode(
@@ -972,7 +975,7 @@ class TestIdBasedCompareSnapshots:
 
         # Find the node diff for ID 1 - it may be nested under parent placeholder
         # Look through the hierarchy for Body/Pad
-        def find_node_diff(node_diffs, path):
+        def find_node_diff(node_diffs: list[NodeDiff], path: str) -> NodeDiff | None:
             """Recursively find a NodeDiff by path."""
             for diff in node_diffs:
                 if diff.path == path:
@@ -986,7 +989,7 @@ class TestIdBasedCompareSnapshots:
         assert pad_diff is not None
         assert pad_diff.state == DiffState.MODIFIED
 
-    def test_id_based_comparison_produces_correct_sets(self):
+    def test_id_based_comparison_produces_correct_sets(self) -> None:
         """Test ID-based comparison produces correct added/deleted/common sets."""
         # Old: IDs 1, 2, 3
         old_nodes = [
@@ -1021,7 +1024,7 @@ class TestIdBasedCompareSnapshots:
         assert result.deleted_count == 1
         assert result.modified_count == 1
 
-    def test_node_diff_includes_path_and_after_for_move_detection(self):
+    def test_node_diff_includes_path_and_after_for_move_detection(self) -> None:
         """Test NodeDiff includes old_path, new_path, old_after, new_after for future move/reorder detection."""
         # Old: ID 1 at path "Body/Original"
         old_node = TreeNode(
@@ -1060,7 +1063,7 @@ class TestIdBasedCompareSnapshots:
         # The NodeDiff should include old_path and new_path for move detection
         # Since the node is unchanged in properties but path changed
         # The node may be nested under a parent placeholder
-        def find_node_diff(node_diffs, path):
+        def find_node_diff(node_diffs: list[NodeDiff], path: str) -> NodeDiff | None:
             """Recursively find a NodeDiff by path."""
             for diff in node_diffs:
                 if diff.path == path:
@@ -1075,7 +1078,7 @@ class TestIdBasedCompareSnapshots:
         assert feature_diff.old_path == "Body/Original"
         assert feature_diff.new_path == "Body/Moved"
 
-    def test_node_diff_for_added_node_has_null_old_path(self):
+    def test_node_diff_for_added_node_has_null_old_path(self) -> None:
         """Test that added node has None for old_path."""
         # New only: ID 2
         new_node = TreeNode(
@@ -1108,7 +1111,7 @@ class TestIdBasedCompareSnapshots:
         assert box_diff.old_path is None
         assert box_diff.new_path == "Box"
 
-    def test_node_diff_for_deleted_node_has_null_new_path(self):
+    def test_node_diff_for_deleted_node_has_null_new_path(self) -> None:
         """Test that deleted node has None for new_path."""
         # Old only: ID 1
         old_node = TreeNode(
@@ -1141,7 +1144,7 @@ class TestIdBasedCompareSnapshots:
         assert box_diff.old_path == "Box"
         assert box_diff.new_path is None
 
-    def test_hierarchical_output_preserved(self):
+    def test_hierarchical_output_preserved(self) -> None:
         """Test that hierarchical NodeDiff.children is preserved for UI."""
         # Create a parent-child relationship in flat nodes
         body = TreeNode(
@@ -1175,7 +1178,7 @@ class TestIdBasedCompareSnapshots:
 class TestExcludedTypesFiltering:
     """Tests for excluded_types filtering in compare_snapshots."""
 
-    def test_excludes_nodes_with_excluded_type(self):
+    def test_excludes_nodes_with_excluded_type(self) -> None:
         """Test that nodes with excluded type_id are filtered out."""
         # Old snapshot with App::Origin (excluded type)
         old_node = TreeNode(
@@ -1218,7 +1221,7 @@ class TestExcludedTypesFiltering:
         assert result.deleted_count == 0
         assert result.modified_count == 0
 
-    def test_excludes_children_of_excluded_type_parent(self):
+    def test_excludes_children_of_excluded_type_parent(self) -> None:
         """Test that children of excluded type nodes are also filtered."""
         # Old snapshot with App::Origin and its child
         origin = TreeNode(
@@ -1274,7 +1277,7 @@ class TestExcludedTypesFiltering:
         # Both nodes should be excluded
         assert len(result.hierarchy.roots) == 0
 
-    def test_includes_nodes_not_in_excluded_types(self):
+    def test_includes_nodes_not_in_excluded_types(self) -> None:
         """Test that nodes not in excluded_types are included."""
         # Old snapshot with Part::Feature
         old_node = TreeNode(
@@ -1315,7 +1318,7 @@ class TestExcludedTypesFiltering:
         assert len(result.hierarchy.roots) == 1
         assert result.hierarchy.roots[0].path == "Box"
 
-    def test_excludes_added_nodes_with_excluded_type(self):
+    def test_excludes_added_nodes_with_excluded_type(self) -> None:
         """Test that added nodes with excluded type are filtered."""
         # Old snapshot is empty
         old_snapshot = Snapshot(
@@ -1346,7 +1349,7 @@ class TestExcludedTypesFiltering:
         # Should have no diffs (excluded)
         assert len(result.hierarchy.roots) == 0
 
-    def test_excludes_deleted_nodes_with_excluded_type(self):
+    def test_excludes_deleted_nodes_with_excluded_type(self) -> None:
         """Test that deleted nodes with excluded type are filtered."""
         # Old snapshot with App::Origin (deleted)
         old_node = TreeNode(
@@ -1381,7 +1384,7 @@ class TestExcludedTypesFiltering:
 class TestExcludedParentPathFiltering:
     """Tests for excluded parent path filtering in compare_snapshots."""
 
-    def test_excludes_child_when_parent_excluded_by_type(self):
+    def test_excludes_child_when_parent_excluded_by_type(self) -> None:
         """Test that child nodes are excluded when parent type is excluded."""
         # Old: Body -> Pad -> Sketch (Sketch will be excluded because parent Pad type is excluded)
         body = TreeNode(
@@ -1456,7 +1459,7 @@ class TestExcludedParentPathFiltering:
         assert "Body/Pad" not in paths_in_result
         assert "Body/Pad/Sketch" not in paths_in_result
 
-    def test_mixed_excluded_and_included_nodes(self):
+    def test_mixed_excluded_and_included_nodes(self) -> None:
         """Test that some nodes are excluded while others are included."""
         # Create nodes: Body with two children - one excluded, one included
         body = TreeNode(
@@ -1537,7 +1540,7 @@ class TestExcludedParentPathFiltering:
 class TestEmptySnapshots:
     """Tests for handling empty snapshots in compare_snapshots."""
 
-    def test_both_snapshots_empty_returns_empty(self):
+    def test_both_snapshots_empty_returns_empty(self) -> None:
         """Test that comparing two empty snapshots returns empty result."""
         old_snapshot = Snapshot(
             snapshot_id="old",
@@ -1559,7 +1562,7 @@ class TestEmptySnapshots:
         assert result.modified_count == 0
         assert result.hierarchy.roots == []
 
-    def test_old_empty_new_with_nodes_returns_added(self):
+    def test_old_empty_new_with_nodes_returns_added(self) -> None:
         """Test that when old is empty, new nodes are marked as added."""
         old_snapshot = Snapshot(
             snapshot_id="old",
@@ -1591,7 +1594,7 @@ class TestEmptySnapshots:
         assert len(result.hierarchy.roots) == 1
         assert result.hierarchy.roots[0].state == DiffState.ADDED
 
-    def test_new_empty_old_with_nodes_returns_deleted(self):
+    def test_new_empty_old_with_nodes_returns_deleted(self) -> None:
         """Test that when new is empty, old nodes are marked as deleted."""
         old_box = TreeNode(
             id=1,
@@ -1623,7 +1626,7 @@ class TestEmptySnapshots:
         assert len(result.hierarchy.roots) == 1
         assert result.hierarchy.roots[0].state == DiffState.DELETED
 
-    def test_hierarchy_preserved_with_empty_parent(self):
+    def test_hierarchy_preserved_with_empty_parent(self) -> None:
         """Test that hierarchy is preserved when parent becomes empty."""
         # Old: Body with child Pad
         body = TreeNode(

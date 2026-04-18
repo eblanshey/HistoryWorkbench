@@ -13,11 +13,11 @@ from tests.fakes.fake_git_port import FakeGitPort
 class TestGitPortProtocol:
     """Tests for the GitPort protocol using the fake implementation."""
 
-    def test_protocol_definition_exists(self):
+    def test_protocol_definition_exists(self) -> None:
         """Test that GitPort Protocol is properly defined."""
         assert isinstance(GitPort, type(Protocol))
 
-    def test_fake_port_implements_protocol(self):
+    def test_fake_port_implements_protocol(self) -> None:
         """Test that FakeGitPort implements the GitPort protocol."""
         fake_port = FakeGitPort()
 
@@ -25,7 +25,7 @@ class TestGitPortProtocol:
         assert hasattr(fake_port, "find_top_level_git_path")
         assert callable(fake_port.find_top_level_git_path)
 
-    def test_find_top_level_git_path_returns_none_for_nonexistent_repo(self):
+    def test_find_top_level_git_path_returns_none_for_nonexistent_repo(self) -> None:
         """Test that find_top_level_git_path returns None when no git repo exists."""
         fake_port = FakeGitPort()
 
@@ -33,7 +33,7 @@ class TestGitPortProtocol:
 
         assert result is None
 
-    def test_find_top_level_git_path_returns_root_when_path_is_git_root(self):
+    def test_find_top_level_git_path_returns_root_when_path_is_git_root(self) -> None:
         """Test that find_top_level_git_path returns the root when path IS the git root."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -42,7 +42,7 @@ class TestGitPortProtocol:
 
         assert result == "/home/user/my_project"
 
-    def test_find_top_level_git_path_returns_root_for_subdirectory(self):
+    def test_find_top_level_git_path_returns_root_for_subdirectory(self) -> None:
         """Test that find_top_level_git_path returns root when path is a subdirectory."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -51,7 +51,7 @@ class TestGitPortProtocol:
 
         assert result == "/home/user/my_project"
 
-    def test_find_top_level_git_path_returns_root_for_nested_subdirectory(self):
+    def test_find_top_level_git_path_returns_root_for_nested_subdirectory(self) -> None:
         """Test that find_top_level_git_path works with deeply nested paths."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -60,7 +60,7 @@ class TestGitPortProtocol:
 
         assert result == "/home/user/my_project"
 
-    def test_find_top_level_git_path_returns_root_for_file_in_repo(self):
+    def test_find_top_level_git_path_returns_root_for_file_in_repo(self) -> None:
         """Test that find_top_level_git_path works for files within the repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -69,7 +69,7 @@ class TestGitPortProtocol:
 
         assert result == "/home/user/my_project"
 
-    def test_find_top_level_git_path_with_trailing_slash(self):
+    def test_find_top_level_git_path_with_trailing_slash(self) -> None:
         """Test that find_top_level_git_path handles trailing slashes correctly."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -78,7 +78,7 @@ class TestGitPortProtocol:
 
         assert result == "/home/user/my_project"
 
-    def test_find_top_level_git_path_with_multiple_repos(self):
+    def test_find_top_level_git_path_with_multiple_repos(self) -> None:
         """Test behavior when multiple git repos are configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project_a")
@@ -90,7 +90,7 @@ class TestGitPortProtocol:
         assert result_a == "/home/user/project_a"
         assert result_b == "/home/user/project_b"
 
-    def test_find_top_level_git_path_nearest_repo_wins(self):
+    def test_find_top_level_git_path_nearest_repo_wins(self) -> None:
         """Test that the nearest git root is found when nested repos exist."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user")
@@ -105,7 +105,7 @@ class TestGitPortProtocol:
 class TestGitPortIntegrationWithGitRepository:
     """Tests for GitPort protocol integration with GitRepository model."""
 
-    def test_can_create_repository_from_port_result(self):
+    def test_can_create_repository_from_port_result(self) -> None:
         """Test that GitRepository can be created from GitPort results."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -120,7 +120,7 @@ class TestGitPortIntegrationWithGitRepository:
             assert repo.name == "my_project"
             assert repo.absolute_path == "/home/user/my_project"
 
-    def test_none_result_handled_gracefully(self):
+    def test_none_result_handled_gracefully(self) -> None:
         """Test that None results from GitPort are handled gracefully."""
         fake_port = FakeGitPort()
 
@@ -130,7 +130,7 @@ class TestGitPortIntegrationWithGitRepository:
         if git_root is None:
             pass  # Expected behavior - no exception raised
 
-    def test_workflow_detect_repository(self):
+    def test_workflow_detect_repository(self) -> None:
         """Test the complete workflow of detecting a repository using GitPort."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/workbench_project")
@@ -157,7 +157,7 @@ class TestGitPortIntegrationWithGitRepository:
 class TestGitPortEdgeCases:
     """Tests for edge cases in GitPort protocol implementation."""
 
-    def test_empty_path(self):
+    def test_empty_path(self) -> None:
         """Test handling of empty path."""
         fake_port = FakeGitPort()
 
@@ -166,7 +166,7 @@ class TestGitPortEdgeCases:
         # Should return None for empty path
         assert result is None
 
-    def test_root_directory(self):
+    def test_root_directory(self) -> None:
         """Test handling of root directory."""
         fake_port = FakeGitPort()
 
@@ -175,7 +175,7 @@ class TestGitPortEdgeCases:
         # Should return None unless root is explicitly added as a git repo
         assert result is None
 
-    def test_single_character_path(self):
+    def test_single_character_path(self) -> None:
         """Test handling of single character path."""
         fake_port = FakeGitPort()
 
@@ -183,7 +183,7 @@ class TestGitPortEdgeCases:
 
         assert result is None
 
-    def test_path_with_special_characters(self):
+    def test_path_with_special_characters(self) -> None:
         """Test handling of paths with special characters."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my-project_v2.0")
@@ -192,7 +192,7 @@ class TestGitPortEdgeCases:
 
         assert result == "/home/user/my-project_v2.0"
 
-    def test_relative_path_handling(self):
+    def test_relative_path_handling(self) -> None:
         """Test handling of relative paths (should work but may not find repo)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -203,7 +203,7 @@ class TestGitPortEdgeCases:
         # This should return None since relative path doesn't match absolute root
         assert result is None
 
-    def test_symlink_like_paths(self):
+    def test_symlink_like_paths(self) -> None:
         """Test handling of paths that look like symlinks.
 
         Note: This fake implementation doesn't normalize paths with '..'.
@@ -222,7 +222,7 @@ class TestGitPortEdgeCases:
 class TestGitPortGetCommits:
     """Tests for the get_commits method of GitPort protocol."""
 
-    def test_fake_port_implements_get_commits_method(self):
+    def test_fake_port_implements_get_commits_method(self) -> None:
         """Test that FakeGitPort implements the get_commits method."""
         fake_port = FakeGitPort()
 
@@ -230,7 +230,7 @@ class TestGitPortGetCommits:
         assert hasattr(fake_port, "get_commits")
         assert callable(fake_port.get_commits)
 
-    def test_get_commits_returns_empty_list_when_no_commits_configured(self):
+    def test_get_commits_returns_empty_list_when_no_commits_configured(self) -> None:
         """Test that get_commits returns an empty list when no commits are configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -240,7 +240,7 @@ class TestGitPortGetCommits:
         assert result == []
         assert isinstance(result, list)
 
-    def test_get_commits_returns_single_commit(self):
+    def test_get_commits_returns_single_commit(self) -> None:
         """Test that get_commits returns a single commit when one is configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -260,7 +260,7 @@ class TestGitPortGetCommits:
         assert result[0].author == "John Doe"
         assert result[0].timestamp.isoformat() == "2024-01-15T10:30:00+00:00"
 
-    def test_get_commits_returns_multiple_commits(self):
+    def test_get_commits_returns_multiple_commits(self) -> None:
         """Test that get_commits returns multiple commits when configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -294,7 +294,7 @@ class TestGitPortGetCommits:
         assert result[1].id == "commit2"
         assert result[2].id == "commit1"
 
-    def test_get_commits_limit_parameter_works_correctly(self):
+    def test_get_commits_limit_parameter_works_correctly(self) -> None:
         """Test that the limit parameter correctly limits the number of commits returned."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -321,7 +321,7 @@ class TestGitPortGetCommits:
         result_zero = fake_port.get_commits("/home/user/my_project", limit=0)
         assert result_zero == []
 
-    def test_get_commits_returns_commits_in_desc_order_newest_first(self):
+    def test_get_commits_returns_commits_in_desc_order_newest_first(self) -> None:
         """Test that get_commits returns commits in DESC order (newest first)."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -355,7 +355,7 @@ class TestGitPortGetCommits:
         assert result[1].id == "middle"
         assert result[2].id == "oldest"
 
-    def test_get_commits_commit_properties_are_accessible(self):
+    def test_get_commits_commit_properties_are_accessible(self) -> None:
         """Test that all GitCommit properties are accessible from returned commits."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -378,7 +378,7 @@ class TestGitPortGetCommits:
         assert commit.author == "Test Author <test@example.com>"
         assert commit.timestamp.isoformat() == "2024-06-15T14:30:45+00:00"
 
-    def test_get_commits_returns_empty_list_for_nonexistent_repo(self):
+    def test_get_commits_returns_empty_list_for_nonexistent_repo(self) -> None:
         """Test that get_commits returns empty list for paths outside any git repo."""
         fake_port = FakeGitPort()
 
@@ -386,7 +386,7 @@ class TestGitPortGetCommits:
 
         assert result == []
 
-    def test_get_commits_works_with_subdirectory_paths(self):
+    def test_get_commits_works_with_subdirectory_paths(self) -> None:
         """Test that get_commits works when called with subdirectory paths."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -408,7 +408,7 @@ class TestGitPortGetCommits:
 class TestGitPortGetCommitsMultipleRepos:
     """Tests for get_commits with multiple git repositories."""
 
-    def test_get_commits_separates_commits_by_repository(self):
+    def test_get_commits_separates_commits_by_repository(self) -> None:
         """Test that get_commits correctly separates commits by repository."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project_a")
@@ -441,7 +441,7 @@ class TestGitPortGetCommitsMultipleRepos:
 class TestGitPortIsPathInRepository:
     """Tests for the is_path_in_repository method of GitPort protocol."""
 
-    def test_fake_port_implements_is_path_in_repository_method(self):
+    def test_fake_port_implements_is_path_in_repository_method(self) -> None:
         """Test that FakeGitPort implements the is_path_in_repository method."""
         fake_port = FakeGitPort()
 
@@ -449,7 +449,7 @@ class TestGitPortIsPathInRepository:
         assert hasattr(fake_port, "is_path_in_repository")
         assert callable(fake_port.is_path_in_repository)
 
-    def test_is_path_in_repository_returns_true_for_git_root(self):
+    def test_is_path_in_repository_returns_true_for_git_root(self) -> None:
         """Test that is_path_in_repository returns True when path equals git_root."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -458,7 +458,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is True
 
-    def test_is_path_in_repository_returns_true_for_subdirectory(self):
+    def test_is_path_in_repository_returns_true_for_subdirectory(self) -> None:
         """Test that is_path_in_repository returns True for subdirectories."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -467,7 +467,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is True
 
-    def test_is_path_in_repository_returns_true_for_nested_subdirectory(self):
+    def test_is_path_in_repository_returns_true_for_nested_subdirectory(self) -> None:
         """Test that is_path_in_repository works with deeply nested paths."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -476,7 +476,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is True
 
-    def test_is_path_in_repository_returns_true_for_file_in_repo(self):
+    def test_is_path_in_repository_returns_true_for_file_in_repo(self) -> None:
         """Test that is_path_in_repository returns True for files within the repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -485,7 +485,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is True
 
-    def test_is_path_in_repository_returns_false_for_path_outside_repo(self):
+    def test_is_path_in_repository_returns_false_for_path_outside_repo(self) -> None:
         """Test that is_path_in_repository returns False for paths outside the repo."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -494,7 +494,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is False
 
-    def test_is_path_in_repository_returns_false_for_completely_different_path(self):
+    def test_is_path_in_repository_returns_false_for_completely_different_path(self) -> None:
         """Test that is_path_in_repository returns False for completely different paths."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -503,7 +503,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is False
 
-    def test_is_path_in_repository_returns_false_for_empty_git_root(self):
+    def test_is_path_in_repository_returns_false_for_empty_git_root(self) -> None:
         """Test that is_path_in_repository returns False for empty git_root."""
         fake_port = FakeGitPort()
 
@@ -511,7 +511,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is False
 
-    def test_is_path_in_repository_returns_false_for_empty_path(self):
+    def test_is_path_in_repository_returns_false_for_empty_path(self) -> None:
         """Test that is_path_in_repository returns False for empty path."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -520,7 +520,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is False
 
-    def test_is_path_in_repository_handles_trailing_slash(self):
+    def test_is_path_in_repository_handles_trailing_slash(self) -> None:
         """Test that is_path_in_repository handles trailing slashes correctly."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/my_project")
@@ -529,7 +529,7 @@ class TestGitPortIsPathInRepository:
 
         assert result is True
 
-    def test_is_path_in_repository_with_multiple_repos(self):
+    def test_is_path_in_repository_with_multiple_repos(self) -> None:
         """Test behavior when multiple git repos are configured."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project_a")
@@ -541,7 +541,7 @@ class TestGitPortIsPathInRepository:
         assert result_a is True
         assert result_b is True
 
-    def test_is_path_in_repository_returns_false_for_similar_but_different_path(self):
+    def test_is_path_in_repository_returns_false_for_similar_but_different_path(self) -> None:
         """Test that similar paths are correctly distinguished."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/project")
@@ -555,7 +555,7 @@ class TestGitPortIsPathInRepository:
 class TestGitPortIsPathInRepositoryWithRealPaths:
     """Tests that verify is_path_in_repository correctly uses os.path operations."""
 
-    def test_is_path_in_repository_uses_os_path_normpath(self):
+    def test_is_path_in_repository_uses_os_path_normpath(self) -> None:
         """Test that the method correctly normalizes paths using os.path.normpath."""
         fake_port = FakeGitPort()
         fake_port.add_git_repo("/home/user/test-repo")
@@ -565,7 +565,7 @@ class TestGitPortIsPathInRepositoryWithRealPaths:
 
         assert result is True
 
-    def test_is_path_in_repository_preserves_absolute_paths(self):
+    def test_is_path_in_repository_preserves_absolute_paths(self) -> None:
         """Test that the method preserves and compares absolute paths correctly."""
         fake_port = FakeGitPort()
         test_path = "/absolute/path/to/repository"

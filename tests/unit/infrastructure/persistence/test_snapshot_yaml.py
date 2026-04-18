@@ -52,7 +52,7 @@ class TestSnapshotYamlSerializer:
             git_path="",
         )
 
-    def test_serialize_snapshot_to_yaml_format(self):
+    def test_serialize_snapshot_to_yaml_format(self) -> None:
         """Test: Serialize Snapshot to YAML format matching ProjectState.md spec."""
         snapshot = self._create_sample_snapshot()
 
@@ -102,7 +102,7 @@ class TestSnapshotYamlSerializer:
             assert objects[2]["path"] == "Body/Pad"
             assert objects[2]["after"] == "Sketch"
 
-    def test_deserialize_yaml_to_snapshot(self):
+    def test_deserialize_yaml_to_snapshot(self) -> None:
         """Test: Deserialize YAML to Snapshot with flat node structure."""
         yaml_content = """v: 1
 timestamp: 2024-01-15T10:30:00+00:00
@@ -174,7 +174,7 @@ objects:
             assert node3.type_id == "PartDesign::Pad"
             assert node3.after == "Sketch"
 
-    def test_roundtrip_produces_identical_output(self):
+    def test_roundtrip_produces_identical_output(self) -> None:
         """Test: Round-trip (serialize → deserialize → serialize) produces identical output."""
         original_snapshot = self._create_sample_snapshot()
 
@@ -197,7 +197,7 @@ objects:
             second_data = yaml.safe_load(second_output)
             assert first_data == second_data
 
-    def test_loading_yaml_creates_correct_flat_node_structure(self):
+    def test_loading_yaml_creates_correct_flat_node_structure(self) -> None:
         """Test: Loading YAML creates correct flat node structure."""
         yaml_content = """v: 1
 timestamp: 2024-02-20T12:00:00+00:00
@@ -264,7 +264,7 @@ objects:
             assert body is not None
             assert body.after is None  # Different parent, first in its group
 
-    def test_serialize_empty_snapshot(self):
+    def test_serialize_empty_snapshot(self) -> None:
         """Test: Serialize snapshot with no nodes."""
         snapshot = Snapshot(
             snapshot_id="empty-uuid",
@@ -282,7 +282,7 @@ objects:
             assert data["objects"] == []
             assert data["uid"] == "empty-uuid"
 
-    def test_deserialize_empty_snapshot(self):
+    def test_deserialize_empty_snapshot(self) -> None:
         """Test: Deserialize snapshot with no objects."""
         yaml_content = """v: 1
 timestamp: 2024-03-01T00:00:00+00:00
@@ -298,7 +298,7 @@ objects: []
             assert snapshot.snapshot_id == "empty-uuid"
             assert snapshot.node_count == 0
 
-    def test_objects_sorted_by_id(self):
+    def test_objects_sorted_by_id(self) -> None:
         """Test: Objects are stored sorted by integer id."""
         # Create snapshot with nodes not in ID order
         nodes = [
@@ -323,7 +323,7 @@ objects: []
             ids = [obj["id"] for obj in data["objects"]]
             assert ids == [1, 2, 3, 5], "Objects should be sorted by id"
 
-    def test_yaml_path_field_for_text_diff_readability(self):
+    def test_yaml_path_field_for_text_diff_readability(self) -> None:
         """Test: Include path field (not parent) for human-readable text diffs."""
         yaml_content = """v: 1
 timestamp: 2024-01-01T00:00:00+00:00
@@ -353,7 +353,7 @@ objects:
 class TestSnapshotYamlSerializerOverwrite:
     """Tests for YAML overwrite behavior when persisting snapshots."""
 
-    def test_to_yaml_overwrites_existing_file(self):
+    def test_to_yaml_overwrites_existing_file(self) -> None:
         """Test: to_yaml overwrites existing file rather than appending or creating new file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yaml_path = Path(tmpdir) / "snapshot.yaml"
@@ -387,7 +387,7 @@ class TestSnapshotYamlSerializerOverwrite:
             # Old data should be completely gone
             assert new_content["timestamp"] == "2024-06-15T00:00:00+00:00"
 
-    def test_multiple_serializations_update_file_size(self):
+    def test_multiple_serializations_update_file_size(self) -> None:
         """Test: Multiple serializations update file size appropriately (overwrite, not append)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yaml_path = Path(tmpdir) / "snapshot.yaml"
@@ -427,7 +427,7 @@ class TestSnapshotYamlSerializerOverwrite:
             assert second_size > first_size, "Larger snapshot should produce larger file"
             assert third_size == first_size, "Same snapshot should produce same file size (overwrite)"
 
-    def test_to_yaml_replaces_all_content_on_overwrite(self):
+    def test_to_yaml_replaces_all_content_on_overwrite(self) -> None:
         """Test: All content is replaced when overwriting, including nested structures."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yaml_path = Path(tmpdir) / "snapshot.yaml"

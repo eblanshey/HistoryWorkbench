@@ -56,6 +56,9 @@ from ..translation_strings import (
 from .models import HistorySelection
 
 
+__all__ = ["DiffPanelView", "HistorySelection"]
+
+
 def _camelcase_to_spaces(name: str) -> str:
     """Insert spaces before uppercase letters and digits, matching FreeCAD display.
 
@@ -164,7 +167,7 @@ class _PropertyValueDelegate(QStyledItemDelegate):
             option: The style option.
             index: The model index.
         """
-        editor.setGeometry(option.rect)
+        editor.setGeometry(option.rect)  # type: ignore[attr-defined]
 
 
 class DiffPanelView(QWidget):

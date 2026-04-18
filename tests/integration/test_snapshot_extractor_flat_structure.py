@@ -24,7 +24,7 @@ class TestSnapshotExtractorFlatStructure:
     with id, path, and after fields as specified in the domain model.
     """
 
-    def test_extracted_snapshot_has_flat_node_list(self, freecad_app, extractor, project_root):
+    def test_extracted_snapshot_has_flat_node_list(self, freecad_app, extractor, project_root) -> None:
         """Test that extracted snapshot has flat node list (no hierarchical tree).
 
         The Snapshot should have a 'nodes' list attribute, not 'root_nodes'.
@@ -46,7 +46,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_each_node_has_id_path_after(self, freecad_app, extractor, project_root):
+    def test_each_node_has_id_path_after(self, freecad_app, extractor, project_root) -> None:
         """Test that each node has id, path, and after fields populated correctly."""
         from pathlib import Path
 
@@ -69,7 +69,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_root_nodes_have_after_null(self, freecad_app, extractor, project_root):
+    def test_root_nodes_have_after_null(self, freecad_app, extractor, project_root) -> None:
         """Test that root nodes have after=None (they are first in document order).
 
         Root nodes are those that have no parent in the claimChildren hierarchy.
@@ -100,7 +100,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_first_child_has_after_null(self, freecad_app, extractor, project_root):
+    def test_first_child_has_after_null(self, freecad_app, extractor, project_root) -> None:
         """Test that first child of any parent has after=None."""
         from pathlib import Path
 
@@ -134,7 +134,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_subsequent_children_have_after_set(self, freecad_app, extractor, project_root):
+    def test_subsequent_children_have_after_set(self, freecad_app, extractor, project_root) -> None:
         """Test that subsequent children have after set to previous sibling name."""
         from pathlib import Path
 
@@ -170,7 +170,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_all_nodes_have_unique_ids(self, freecad_app, extractor, project_root):
+    def test_all_nodes_have_unique_ids(self, freecad_app, extractor, project_root) -> None:
         """Test that all nodes have unique ids."""
         from pathlib import Path
 
@@ -193,7 +193,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_path_format_root_vs_child(self, freecad_app, extractor, project_root):
+    def test_path_format_root_vs_child(self, freecad_app, extractor, project_root) -> None:
         """Test that root nodes have path=name, children have path=ParentName/ChildName."""
         from pathlib import Path
 
@@ -221,7 +221,7 @@ class TestSnapshotExtractorFlatStructure:
         finally:
             freecad_app.closeDocument(doc.Name)
 
-    def test_node_id_is_object_id_property(self, freecad_app, extractor, project_root):
+    def test_node_id_is_object_id_property(self, freecad_app, extractor, project_root) -> None:
         """Test that node id uses FreeCAD's object.ID property.
 
         The id should match the unique integer ID that FreeCAD assigns to each object.

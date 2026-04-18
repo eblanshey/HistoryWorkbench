@@ -72,13 +72,13 @@ class _CompareCommand:
         view = self._get_view()
 
         if view is None:
-            QMessageBox.critical(None, "Error", "Diff panel view not found.")
+            QMessageBox.critical(None, "Error", "Diff panel view not found.")  # type: ignore[arg-type]
             return
 
-        selected_ids = view.get_selected_snapshot_ids()
+        selected_ids = view.get_selected_snapshot_ids()  # type: ignore[attr-defined]
         if len(selected_ids) < 2:
             QMessageBox.warning(
-                None,
+                None,  # type: ignore[arg-type]
                 "Selection Required",
                 "Please select at least 2 snapshots to compare.",
             )
@@ -111,7 +111,7 @@ class _CompareCommand:
             return None
 
         # Find the DiffPanelView widget (assumed to be in the main window)
-        for widget in mw.findChildren(DiffPanelView):
+        for widget in mw.findChildren(DiffPanelView):  # type: ignore[var-annotated]
             return widget
 
         return None

@@ -4,12 +4,19 @@
 # the actual FreeCAD runtime and git CLI.
 """Integration tests for FindActiveGitRepositoryAction."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from freecad.diff_wb.domain.freecad_ports import FreeCadContext
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.infrastructure.freecad.ports import get_port
 from freecad.diff_wb.infrastructure.git.git_port_adapter import GitPortAdapter
+
+
+if TYPE_CHECKING:
+    from freecad.diff_wb.domain.freecad_ports import AppLike, GuiLike
 
 
 class TestFindActiveGitRepositoryAction:
@@ -18,8 +25,8 @@ class TestFindActiveGitRepositoryAction:
     def test_execute_returns_repository_for_saved_document_in_git_repo(
         self,
         project_root: Path,
-        freecad_app,
-    ):
+        freecad_app: AppLike,
+    ) -> None:
         """Test that action returns a valid GitRepository for a saved document.
 
         This test:
@@ -64,8 +71,8 @@ class TestFindActiveGitRepositoryAction:
 
     def test_execute_returns_failure_for_unsaved_document(
         self,
-        freecad_app,
-    ):
+        freecad_app: AppLike,
+    ) -> None:
         """Test that action returns failure when document is not saved."""
         from freecad.diff_wb.application.actions.find_active_git_repository import (
             FindActiveGitRepositoryAction,
@@ -89,16 +96,17 @@ class TestFindActiveGitRepositoryAction:
 
         # Verify failure - unsaved documents have empty FileName
         assert not result.is_success
-        assert "not saved" in result.message.lower() or "no file path" in result.message.lower()
+        message_lower = result.message.lower() if result.message else ""
+        assert "not saved" in message_lower or "no file path" in message_lower
 
         # Clean up
         freecad_app.closeDocument(doc.Name)
 
     def test_execute_returns_failure_when_no_active_document(
         self,
-        freecad_app,
-        freecad_gui,
-    ):
+        freecad_app: AppLike,
+        freecad_gui: GuiLike | None,
+    ) -> None:
         """Test that action returns failure when no document is active."""
         from freecad.diff_wb.application.actions.find_active_git_repository import (
             FindActiveGitRepositoryAction,
@@ -130,4 +138,5 @@ class TestFindActiveGitRepositoryAction:
 
         # Verify failure
         assert not result.is_success
-        assert "no active document" in result.message.lower()
+        message_lower = result.message.lower() if result.message else ""
+        assert "no active document" in message_lower

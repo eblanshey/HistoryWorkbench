@@ -9,9 +9,14 @@ and activate the workbench.
 
 import os
 import traceback
+from typing import TYPE_CHECKING
 
 from ..resources import ICONPATH
 from ..utils import Log, set_logger
+
+
+if TYPE_CHECKING:
+    pass
 
 
 try:
@@ -19,8 +24,8 @@ try:
     from FreeCADGui import getMainWindow  # noqa: N813
 except Exception as e:
     Log.exception(f"Failed to import FreeCADGui: {e}")
-    Gui = None
-    getMainWindow = None  # noqa: N816
+    Gui = None  # type: ignore[assignment]
+    getMainWindow = None  # type: ignore[assignment]  # noqa: N816
 
 
 if Gui is not None:

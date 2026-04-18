@@ -26,7 +26,7 @@ def reset_registry():
 class TestComposeAndRegisterUiReturnsView:
     """Test that compose_and_register_ui returns a DiffPanelView."""
 
-    def test_compose_returns_diff_panel_view_instance(self):
+    def test_compose_returns_diff_panel_view_instance(self) -> None:
         """compose_and_register_ui should return a DiffPanelView instance."""
         from freecad.diff_wb.ui.views.diff_panel_view import DiffPanelView
 
@@ -57,7 +57,7 @@ class TestComposeAndRegisterUiReturnsView:
 class TestComposeCreatesUiState:
     """Test that compose_and_register_ui creates a UIState instance."""
 
-    def test_compose_creates_ui_state(self):
+    def test_compose_creates_ui_state(self) -> None:
         """compose_and_register_ui should create a UIState instance."""
         # Create mock container with all required attributes
         mock_container = MagicMock(spec=ApplicationContainer)
@@ -101,7 +101,7 @@ class TestComposerRegistersSnapshotPresenter:
         mock_container.get_commits_action = MagicMock()
         return mock_container
 
-    def test_snapshot_presenter_is_registered(self):
+    def test_snapshot_presenter_is_registered(self) -> None:
         """After composition, ui_registry.snapshot_presenter should be set."""
         mock_container = self._create_mock_container()
 
@@ -111,7 +111,7 @@ class TestComposerRegistersSnapshotPresenter:
             # Verify snapshot presenter is registered (not None and not raising error)
             assert ui_registry._snapshot_presenter is not None
 
-    def test_snapshot_presenter_receives_correct_dependencies(self):
+    def test_snapshot_presenter_receives_correct_dependencies(self) -> None:
         """SnapshotPresenter should receive view and list_snapshots_action."""
         mock_container = self._create_mock_container()
         mock_list_action = MagicMock()
@@ -150,7 +150,7 @@ class TestComposerRegistersDiffPresenter:
         mock_container.get_commits_action = MagicMock()
         return mock_container
 
-    def test_diff_presenter_is_registered(self):
+    def test_diff_presenter_is_registered(self) -> None:
         """After composition, ui_registry.diff_presenter should be set."""
         mock_container = self._create_mock_container()
 
@@ -160,7 +160,7 @@ class TestComposerRegistersDiffPresenter:
             # Verify diff presenter is registered
             assert ui_registry._diff_presenter is not None
 
-    def test_diff_presenter_receives_ui_state(self):
+    def test_diff_presenter_receives_ui_state(self) -> None:
         """DiffPresenter should receive ui_state reference."""
         mock_container = self._create_mock_container()
 
@@ -178,7 +178,7 @@ class TestComposerRegistersDiffPresenter:
             MockPresenter.assert_called_once()
             assert MockPresenter.call_args.kwargs["ui_state"] is mock_ui_state
 
-    def test_diff_presenter_receives_all_required_actions(self):
+    def test_diff_presenter_receives_all_required_actions(self) -> None:
         """DiffPresenter should receive all required action dependencies."""
         mock_container = self._create_mock_container()
 
@@ -214,7 +214,7 @@ class TestComposerConnectsTreeWidgetCallback:
         mock_container.get_commits_action = MagicMock()
         return mock_container
 
-    def test_set_node_selection_callback_is_called(self):
+    def test_set_node_selection_callback_is_called(self) -> None:
         """set_node_selection_callback should be called with presenter's on_node_selected method."""
         mock_container = self._create_mock_container()
 
@@ -232,7 +232,7 @@ class TestComposerConnectsTreeWidgetCallback:
             # Verify set_node_selection_callback was called with on_node_selected
             mock_view.set_node_selection_callback.assert_called_once_with(mock_presenter.on_node_selected)
 
-    def test_callback_invokes_on_node_selected_with_git_path_and_node_path(self):
+    def test_callback_invokes_on_node_selected_with_git_path_and_node_path(self) -> None:
         """Callback should invoke on_node_selected with both git_path and node_path."""
 
         mock_container = self._create_mock_container()
@@ -275,7 +275,7 @@ class TestComposerInitializesGitRepositoryPresenter:
         mock_container.get_commits_action = MagicMock()
         return mock_container
 
-    def test_git_repository_presenter_is_created(self):
+    def test_git_repository_presenter_is_created(self) -> None:
         """GitRepositoryPresenter should be instantiated during composition."""
         mock_container = self._create_mock_container()
 
@@ -288,7 +288,7 @@ class TestComposerInitializesGitRepositoryPresenter:
             # Verify GitRepositoryPresenter was created
             MockPresenter.assert_called_once()
 
-    def test_git_repository_presenter_receives_ui_state(self):
+    def test_git_repository_presenter_receives_ui_state(self) -> None:
         """GitRepositoryPresenter should receive ui_state reference."""
         mock_container = self._create_mock_container()
 
@@ -306,7 +306,7 @@ class TestComposerInitializesGitRepositoryPresenter:
             MockPresenter.assert_called_once()
             assert MockPresenter.call_args.kwargs["ui_state"] is mock_ui_state
 
-    def test_git_repository_presenter_receives_required_actions(self):
+    def test_git_repository_presenter_receives_required_actions(self) -> None:
         """GitRepositoryPresenter should receive find_git_repo_action and get_commits_action."""
         mock_container = self._create_mock_container()
 
@@ -320,7 +320,7 @@ class TestComposerInitializesGitRepositoryPresenter:
             assert "find_git_repo_action" in call_args.kwargs
             assert "get_commits_action" in call_args.kwargs
 
-    def test_git_repository_presenter_on_workbench_activated_is_called(self):
+    def test_git_repository_presenter_on_workbench_activated_is_called(self) -> None:
         """GitRepositoryPresenter.on_workbench_activated() should be called after creation."""
         mock_container = self._create_mock_container()
 
@@ -354,7 +354,7 @@ class TestComposerWiresAllDependencies:
         mock_container.get_commits_action = MagicMock()
         return mock_container
 
-    def test_all_actions_passed_from_container_to_presenters(self):
+    def test_all_actions_passed_from_container_to_presenters(self) -> None:
         """All container actions should be passed to appropriate presenters."""
         mock_container = self._create_mock_container()
 

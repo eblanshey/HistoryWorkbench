@@ -9,7 +9,7 @@ from freecad.diff_wb.domain.tree import Property, PropertyType
 class TestPropertyDiffChildren:
     """Tests for PropertyDiff children computation."""
 
-    def test_property_diff_computes_children(self):
+    def test_property_diff_computes_children(self) -> None:
         """PropertyDiff has children after creation for expandable properties."""
         # Create a Placement property with Position and Rotation
         old_placement = Property.create(
@@ -32,7 +32,7 @@ class TestPropertyDiffChildren:
         child_names = {child.property_name for child in prop_diff.children}
         assert child_names == {"Position", "Rotation"}
 
-    def test_property_diff_no_children_for_primitives(self):
+    def test_property_diff_no_children_for_primitives(self) -> None:
         """Primitive properties have empty children."""
         old_value = Property.create(PropertyType.FLOAT, 10.0)
         new_value = Property.create(PropertyType.FLOAT, 20.0)
@@ -45,7 +45,7 @@ class TestPropertyDiffChildren:
 
         assert prop_diff.children == []
 
-    def test_property_diff_no_children_for_string(self):
+    def test_property_diff_no_children_for_string(self) -> None:
         """String properties have empty children."""
         old_value = Property.create(PropertyType.STRING, "hello")
         new_value = Property.create(PropertyType.STRING, "world")
@@ -58,7 +58,7 @@ class TestPropertyDiffChildren:
 
         assert prop_diff.children == []
 
-    def test_property_diff_children_states_unchanged(self):
+    def test_property_diff_children_states_unchanged(self) -> None:
         """Children have correct UNCHANGED state when values are equal."""
         old_placement = Property.create(
             PropertyType.PLACEMENT,
@@ -82,7 +82,7 @@ class TestPropertyDiffChildren:
         for child in prop_diff.children:
             assert child.state == DiffState.UNCHANGED
 
-    def test_property_diff_children_states_modified(self):
+    def test_property_diff_children_states_modified(self) -> None:
         """Children have correct MODIFIED state when values differ."""
         old_placement = Property.create(
             PropertyType.PLACEMENT,
@@ -110,7 +110,7 @@ class TestPropertyDiffChildren:
         rotation_child = next(c for c in prop_diff.children if c.property_name == "Rotation")
         assert rotation_child.state == DiffState.UNCHANGED
 
-    def test_property_diff_children_added(self):
+    def test_property_diff_children_added(self) -> None:
         """Children have ADDED state when property is new."""
         new_placement = Property.create(
             PropertyType.PLACEMENT,
@@ -130,7 +130,7 @@ class TestPropertyDiffChildren:
         for child in prop_diff.children:
             assert child.state == DiffState.ADDED
 
-    def test_property_diff_children_deleted(self):
+    def test_property_diff_children_deleted(self) -> None:
         """Children have DELETED state when property is removed."""
         old_placement = Property.create(
             PropertyType.PLACEMENT,
@@ -150,7 +150,7 @@ class TestPropertyDiffChildren:
         for child in prop_diff.children:
             assert child.state == DiffState.DELETED
 
-    def test_property_diff_vector_children(self):
+    def test_property_diff_vector_children(self) -> None:
         """Vector properties have x, y, z children."""
         old_vector = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
         new_vector = Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0))
@@ -170,7 +170,7 @@ class TestPropertyDiffChildren:
         for child in prop_diff.children:
             assert child.state == DiffState.MODIFIED
 
-    def test_property_diff_both_none(self):
+    def test_property_diff_both_none(self) -> None:
         """PropertyDiff handles None for both old and new values."""
         prop_diff = PropertyDiff(
             property_name="Placement",
@@ -183,7 +183,7 @@ class TestPropertyDiffChildren:
         assert prop_diff.state == DiffState.ADDED
         assert prop_diff.children == []
 
-    def test_property_diff_children_empty_both_sides(self):
+    def test_property_diff_children_empty_both_sides(self) -> None:
         """PropertyDiff handles both sides having no children."""
         old_value = Property.create(PropertyType.STRING, "hello")
         new_value = Property.create(PropertyType.STRING, "world")
@@ -201,16 +201,16 @@ class TestPropertyDiffChildren:
 class TestWarningConstants:
     """Tests for warning constants in diff models."""
 
-    def test_warning_old_snapshot_missing_exists(self):
+    def test_warning_old_snapshot_missing_exists(self) -> None:
         """Warning constant for missing old snapshot is defined."""
         # The constant should be importable and accessible
         assert WARNING_OLD_SNAPSHOT_MISSING is not None
 
-    def test_warning_old_snapshot_missing_exact_value(self):
+    def test_warning_old_snapshot_missing_exact_value(self) -> None:
         """Warning constant equals expected string exactly."""
         assert WARNING_OLD_SNAPSHOT_MISSING == "Old snapshot missing"
 
-    def test_warning_old_snapshot_missing_is_non_empty_descriptive(self):
+    def test_warning_old_snapshot_missing_is_non_empty_descriptive(self) -> None:
         """Warning string is non-empty and descriptive."""
         # Check that the warning string is non-empty
         assert isinstance(WARNING_OLD_SNAPSHOT_MISSING, str)

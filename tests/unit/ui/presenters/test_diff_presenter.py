@@ -656,9 +656,9 @@ class TestDiffPresenterHistorySelection:
             MagicMock() as mock_staging,
             MagicMock() as mock_commit,
         ):
-            presenter._on_working_tree_selected = mock_working  # type: ignore
-            presenter._on_staging_selected = mock_staging  # type: ignore
-            presenter._on_commit_selected = mock_commit  # type: ignore
+            presenter._on_working_tree_selected = mock_working
+            presenter._on_staging_selected = mock_staging
+            presenter._on_commit_selected = mock_commit
 
             # Act
             selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
@@ -678,9 +678,9 @@ class TestDiffPresenterHistorySelection:
             MagicMock() as mock_staging,
             MagicMock() as mock_commit,
         ):
-            presenter._on_working_tree_selected = mock_working  # type: ignore
-            presenter._on_staging_selected = mock_staging  # type: ignore
-            presenter._on_commit_selected = mock_commit  # type: ignore
+            presenter._on_working_tree_selected = mock_working
+            presenter._on_staging_selected = mock_staging
+            presenter._on_commit_selected = mock_commit
 
             # Act
             selection = HistorySelection(item_kind="STAGING", commit_hash=None)
@@ -700,9 +700,9 @@ class TestDiffPresenterHistorySelection:
             MagicMock() as mock_staging,
             MagicMock() as mock_commit,
         ):
-            presenter._on_working_tree_selected = mock_working  # type: ignore
-            presenter._on_staging_selected = mock_staging  # type: ignore
-            presenter._on_commit_selected = mock_commit  # type: ignore
+            presenter._on_working_tree_selected = mock_working
+            presenter._on_staging_selected = mock_staging
+            presenter._on_commit_selected = mock_commit
 
             # Act
             commit_hash = "abc123"
@@ -787,14 +787,14 @@ class TestDiffPresenterWorkingTreeOrchestration:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup mock action
         mock_docs_result = MagicMock()
         mock_docs_result.is_success = True
         mock_docs_result.data = []
         mock_docs_result.message = ""
-        presenter._get_eligible_docs.execute.return_value = mock_docs_result  # type: ignore
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
 
         # Act
         presenter._on_working_tree_selected()
@@ -810,7 +810,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup mock documents
         mock_doc1 = MagicMock(spec=DocumentLike)
@@ -819,7 +819,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_docs_result.is_success = True
         mock_docs_result.data = [mock_doc1]
         mock_docs_result.message = ""
-        presenter._get_eligible_docs.execute.return_value = mock_docs_result  # type: ignore
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
 
         # Setup mock working snapshot
         mock_working_snapshot = Snapshot(
@@ -832,24 +832,24 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_working_result.is_success = True
         mock_working_result.data = mock_working_snapshot
         mock_working_result.message = ""
-        presenter._create_working_tree_snapshot.execute.return_value = mock_working_result  # type: ignore
+        presenter._create_working_tree_snapshot.execute.return_value = mock_working_result
 
         # Setup mock commit result (stub returns None)
         mock_commit_result = MagicMock()
         mock_commit_result.is_success = True
         mock_commit_result.data = None
-        presenter._create_commit_snapshot.execute.return_value = mock_commit_result  # type: ignore
+        presenter._create_commit_snapshot.execute.return_value = mock_commit_result
 
         # Setup mock diff result
         mock_diff_result = DiffResult(
-            old_snapshot=None,  # type: ignore
+            old_snapshot=None,
             new_snapshot=mock_working_snapshot,
             hierarchy=DiffHierarchy(),
         )
         mock_create_diff_result = MagicMock()
         mock_create_diff_result.is_success = True
         mock_create_diff_result.data = mock_diff_result
-        presenter._create_diff.execute.return_value = mock_create_diff_result  # type: ignore
+        presenter._create_diff.execute.return_value = mock_create_diff_result
 
         # Act
         presenter._on_working_tree_selected()
@@ -865,7 +865,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup mock document
         mock_doc = MagicMock(spec=DocumentLike)
@@ -874,7 +874,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_docs_result.is_success = True
         mock_docs_result.data = [mock_doc]
         mock_docs_result.message = ""
-        presenter._get_eligible_docs.execute.return_value = mock_docs_result  # type: ignore
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
 
         # Setup mock working snapshot
         mock_working_snapshot = Snapshot(
@@ -886,13 +886,13 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_working_result = MagicMock()
         mock_working_result.is_success = True
         mock_working_result.data = mock_working_snapshot
-        presenter._create_working_tree_snapshot.execute.return_value = mock_working_result  # type: ignore
+        presenter._create_working_tree_snapshot.execute.return_value = mock_working_result
 
         # Setup mock commit result
         mock_commit_result = MagicMock()
         mock_commit_result.is_success = True
         mock_commit_result.data = None
-        presenter._create_commit_snapshot.execute.return_value = mock_commit_result  # type: ignore
+        presenter._create_commit_snapshot.execute.return_value = mock_commit_result
 
         # Mock the diff creation
         captured_old_snapshot = []
@@ -902,13 +902,13 @@ class TestDiffPresenterWorkingTreeOrchestration:
             mock_diff_result = MagicMock()
             mock_diff_result.is_success = True
             mock_diff_result.data = DiffResult(
-                old_snapshot=old,  # type: ignore
+                old_snapshot=old,
                 new_snapshot=new,
                 hierarchy=DiffHierarchy(),
             )
             return mock_diff_result
 
-        presenter._create_diff.execute.side_effect = capture_diff  # type: ignore
+        presenter._create_diff.execute.side_effect = capture_diff
 
         # Act
         presenter._on_working_tree_selected()
@@ -925,7 +925,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup multiple documents
         mock_doc1 = MagicMock(spec=DocumentLike)
@@ -936,7 +936,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_docs_result.is_success = True
         mock_docs_result.data = [mock_doc1, mock_doc2]
         mock_docs_result.message = ""
-        presenter._get_eligible_docs.execute.return_value = mock_docs_result  # type: ignore
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
 
         # First doc fails, second succeeds
         failed_result = MagicMock()
@@ -963,22 +963,22 @@ class TestDiffPresenterWorkingTreeOrchestration:
                 return failed_result
             return successful_result
 
-        presenter._create_working_tree_snapshot.execute.side_effect = create_working_side_effect  # type: ignore
+        presenter._create_working_tree_snapshot.execute.side_effect = create_working_side_effect
 
         # Setup commit and diff mocks
         mock_commit_result = MagicMock()
         mock_commit_result.is_success = True
         mock_commit_result.data = None
-        presenter._create_commit_snapshot.execute.return_value = mock_commit_result  # type: ignore
+        presenter._create_commit_snapshot.execute.return_value = mock_commit_result
 
         mock_diff_result = MagicMock()
         mock_diff_result.is_success = True
         mock_diff_result.data = DiffResult(
-            old_snapshot=None,  # type: ignore
+            old_snapshot=None,
             new_snapshot=successful_snapshot,
             hierarchy=DiffHierarchy(),
         )
-        presenter._create_diff.execute.return_value = mock_diff_result  # type: ignore
+        presenter._create_diff.execute.return_value = mock_diff_result
 
         # Act
         presenter._on_working_tree_selected()
@@ -994,7 +994,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup two documents
         mock_doc1 = MagicMock(spec=DocumentLike)
@@ -1005,7 +1005,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
         mock_docs_result.is_success = True
         mock_docs_result.data = [mock_doc1, mock_doc2]
         mock_docs_result.message = ""
-        presenter._get_eligible_docs.execute.return_value = mock_docs_result  # type: ignore
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
 
         # Create snapshots for both docs
         snapshot1 = Snapshot(
@@ -1022,19 +1022,19 @@ class TestDiffPresenterWorkingTreeOrchestration:
             result.message = ""
             return result
 
-        presenter._create_working_tree_snapshot.execute.side_effect = create_working_side_effect  # type: ignore
+        presenter._create_working_tree_snapshot.execute.side_effect = create_working_side_effect
 
         # Setup commit and diff mocks
         mock_commit_result = MagicMock()
         mock_commit_result.is_success = True
         mock_commit_result.data = None
-        presenter._create_commit_snapshot.execute.return_value = mock_commit_result  # type: ignore
+        presenter._create_commit_snapshot.execute.return_value = mock_commit_result
 
         def create_diff_side_effect(old, new):
             result = MagicMock()
             result.is_success = True
             result.data = DiffResult(
-                old_snapshot=None,  # type: ignore
+                old_snapshot=None,
                 new_snapshot=new,
                 hierarchy=DiffHierarchy(),
                 added_count=1,
@@ -1043,7 +1043,7 @@ class TestDiffPresenterWorkingTreeOrchestration:
             )
             return result
 
-        presenter._create_diff.execute.side_effect = create_diff_side_effect  # type: ignore
+        presenter._create_diff.execute.side_effect = create_diff_side_effect
 
         # Act
         presenter._on_working_tree_selected()
@@ -1098,7 +1098,7 @@ class TestDiffPresenterAddButton:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup mock working snapshot
         mock_working_snapshot = Snapshot(
@@ -1110,18 +1110,18 @@ class TestDiffPresenterAddButton:
 
         # Setup mock diff result
         mock_diff_result = DiffResult(
-            old_snapshot=None,  # type: ignore
+            old_snapshot=None,
             new_snapshot=mock_working_snapshot,
             hierarchy=DiffHierarchy(),
         )
         # Store in _diff_results_by_path as _on_working_tree_selected would
-        presenter._diff_results_by_path = {"doc.FCStd": mock_diff_result}  # type: ignore
+        presenter._diff_results_by_path = {"doc.FCStd": mock_diff_result}
 
         # Setup mock stage action
         mock_stage_result = MagicMock()
         mock_stage_result.is_success = True
         mock_stage_result.message = ""
-        presenter._stage_documents.execute.return_value = mock_stage_result  # type: ignore
+        presenter._stage_documents.execute.return_value = mock_stage_result
 
         # Act
         presenter.on_add_button_clicked("doc.FCStd")
@@ -1147,10 +1147,10 @@ class TestDiffPresenterAddButton:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # No diff results stored (empty _diff_results_by_path)
-        presenter._diff_results_by_path = {}  # type: ignore
+        presenter._diff_results_by_path = {}
 
         # Act
         presenter.on_add_button_clicked("missing.FCStd")
@@ -1164,7 +1164,7 @@ class TestDiffPresenterAddButton:
 
         # Setup mock repo
         mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
-        presenter._ui_state.git_repository = mock_repo  # type: ignore
+        presenter._ui_state.git_repository = mock_repo
 
         # Setup mock working snapshot
         mock_working_snapshot = Snapshot(
@@ -1176,21 +1176,21 @@ class TestDiffPresenterAddButton:
 
         # Setup mock diff result
         mock_diff_result = DiffResult(
-            old_snapshot=None,  # type: ignore
+            old_snapshot=None,
             new_snapshot=mock_working_snapshot,
             hierarchy=DiffHierarchy(),
         )
-        presenter._diff_results_by_path = {"doc.FCStd": mock_diff_result}  # type: ignore
+        presenter._diff_results_by_path = {"doc.FCStd": mock_diff_result}
 
         # Setup mock stage action
         mock_stage_result = MagicMock()
         mock_stage_result.is_success = True
         mock_stage_result.message = ""
-        presenter._stage_documents.execute.return_value = mock_stage_result  # type: ignore
+        presenter._stage_documents.execute.return_value = mock_stage_result
 
         # Mock _on_working_tree_selected to verify it's called
         with MagicMock() as mock_refresh:
-            presenter._on_working_tree_selected = mock_refresh  # type: ignore
+            presenter._on_working_tree_selected = mock_refresh
 
             # Act
             presenter.on_add_button_clicked("doc.FCStd")

@@ -17,12 +17,12 @@ def _make_snapshot(name: str, nodes: list[TreeNode]) -> Snapshot:
 class TestInMemorySnapshotRepository:
     """Tests for InMemorySnapshotRepository class."""
 
-    def test_store_creation_and_initialization(self):
+    def test_store_creation_and_initialization(self) -> None:
         """Test that store can be created and starts empty."""
         store = InMemorySnapshotRepository()
         assert store.list_snapshots() == []
 
-    def test_add_snapshot_returns_snapshot_id(self):
+    def test_add_snapshot_returns_snapshot_id(self) -> None:
         """Test that add_snapshot returns a unique snapshot_id."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -41,7 +41,7 @@ class TestInMemorySnapshotRepository:
         assert snapshot_id is not None
         assert isinstance(snapshot_id, str)
 
-    def test_get_snapshot_returns_snapshot(self):
+    def test_get_snapshot_returns_snapshot(self) -> None:
         """Test that get_snapshot returns the stored snapshot."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -64,13 +64,13 @@ class TestInMemorySnapshotRepository:
         assert len(retrieved.nodes) == 1
         assert retrieved.nodes[0].name == "TestObject"
 
-    def test_get_snapshot_returns_none_for_invalid_id(self):
+    def test_get_snapshot_returns_none_for_invalid_id(self) -> None:
         """Test that get_snapshot returns None for non-existent ID."""
         store = InMemorySnapshotRepository()
         result = store.get_snapshot("non_existent_id")
         assert result is None
 
-    def test_list_snapshots_returns_metadata(self):
+    def test_list_snapshots_returns_metadata(self) -> None:
         """Test that list_snapshots returns snapshot metadata."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -93,7 +93,7 @@ class TestInMemorySnapshotRepository:
         assert snapshots[0].name == "test_snapshot"
         assert snapshots[0].timestamp is not None
 
-    def test_delete_snapshot_removes_snapshot(self):
+    def test_delete_snapshot_removes_snapshot(self) -> None:
         """Test that delete_snapshot removes the snapshot."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -114,7 +114,7 @@ class TestInMemorySnapshotRepository:
         assert store.get_snapshot(snapshot_id) is None
         assert len(store.list_snapshots()) == 0
 
-    def test_delete_snapshot_returns_true_on_success(self):
+    def test_delete_snapshot_returns_true_on_success(self) -> None:
         """Test that delete_snapshot returns True on successful deletion."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -134,13 +134,13 @@ class TestInMemorySnapshotRepository:
 
         assert result is True
 
-    def test_delete_snapshot_returns_false_for_invalid_id(self):
+    def test_delete_snapshot_returns_false_for_invalid_id(self) -> None:
         """Test that delete_snapshot returns False for non-existent ID."""
         store = InMemorySnapshotRepository()
         result = store.delete_snapshot("non_existent_id")
         assert result is False
 
-    def test_duplicate_name_handling(self):
+    def test_duplicate_name_handling(self) -> None:
         """Test that duplicate snapshot names are allowed (different IDs)."""
         store = InMemorySnapshotRepository()
         nodes1 = [
@@ -183,7 +183,7 @@ class TestInMemorySnapshotRepository:
         assert snap1.nodes[0].name == "Object1"
         assert snap2.nodes[0].name == "Object2"
 
-    def test_empty_store_behavior(self):
+    def test_empty_store_behavior(self) -> None:
         """Test behavior of empty store operations."""
         store = InMemorySnapshotRepository()
 
@@ -196,7 +196,7 @@ class TestInMemorySnapshotRepository:
         # Delete should return False
         assert store.delete_snapshot("any_id") is False
 
-    def test_clear_removes_all_snapshots(self):
+    def test_clear_removes_all_snapshots(self) -> None:
         """Test that clear() removes all snapshots."""
         store = InMemorySnapshotRepository()
 
@@ -222,7 +222,7 @@ class TestInMemorySnapshotRepository:
         assert store.list_snapshots() == []
         assert len(store._snapshots) == 0
 
-    def test_snapshot_timestamp_is_set(self):
+    def test_snapshot_timestamp_is_set(self) -> None:
         """Test that snapshot timestamp is set correctly."""
         store = InMemorySnapshotRepository()
         nodes = [
@@ -245,7 +245,7 @@ class TestInMemorySnapshotRepository:
         assert retrieved is not None
         assert before <= retrieved.timestamp <= after
 
-    def test_nested_children_preserved(self):
+    def test_nested_children_preserved(self) -> None:
         """Test that nested child nodes are preserved in storage (flat structure)."""
         store = InMemorySnapshotRepository()
         # In flat structure, both parent and child are in the nodes list

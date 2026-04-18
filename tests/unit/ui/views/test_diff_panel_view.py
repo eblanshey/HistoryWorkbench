@@ -43,7 +43,7 @@ class TestHistorySelection:
         """HistorySelection is immutable (frozen)."""
         selection = HistorySelection(item_kind="COMMIT", commit_hash="abc123")
         with pytest.raises(AttributeError):  # Frozen dataclasses raise AttributeError on assignment
-            selection.commit_hash = "new_hash"  # type: ignore[attr-defined]
+            selection.commit_hash = "new_hash"  # type: ignore[misc]
 
     def test_history_selection_commit_with_none_hash(self) -> None:
         """HistorySelection for COMMIT can have None commit_hash."""

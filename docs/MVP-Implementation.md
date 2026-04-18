@@ -164,7 +164,7 @@ Question: where do we put the logic that determines the correct snapshot directo
     - CreateDiff
   - Return list of DiffResults
 - Set the view to displays those diffs.
-- For paths where CreateDocumentSnapshotForCommit for index returns None, in the tree diff widget create a one-level, flat item for that diff with a "prohibited" emoji symbol (U+1F6AB), with tooltip "Snapshot missing." It will not have the tree below it.
+- For paths where CreateDocumentSnapshotForCommit for index returns None, in the tree diff widget create a one-level, flat item for that diff with a "Warning" icon, similar to how we do elsewhere, with tooltip "Snapshot missing." It will not have the tree below it.
 
 ## Future phases:
 - Committing

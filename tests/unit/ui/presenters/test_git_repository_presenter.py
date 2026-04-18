@@ -4,6 +4,7 @@
 # detection and updates both the application state and the view.
 """Unit tests for GitRepositoryPresenter."""
 
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,31 +14,36 @@ from freecad.diff_wb.ui.presenters.git_repository_presenter import GitRepository
 
 
 @pytest.fixture
-def mock_view():
+def mock_view() -> MagicMock:
     """Create a mock DiffPanelView."""
     return MagicMock()
 
 
 @pytest.fixture
-def mock_find_action():
+def mock_find_action() -> MagicMock:
     """Create a mock FindActiveGitRepositoryAction."""
     return MagicMock()
 
 
 @pytest.fixture
-def mock_get_commits_action():
+def mock_get_commits_action() -> MagicMock:
     """Create a mock GetCommitsAction."""
     return MagicMock()
 
 
 @pytest.fixture
-def mock_ui_state():
+def mock_ui_state() -> MagicMock:
     """Create a mock UIState."""
     return MagicMock()
 
 
 @pytest.fixture
-def presenter(mock_view, mock_find_action, mock_get_commits_action, mock_ui_state):
+def presenter(
+    mock_view: MagicMock,
+    mock_find_action: MagicMock,
+    mock_get_commits_action: MagicMock,
+    mock_ui_state: MagicMock,
+) -> GitRepositoryPresenter:
     """Create a GitRepositoryPresenter instance with mocked dependencies."""
     return GitRepositoryPresenter(
         view=mock_view,
@@ -52,11 +58,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_workbench_activated_with_successful_detection(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_workbench_activated() updates state and view when detection succeeds."""
         # Arrange
         repo = GitRepository(name="test_project", absolute_path="/home/user/test_project")
@@ -75,11 +81,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_workbench_activated_with_failed_detection(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_workbench_activated() sets state to None and shows no repo message on failure."""
         # Arrange
         mock_result = MagicMock()
@@ -97,11 +103,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_workbench_activated_with_none_repository(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_workbench_activated() handles case where action returns None repository."""
         # Arrange
         mock_result = MagicMock()
@@ -119,11 +125,11 @@ class TestGitRepositoryPresenter:
 
     def test_presenter_initialization_stores_dependencies(
         self,
-        mock_view,
-        mock_find_action,
-        mock_get_commits_action,
-        mock_ui_state,
-    ):
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_get_commits_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """Presenter stores all dependencies correctly on initialization."""
         # Act
         presenter = GitRepositoryPresenter(
@@ -141,11 +147,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_refresh_clicked_with_successful_detection(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_refresh_clicked() updates state and view when detection succeeds."""
         # Arrange
         repo = GitRepository(name="test_project", absolute_path="/home/user/test_project")
@@ -164,11 +170,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_refresh_clicked_with_failed_detection(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_refresh_clicked() sets state to None and shows no repo message on failure."""
         # Arrange
         mock_result = MagicMock()
@@ -186,11 +192,11 @@ class TestGitRepositoryPresenter:
 
     def test_on_refresh_clicked_with_none_repository(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """on_refresh_clicked() handles case where action returns None repository."""
         # Arrange
         mock_result = MagicMock()
@@ -208,11 +214,11 @@ class TestGitRepositoryPresenter:
 
     def test_presenter_initialization_registers_refresh_callback(
         self,
-        mock_view,
-        mock_find_action,
-        mock_get_commits_action,
-        mock_ui_state,
-    ):
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_get_commits_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """Presenter registers its on_refresh_clicked method as the refresh callback on initialization."""
         # Act
         presenter = GitRepositoryPresenter(
@@ -231,10 +237,10 @@ class TestCommitLoading:
 
     def test_load_commits_calls_show_commits_on_success(
         self,
-        presenter,
-        mock_view,
-        mock_get_commits_action,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_get_commits_action: MagicMock,
+    ) -> None:
         """_load_commits() calls show_commits with commits on success."""
         # Arrange
         commits = [
@@ -242,7 +248,7 @@ class TestCommitLoading:
                 id="a1b2c3d4e5f67890",
                 message="Test commit",
                 author="Test Author",
-                timestamp="2024-01-15T10:30:00+00:00",
+                timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
             ),
         ]
         mock_result = MagicMock()
@@ -261,10 +267,10 @@ class TestCommitLoading:
 
     def test_load_commits_shows_empty_list_on_failure(
         self,
-        presenter,
-        mock_view,
-        mock_get_commits_action,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_get_commits_action: MagicMock,
+    ) -> None:
         """_load_commits() shows empty list when action fails."""
         # Arrange
         mock_result = MagicMock()
@@ -282,12 +288,12 @@ class TestCommitLoading:
 
     def test_detect_git_repository_loads_commits_on_success(
         self,
-        presenter,
-        mock_view,
-        mock_find_action,
-        mock_get_commits_action,
-        mock_ui_state,
-    ):
+        presenter: GitRepositoryPresenter,
+        mock_view: MagicMock,
+        mock_find_action: MagicMock,
+        mock_get_commits_action: MagicMock,
+        mock_ui_state: MagicMock,
+    ) -> None:
         """_detect_git_repository() loads commits after detecting repository."""
         # Arrange
         repo = GitRepository(name="test_project", absolute_path="/home/user/test_project")
@@ -299,7 +305,14 @@ class TestCommitLoading:
         mock_find_action.execute.return_value = mock_find_result
 
         # Mock get commits action to return commits
-        commits = [GitCommit(id="a1b2c3d", message="Test", author="Test", timestamp="2024-01-15T10:30:00+00:00")]
+        commits = [
+            GitCommit(
+                id="a1b2c3d",
+                message="Test",
+                author="Test",
+                timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
+            )
+        ]
         mock_commit_result = MagicMock()
         mock_commit_result.is_success = True
         mock_commit_result.data = commits

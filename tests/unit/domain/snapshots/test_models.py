@@ -11,7 +11,7 @@ from freecad.diff_wb.domain import Snapshot, TreeNode
 class TestSnapshot:
     """Tests for the Snapshot class."""
 
-    def test_creation(self):
+    def test_creation(self) -> None:
         """Test snapshot creation."""
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
         snapshot = Snapshot(snapshot_id="test-id", document_name="TestDocument", timestamp=timestamp, git_path="")
@@ -19,7 +19,7 @@ class TestSnapshot:
         assert snapshot.timestamp == timestamp
         assert snapshot.git_path == ""
 
-    def test_with_flat_nodes_list(self):
+    def test_with_flat_nodes_list(self) -> None:
         """Test snapshot creation with flat nodes list."""
         node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
@@ -28,7 +28,7 @@ class TestSnapshot:
         )
         assert len(snapshot.nodes) == 1
 
-    def test_root_node_identification(self):
+    def test_root_node_identification(self) -> None:
         """Test root node identification - path without '/' separator."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
@@ -40,7 +40,7 @@ class TestSnapshot:
         assert "/" not in snapshot.nodes[0].path
         assert snapshot.nodes[0].path == "Body"
 
-    def test_non_root_node_path(self):
+    def test_non_root_node_path(self) -> None:
         """Test non-root node has path with '/' separator."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         child_node = TreeNode(id=2, name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
@@ -57,7 +57,7 @@ class TestSnapshot:
         assert "/" in snapshot.nodes[1].path
         assert snapshot.nodes[1].path == "Body/Pad"
 
-    def test_get_all_nodes_returns_flat_list(self):
+    def test_get_all_nodes_returns_flat_list(self) -> None:
         """Test get_all_nodes() returns flat list directly without recursion."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         child_node = TreeNode(id=2, name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
@@ -79,7 +79,7 @@ class TestSnapshot:
         assert len(all_nodes) == 3
         assert all_nodes == [root_node, child_node, grandchild_node]
 
-    def test_find_node_by_path_searches_flat_list(self):
+    def test_find_node_by_path_searches_flat_list(self) -> None:
         """Test find_node_by_path() searches flat list efficiently."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         child_node = TreeNode(id=2, name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
@@ -97,7 +97,7 @@ class TestSnapshot:
         assert found.name == "Pad"
         assert found.id == 2
 
-    def test_find_node_by_path_root(self):
+    def test_find_node_by_path_root(self) -> None:
         """Test find_node_by_path() for root node."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         child_node = TreeNode(id=2, name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
@@ -115,14 +115,14 @@ class TestSnapshot:
         assert found.name == "Body"
         assert found.id == 1
 
-    def test_find_nonexistent_node(self):
+    def test_find_nonexistent_node(self) -> None:
         """Test finding a nonexistent node."""
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
         snapshot = Snapshot(snapshot_id="test-id", document_name="TestDocument", timestamp=timestamp, git_path="")
         found = snapshot.find_node_by_path("NonExistent")
         assert found is None
 
-    def test_node_count_returns_flat_list_length(self):
+    def test_node_count_returns_flat_list_length(self) -> None:
         """Test node_count returns correct flat list length."""
         root_node = TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body")
         child_node = TreeNode(id=2, name="Pad", type_id="PartDesign::Pad", label="Pad", path="Body/Pad")
@@ -141,7 +141,7 @@ class TestSnapshot:
         # Should return flat list length directly
         assert snapshot.node_count == 3
 
-    def test_snapshot_can_be_created_from_flat_nodes(self):
+    def test_snapshot_can_be_created_from_flat_nodes(self) -> None:
         """Test Snapshot can be created from list of flat nodes."""
         nodes = [
             TreeNode(id=1, name="Body", type_id="PartDesign::Body", label="Body", path="Body", after=None),
@@ -163,7 +163,7 @@ class TestSnapshot:
         assert "Body" in root_paths
         assert "Box" in root_paths
 
-    def test_snapshot_sorting(self):
+    def test_snapshot_sorting(self) -> None:
         """Test that snapshots can be sorted by timestamp."""
         ts1 = datetime(2024, 1, 1, 0, 0, 0)
         ts2 = datetime(2024, 1, 2, 0, 0, 0)
@@ -180,7 +180,7 @@ class TestSnapshot:
         assert sorted_snapshots[1] == snapshot3  # Middle
         assert sorted_snapshots[2] == snapshot2  # Latest
 
-    def test_snapshot_with_git_path_creates_correctly(self):
+    def test_snapshot_with_git_path_creates_correctly(self) -> None:
         """Test: Snapshot with git_path field creates correctly."""
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
         snapshot = Snapshot(
@@ -192,7 +192,7 @@ class TestSnapshot:
         assert snapshot.git_path == "path/to/doc.FCStd"
         assert snapshot.document_name == "TestDocument"
 
-    def test_git_path_is_relative_path_from_git_root(self):
+    def test_git_path_is_relative_path_from_git_root(self) -> None:
         """Test: git_path is relative path from git root (e.g., 'path/to/doc.FCStd')."""
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
 
@@ -213,7 +213,7 @@ class TestSnapshot:
             )
             assert snapshot.git_path == path
 
-    def test_git_path_used_in_str_representation(self):
+    def test_git_path_used_in_str_representation(self) -> None:
         """Test: git_path used in __str__ representation."""
         timestamp = datetime(2024, 1, 1, 0, 0, 0)
 

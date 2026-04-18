@@ -222,7 +222,7 @@ class MockFreeCADObject:
 class TestSnapshotExtractor:
     """Tests for SnapshotExtractor class."""
 
-    def test_extract_tree_with_empty_document(self):
+    def test_extract_tree_with_empty_document(self) -> None:
         """Test extraction from an empty document."""
         mock_doc = MagicMock()
         mock_doc.Objects = []
@@ -235,7 +235,7 @@ class TestSnapshotExtractor:
         assert result.document_name == "EmptyDocument"
         assert result.nodes == []
 
-    def test_extract_tree_with_root_object(self):
+    def test_extract_tree_with_root_object(self) -> None:
         """Test extraction with a single root object."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -264,7 +264,7 @@ class TestSnapshotExtractor:
         assert result.nodes[0].name == "Body"
         assert result.nodes[0].type_id == "PartDesign::Body"
 
-    def test_extract_tree_with_nested_children_via_group(self):
+    def test_extract_tree_with_nested_children_via_group(self) -> None:
         """Test extraction with nested child objects via ViewProvider.claimChildren()."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -326,7 +326,7 @@ class TestSnapshotExtractor:
         sketch_node = next(node for node in result.nodes if node.name == "Sketch")
         assert sketch_node.path == "Body/Sketch"
 
-    def test_extract_tree_with_unnamed_document(self):
+    def test_extract_tree_with_unnamed_document(self) -> None:
         """Test extraction from a document without a Name attribute."""
         mock_doc = MagicMock()
         mock_doc.Name = ""  # Empty string simulates no name
@@ -343,7 +343,7 @@ class TestSnapshotExtractor:
         assert result.document_name == ""
         assert result.nodes == []
 
-    def test_extract_tree_property_extraction(self):
+    def test_extract_tree_property_extraction(self) -> None:
         """Test that properties are correctly extracted."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -373,7 +373,7 @@ class TestSnapshotExtractor:
         assert "Label" in node.properties
         assert "Length" in node.properties
 
-    def test_extract_tree_captures_expressions(self):
+    def test_extract_tree_captures_expressions(self) -> None:
         """Test that expressions are correctly captured from ExpressionEngine."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -407,7 +407,7 @@ class TestSnapshotExtractor:
         assert length_prop.expression == "Sketch.Length * 0.5"
         assert length_prop.value == 10.0
 
-    def test_extract_tree_discovers_children_via_group(self):
+    def test_extract_tree_discovers_children_via_group(self) -> None:
         """Test that ViewProvider.claimChildren() discovers children correctly.
 
         This tests the scenario where a Part container has Body and VarSet in its
@@ -487,7 +487,7 @@ class TestSnapshotExtractor:
         assert varset_node.type_id == "App::VarSet"
         assert varset_node.path == "Part/VarSet"
 
-    def test_extract_tree_handles_nested_hierarchy(self):
+    def test_extract_tree_handles_nested_hierarchy(self) -> None:
         """Test nested hierarchy: Part -> Body -> Sketch.
 
         This verifies that the hierarchy detection correctly builds
@@ -569,7 +569,7 @@ class TestSnapshotExtractor:
         sketch_node = next(node for node in result.nodes if node.name == "Sketch")
         assert sketch_node.path == "Part/Body/Sketch"
 
-    def test_extract_tree_handles_origin_features(self):
+    def test_extract_tree_handles_origin_features(self) -> None:
         """Test that ViewProvider.claimChildren() correctly identifies origin children.
 
         App::Origin containers store their geometry (axes, planes, points) and
@@ -643,7 +643,7 @@ class TestSnapshotExtractor:
         assert "X_Axis" in names
         assert "XY_Plane" in names
 
-    def test_extract_tree_filters_hidden_properties_by_editor_mode(self):
+    def test_extract_tree_filters_hidden_properties_by_editor_mode(self) -> None:
         """Test that properties with ['Hidden'] editor mode are filtered out."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -695,7 +695,7 @@ class TestSnapshotExtractor:
         assert "ExpressionEngine" not in node.properties
         assert "Visibility" not in node.properties
 
-    def test_extract_tree_properties_with_empty_group_are_visible(self):
+    def test_extract_tree_properties_with_empty_group_are_visible(self) -> None:
         """Test that properties with empty group ARE visible.
 
         Properties with getGroupOfProperty() returning empty string ARE visible
@@ -747,7 +747,7 @@ class TestSnapshotExtractor:
         assert "AddSubShape" in node.properties
         assert "ShapeMaterial" in node.properties
 
-    def test_extract_tree_filters_combined_hidden_conditions(self):
+    def test_extract_tree_filters_combined_hidden_conditions(self) -> None:
         """Test filtering with both editor mode and property status conditions."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -797,7 +797,7 @@ class TestSnapshotExtractor:
         assert "_ElementMapVersion" not in node.properties
         assert len(node.properties) == 3
 
-    def test_extract_tree_includes_properties_with_non_empty_group(self):
+    def test_extract_tree_includes_properties_with_non_empty_group(self) -> None:
         """Test that properties with non-empty groups are included."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
@@ -840,7 +840,7 @@ class TestSnapshotExtractor:
         assert "TaperAngle" in node.properties
         assert "Refine" in node.properties
 
-    def test_extract_tree_viewprovider_returns_string_names(self):
+    def test_extract_tree_viewprovider_returns_string_names(self) -> None:
         """Test when ViewProvider.claimChildren() returns string names.
 
         Some FreeCAD ViewProviders return string names instead of object
@@ -901,7 +901,7 @@ class TestSnapshotExtractor:
         assert "Body" in names
         assert "Sketch" in names
 
-    def test_extract_tree_handles_gui_unavailable(self):
+    def test_extract_tree_handles_gui_unavailable(self) -> None:
         """Test exception when FreeCADGui is not available.
 
         When FreeCADGui is not available (e.g., headless environment without
@@ -944,7 +944,7 @@ class TestSnapshotExtractor:
         # This is the expected behavior - the exception should be logged
         assert result.document_name == "TestDoc"
 
-    def test_extract_tree_handles_claimchildren_exception(self):
+    def test_extract_tree_handles_claimchildren_exception(self) -> None:
         """Test that exceptions in claimChildren() are handled gracefully.
 
         Some ViewProviders may throw exceptions when claimChildren() is called.
@@ -984,7 +984,7 @@ class TestSnapshotExtractor:
         assert len(result.nodes) == 1
         assert result.nodes[0].name == "Body"
 
-    def test_extract_tree_handles_circular_claims(self):
+    def test_extract_tree_handles_circular_claims(self) -> None:
         """Test that circular claims (A claims B, B claims A) don't cause infinite loops.
 
         This is an edge case where object A claims object B as a child, and
@@ -1050,7 +1050,7 @@ class TestSnapshotExtractor:
         assert result.document_name == "TestDoc"
         # The test passes if we get here without RecursionError
 
-    def test_extract_tree_filters_objects_without_name(self):
+    def test_extract_tree_filters_objects_without_name(self) -> None:
         """Test that objects without Name attribute are filtered out.
 
         Invalid FreeCAD objects (e.g., some internal objects) may not have
@@ -1102,7 +1102,7 @@ class TestSnapshotExtractor:
 class TestIsPropertyHidden:
     """Tests for hidden property detection logic."""
 
-    def test_hidden_property_detection_savedgeometry_no_editor(self):
+    def test_hidden_property_detection_savedgeometry_no_editor(self) -> None:
         """Test that SavedGeometry is detected as hidden because it has no editor.
 
         SavedGeometry is a Part::PropertyTopoShapeList which doesn't override
@@ -1135,7 +1135,7 @@ class TestIsPropertyHidden:
         assert is_hidden, "SavedGeometry should be hidden (no editor)"
         assert "toposhapelist" in reason, f"Reason should mention toposhapelist, got: {reason}"
 
-    def test_hidden_property_detection_label_is_visible(self):
+    def test_hidden_property_detection_label_is_visible(self) -> None:
         """Test that Label is visible (no Prop_Hidden bit, no Hidden editor mode)."""
 
         obj = MockFreeCADObject(
@@ -1155,7 +1155,7 @@ class TestIsPropertyHidden:
         assert not is_hidden, "Label should be visible (no Prop_Hidden bit)"
         assert reason == "", f"Reason should be empty for visible property, got: {reason}"
 
-    def test_hidden_property_detection_editor_mode_hidden(self):
+    def test_hidden_property_detection_editor_mode_hidden(self) -> None:
         """Test that properties with getEditorMode=["Hidden"] are hidden."""
 
         obj = MockFreeCADObject(
@@ -1184,7 +1184,7 @@ class TestIsPropertyHidden:
         is_hidden_label, _ = _is_property_hidden(obj, "Label")
         assert not is_hidden_label, "Label should be visible"
 
-    def test_hidden_property_detection_prop_hidden_bit_26(self):
+    def test_hidden_property_detection_prop_hidden_bit_26(self) -> None:
         """Test that properties with Prop_Hidden flag (bit 26) are hidden.
 
         When a property is declared with Prop_Hidden (bit 4), FreeCAD mirrors
@@ -1229,7 +1229,7 @@ class TestIsPropertyHidden:
         is_hidden_label, _ = _is_property_hidden(obj, "Label")
         assert not is_hidden_label, "Label should be visible"
 
-    def test_hidden_property_detection_empty_group_is_visible(self):
+    def test_hidden_property_detection_empty_group_is_visible(self) -> None:
         """Test that properties with empty group are VISIBLE (not hidden).
 
         This is the BUG FIX: Properties with empty getGroupOfProperty() should
@@ -1258,7 +1258,7 @@ class TestIsPropertyHidden:
         assert not is_hidden, "Shape with empty group should be VISIBLE (maps to Base)"
         assert reason == "", f"Reason should be empty for visible property, got: {reason}"
 
-    def test_hidden_property_detection_combined_conditions(self):
+    def test_hidden_property_detection_combined_conditions(self) -> None:
         """Test detection when multiple hiding conditions apply."""
 
         # Object with properties hidden by different mechanisms
@@ -1302,7 +1302,7 @@ class TestIsPropertyHidden:
         is_hidden, reason = _is_property_hidden(obj, "Shape")
         assert is_hidden, "Shape should be hidden (no editor)"
 
-    def test_hidden_property_detection_hidden_string_in_status(self):
+    def test_hidden_property_detection_hidden_string_in_status(self) -> None:
         """Test that 'Hidden' string in status list is correctly detected.
 
         From FreeCAD source (src/App/PropertyContainerPyImp.cpp line 311-356):
@@ -1338,7 +1338,7 @@ class TestIsPropertyHidden:
         is_hidden, reason = _is_property_hidden(obj, "VisibleProp")
         assert not is_hidden, "Property with empty status should be visible"
 
-    def test_hidden_property_detection_no_getpropertystatus(self):
+    def test_hidden_property_detection_no_getpropertystatus(self) -> None:
         """Test behavior when getPropertyStatus is not available."""
 
         # Create a minimal mock object without getPropertyStatus method
@@ -1361,7 +1361,7 @@ class TestIsPropertyHidden:
         is_hidden, reason = _is_property_hidden(obj, "Label")
         assert not is_hidden, "Label should be visible when getPropertyStatus is not available"
 
-    def test_hidden_property_detection_mixed_status_list(self):
+    def test_hidden_property_detection_mixed_status_list(self) -> None:
         """Test detection with mixed list containing both strings and integers.
 
         From FreeCAD source (src/App/PropertyContainerPyImp.cpp line 311-356):
@@ -1414,7 +1414,7 @@ class TestIsPropertyHidden:
         is_hidden, reason = _is_property_hidden(obj, "Visible")
         assert not is_hidden, "Property with empty status should be visible"
 
-    def test_hidden_property_detection_gettypeofproperty_returns_hidden(self):
+    def test_hidden_property_detection_gettypeofproperty_returns_hidden(self) -> None:
         """Test that properties with getTypeOfProperty returning ['Hidden'] are detected as hidden.
 
         This replicates FreeCAD's PropertyView::isPropertyHidden() logic from
@@ -1462,7 +1462,7 @@ class TestIsPropertyHidden:
         is_hidden, reason = _is_property_hidden(obj, "Placement")
         assert not is_hidden, "Placement should be visible"
 
-    def test_hidden_property_detection_gettypeofproperty_filters_in_extraction(self):
+    def test_hidden_property_detection_gettypeofproperty_filters_in_extraction(self) -> None:
         """Test that properties with Hidden in getTypeOfProperty are filtered out during extraction."""
         from freecad.diff_wb.domain.snapshots.gui_extractor import _extract_visible_properties
 
@@ -1513,7 +1513,7 @@ class TestIsPropertyHidden:
 class TestGetPropertyGroup:
     """Tests for property group extraction."""
 
-    def test_property_group_returns_correct_group_name(self):
+    def test_property_group_returns_correct_group_name(self) -> None:
         """Test that properties return the correct group name from getGroupOfProperty."""
 
         obj = MockFreeCADObject(
@@ -1542,7 +1542,7 @@ class TestGetPropertyGroup:
         group_length = _get_property_group(obj, "Length")
         assert group_length == "Side1", f"Expected 'Side1', got '{group_length}'"
 
-    def test_empty_group_returns_base(self):
+    def test_empty_group_returns_base(self) -> None:
         """Test that empty group strings return 'Base'.
 
         FreeCAD properties with no explicit group have getGroupOfProperty()
@@ -1574,7 +1574,7 @@ class TestGetPropertyGroup:
         group_label = _get_property_group(obj, "Label")
         assert group_label == "Base", f"Expected 'Base', got '{group_label}'"
 
-    def test_property_group_no_method_returns_base(self):
+    def test_property_group_no_method_returns_base(self) -> None:
         """Test that objects without getGroupOfProperty return 'Base'."""
 
         # Object without getGroupOfProperty method
@@ -1585,7 +1585,7 @@ class TestGetPropertyGroup:
         group = _get_property_group(obj, "AnyProperty")
         assert group == "Base", f"Expected 'Base' for objects without getGroupOfProperty, got '{group}'"
 
-    def test_property_group_in_extracted_properties(self):
+    def test_property_group_in_extracted_properties(self) -> None:
         """Test that extracted properties include the group field."""
         from freecad.diff_wb.domain.snapshots.gui_extractor import _extract_visible_properties
 

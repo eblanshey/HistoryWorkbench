@@ -80,7 +80,7 @@ def mock_freecad_gui() -> object | None:
         def getMainWindow() -> MockMainWindow:
             return MockMainWindow()
 
-    return MockGui()  # type: ignore[return-value]
+    return MockGui()
 
 
 @pytest.fixture

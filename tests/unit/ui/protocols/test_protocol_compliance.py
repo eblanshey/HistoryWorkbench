@@ -208,5 +208,11 @@ class TestProtocolValidationUtility:
             def set_add_button_callback(self, callback: Callable[[str], None]) -> None:
                 pass
 
+            def collapse_tree_item(self, git_path: str) -> None:
+                pass
+
+            def set_stage_button_enabled(self, git_path: str, enabled: bool) -> None:
+                pass
+
         violations = validate_protocol_compliance(CompliantView, DiffView, raise_on_error=False)
         assert violations == [], f"Should have no violations, got: {violations}"

@@ -264,6 +264,8 @@ class DiffPanelView(QWidget):
         self._on_add_button_callback: Callable[[str], None] | None = None
         self._on_node_selection_callback: Callable[[str, str], None] | None = None
         self._current_selection: HistorySelection | None = None
+        # Track stage buttons by git_path for runtime updates
+        self._stage_buttons: dict[str, QPushButton] = {}
         # Create the delegate for property value double-click editing (for copying)
         self._property_value_delegate = _PropertyValueDelegate(self)
         self._setup_ui()
@@ -767,6 +769,9 @@ class DiffPanelView(QWidget):
                 # The default argument captures the current value of diff.git_path at iteration time.
                 add_button.clicked.connect(lambda checked, gp=diff.git_path: self._on_add_button_clicked(gp))
                 layout.addWidget(add_button)
+                # Track button for runtime updates
+                if diff.git_path:
+                    self._stage_buttons[diff.git_path] = add_button
 
             # Set the widget on the tree item
             self.tree_widget.addTopLevelItem(root_item)
@@ -1175,3 +1180,26 @@ class DiffPanelView(QWidget):
             item.setExpanded(True)
         for i in range(item.childCount()):
             self._apply_expansion_recursive(item.child(i))
+
+    def collapse_tree_item(self, git_path: str) -> None:
+        """Collapse the root tree item for the given git_path.
+
+        Args:
+            git_path: The git_path of the root tree item to collapse.
+        """
+        for i in range(self.tree_widget.topLevelItemCount()):
+            item = self.tree_widget.topLevelItem(i)
+            item_git_path = item.data(0, Qt.ItemDataRole.UserRole)
+            if item_git_path == git_path:
+                item.setExpanded(False)
+                break
+
+    def set_stage_button_enabled(self, git_path: str, enabled: bool) -> None:
+        """Enable or disable the '+ Stage' button for a given git_path.
+
+        Args:
+            git_path: The git_path of the document whose button to update.
+            enabled: Whether the stage button should be enabled.
+        """
+        if git_path in self._stage_buttons:
+            self._stage_buttons[git_path].setEnabled(enabled)

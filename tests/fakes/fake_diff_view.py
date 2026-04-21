@@ -119,3 +119,20 @@ class FakeDiffView:
         """
         if self._refresh_callback is not None:
             self._refresh_callback()
+
+    def collapse_tree_item(self, git_path: str) -> None:
+        """Capture collapse_tree_item call instead of collapsing UI.
+
+        Args:
+            git_path: The git_path of the tree item to collapse.
+        """
+        self._record_call("collapse_tree_item", git_path=git_path)
+
+    def set_stage_button_enabled(self, git_path: str, enabled: bool) -> None:
+        """Capture set_stage_button_enabled call instead of updating UI.
+
+        Args:
+            git_path: The git_path of the document whose button to update.
+            enabled: Whether the stage button should be enabled.
+        """
+        self._record_call("set_stage_button_enabled", git_path=git_path, enabled=enabled)

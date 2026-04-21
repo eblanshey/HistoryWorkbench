@@ -125,3 +125,18 @@ class DiffView(Protocol):
             callback: A callable that receives the git_path (str) of the
                       document whose '+ Stage' button was clicked.
         """
+
+    def collapse_tree_item(self, git_path: str) -> None:
+        """Collapse the root tree item for the given git_path.
+
+        Args:
+            git_path: The git_path of the root tree item to collapse.
+        """
+
+    def set_stage_button_enabled(self, git_path: str, enabled: bool) -> None:
+        """Enable or disable the '+ Stage' button for a given git_path.
+
+        Args:
+            git_path: The git_path of the document whose button to update.
+            enabled: Whether the stage button should be enabled.
+        """

@@ -1156,8 +1156,8 @@ class TestDiffPresenterAddButton:
         # Assert - stage was never called
         presenter._stage_documents.execute.assert_not_called()
 
-    def test_on_add_button_clicked_refreshes_view_after_staging(self) -> None:
-        """Refreshes view by calling _on_working_tree_selected after successful staging."""
+    def test_on_add_button_clicked_collapses_and_disables_after_staging(self) -> None:
+        """Collapses tree item and disables stage button after successful staging."""
         fake_view, presenter = _create_test_presenter()
 
         # Setup mock repo
@@ -1186,15 +1186,16 @@ class TestDiffPresenterAddButton:
         mock_stage_result.message = ""
         presenter._stage_documents.execute.return_value = mock_stage_result
 
-        # Mock _on_working_tree_selected to verify it's called
-        with MagicMock() as mock_refresh:
-            presenter._on_working_tree_selected = mock_refresh
+        # Mock view methods for collapse and disable
+        fake_view.collapse_tree_item = MagicMock()
+        fake_view.set_stage_button_enabled = MagicMock()
 
-            # Act
-            presenter.on_add_button_clicked("doc.FCStd")
+        # Act
+        presenter.on_add_button_clicked("doc.FCStd")
 
-            # Assert - refresh was called after staging
-            mock_refresh.assert_called_once()
+        # Assert - view methods called instead of refresh
+        fake_view.collapse_tree_item.assert_called_once_with("doc.FCStd")
+        fake_view.set_stage_button_enabled.assert_called_once_with("doc.FCStd", enabled=False)
 
 
 class TestDiffPresenterStagingSelection:

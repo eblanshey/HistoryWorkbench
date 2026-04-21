@@ -659,9 +659,9 @@ class DiffPresenter:
 
         Log.info(f"Successfully staged {git_path}")
 
-        # Recalculate diff (Working Tree -> Commit None means same snapshot)
-        # This will refresh the view to show no changes
-        self._on_working_tree_selected()
+        # Collapse the root tree item and disable the stage button
+        self._view.collapse_tree_item(git_path)
+        self._view.set_stage_button_enabled(git_path, enabled=False)
 
     def present_diffs(
         self,

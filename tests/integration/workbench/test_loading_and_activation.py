@@ -48,7 +48,7 @@ class TestWorkbenchLoading:
                 assert hasattr(DiffWorkbench, "toolbox")
 
                 # Verify specific attribute values
-                assert DiffWorkbench.MenuText == "Diff Workbench"
+                assert DiffWorkbench.MenuText == "Diff"
                 assert DiffWorkbench.ToolTip == "Compare document snapshots"
                 assert DiffWorkbench.toolbox == ["DiffTakeSnapshot", "DiffCompare", "DiffSwapColumns"]
         finally:
@@ -82,7 +82,7 @@ class TestWorkbenchLoading:
             assert hasattr(wb, "Activated")
             assert hasattr(wb, "Deactivated")
             assert hasattr(wb, "GetClassName")
-            assert wb.MenuText == "Diff Workbench"
+            assert wb.MenuText == "Diff"
             assert wb.ToolTip == "Compare document snapshots"
             assert wb.toolbox == ["DiffTakeSnapshot", "DiffCompare", "DiffSwapColumns"]
         else:

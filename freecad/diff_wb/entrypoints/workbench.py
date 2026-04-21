@@ -43,7 +43,7 @@ if Gui is not None:
 
         def __init__(self):
             super().__init__()
-            self.MenuText = "Diff Workbench"
+            self.MenuText = "Diff"
             self.ToolTip = "Compare document snapshots"
             self._subwindow = None  # Store reference to MDI subwindow
 

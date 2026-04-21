@@ -1697,9 +1697,7 @@ class TestDiffPresenterStageAllButtonVisibility:
         presenter._ui_state.git_repository = mock_repo
 
         # Return staged paths
-        presenter._get_staged_file_paths.execute.return_value = MagicMock(
-            is_success=True, data=["a.FCStd"]
-        )
+        presenter._get_staged_file_paths.execute.return_value = MagicMock(is_success=True, data=["a.FCStd"])
 
         # All staged file diffs fail (index snapshot missing) - creates warning row
         mock_index_result = MagicMock()

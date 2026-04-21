@@ -343,9 +343,13 @@ class DiffPresenter:
         self._get_staged_file_paths = get_staged_file_paths_action
         self._get_committed_file_paths = get_committed_file_paths_action
         self._diff_results_by_path: dict[str, DiffResult] = {}
+        self._dirty_paths: set[str] = set()
 
         # Wire up the callback for history selection
         self._view.set_history_selection_callback(self.on_history_item_selected)
+
+        # Wire Stage All callback
+        self._view.set_stage_all_callback(self.on_stage_all_clicked)
 
     def present_diff(self, diff_result: DiffResult) -> None:
         """Transform domain data and call view methods to render UI.
@@ -398,11 +402,18 @@ class DiffPresenter:
         repo = self._ui_state.git_repository
         if repo is None:
             Log.warning("No git repository detected")
+            self._diff_results_by_path.clear()
+            self._view.show_diff_trees([])
+            self._view.set_stage_all_button_visible(False)
             return
 
         docs_result = self._get_eligible_docs.execute(repo)
         if not docs_result.is_success or not docs_result.data:
             Log.warning(f"No eligible documents: {docs_result.message}")
+            # Clear any stale state from prior selection
+            self._diff_results_by_path.clear()
+            self._view.show_diff_trees([])
+            self._view.set_stage_all_button_visible(False)
             return
 
         eligible_docs = docs_result.data
@@ -429,6 +440,9 @@ class DiffPresenter:
         dirty_result = self._get_dirty_documents.execute(repo, eligible_docs)
         dirty_paths = set(dirty_result.data) if dirty_result.is_success else set()
 
+        # Store dirty paths for Stage All button staggability check
+        self._dirty_paths = dirty_paths
+
         # Store diff results keyed by git_path for later use by add button
         self._diff_results_by_path.clear()
         for result in all_diff_results:
@@ -440,6 +454,9 @@ class DiffPresenter:
             self.present_diffs(all_diff_results, dirty_paths)
         else:
             Log.warning("No diff results to display")
+            self._diff_results_by_path.clear()
+            self._view.show_diff_trees([])
+            self._view.set_stage_all_button_visible(False)
 
     def _on_staging_selected(self) -> None:
         """Handle Staging item selection.
@@ -452,6 +469,9 @@ class DiffPresenter:
         Displays resulting diffs. For paths where index snapshot is missing,
         creates flat warning items (no tree below).
         """
+        # Stage All button is only shown in Working Tree view
+        self._view.set_stage_all_button_visible(False)
+
         repo = self._ui_state.git_repository
         if repo is None:
             Log.warning("No git repository detected")
@@ -484,6 +504,7 @@ class DiffPresenter:
             self.present_diffs(all_diff_results, set(), missing_snapshot_paths)
         else:
             Log.warning("No diff results to display for staging")
+            self._view.show_diff_trees([])
 
     def _compute_staged_diffs(self, repo: GitRepository, staged_paths: list[str]) -> tuple[list[DiffResult], list[str]]:
         """Compute diffs for staged files.
@@ -605,6 +626,9 @@ class DiffPresenter:
         Delegates per-file diff computation to _compute_commit_diffs(),
         then stores results and presents them to the view.
         """
+        # Stage All button is only shown in Working Tree view
+        self._view.set_stage_all_button_visible(False)
+
         if commit_hash is None:
             Log.warning("Commit selection received without commit hash")
             return
@@ -659,9 +683,54 @@ class DiffPresenter:
 
         Log.info(f"Successfully staged {git_path}")
 
+        # Remove staged file from dirty paths
+        self._dirty_paths.discard(git_path)
+
         # Collapse the root tree item and disable the stage button
         self._view.collapse_tree_item(git_path)
         self._view.set_stage_button_enabled(git_path, enabled=False)
+
+    def on_stage_all_clicked(self) -> None:
+        """Handle 'Stage All' button click.
+
+        Collects all working tree snapshots from _diff_results_by_path that have
+        changes (matching the staggability criteria for individual + Stage buttons),
+        stages them via StageDocumentsAction, then refreshes the view.
+        """
+        repo = self._ui_state.git_repository
+        if repo is None:
+            Log.warning("No git repository detected")
+            return
+
+        # Collect snapshots for documents that have diff changes OR are git-dirty
+        # (matching individual "+ Stage" button staggability: has_changes or is_git_dirty)
+        snapshots = [
+            result.new_snapshot
+            for result in self._diff_results_by_path.values()
+            if result.new_snapshot is not None
+            and (
+                any(node.has_changes for node in result.hierarchy.roots)
+                or result.new_snapshot.git_path in self._dirty_paths
+            )
+        ]
+
+        if not snapshots:
+            Log.warning("No documents with changes to stage")
+            return
+
+        # Stage all documents
+        result = self._stage_documents.execute(repo, snapshots)
+        if not result.is_success:
+            Log.warning(f"Failed to stage documents: {result.message}")
+            return
+
+        Log.info(f"Successfully staged {len(snapshots)} documents")
+
+        # Clear dirty paths since staged files are no longer dirty
+        self._dirty_paths.clear()
+
+        # Refresh the working tree view to reflect staged state
+        self._on_working_tree_selected()
 
     def present_diffs(
         self,
@@ -681,6 +750,8 @@ class DiffPresenter:
 
         if not diff_results and not missing_snapshot_paths:
             self._view.show_diff_trees([])
+            # Also hide Stage All button when no data to display
+            self._view.set_stage_all_button_visible(False)
             return
 
         presentations = []
@@ -722,6 +793,18 @@ class DiffPresenter:
         presentations.sort(key=lambda p: p.git_path)
 
         self._view.show_diff_trees(presentations)
+
+        # Stage All button: only visible during Working Tree selection
+        is_working_tree = (
+            self._view._current_selection is not None and self._view._current_selection.item_kind == "WORKING_TREE"
+        )
+        if is_working_tree:
+            # Enable if any presentation has stage_button_enabled
+            any_staggable = any(p.stage_button_enabled for p in presentations)
+            self._view.set_stage_all_button_visible(True)
+            self._view.set_stage_all_button_enabled(any_staggable)
+        else:
+            self._view.set_stage_all_button_visible(False)
 
         # Show summary from first document (for now)
         if diff_results:

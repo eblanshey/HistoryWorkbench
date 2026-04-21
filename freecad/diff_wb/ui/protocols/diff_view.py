@@ -20,7 +20,7 @@ Translation Strategy for Summary:
 """
 
 from collections.abc import Callable
-from typing import Protocol
+from typing import Any, Protocol
 
 from ...domain.git.models import GitRepository
 from ..presenters.presentation_models import (
@@ -140,3 +140,26 @@ class DiffView(Protocol):
             git_path: The git_path of the document whose button to update.
             enabled: Whether the stage button should be enabled.
         """
+
+    def set_stage_all_callback(self, callback: Callable[[], None]) -> None:
+        """Set the callback for when the 'Stage All' button is clicked.
+
+        Args:
+            callback: A no-argument callable to invoke on Stage All click.
+        """
+
+    def set_stage_all_button_visible(self, visible: bool) -> None:
+        """Show or hide the 'Stage All' button.
+
+        Args:
+            visible: Whether the Stage All button should be visible.
+        """
+
+    def set_stage_all_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable the 'Stage All' button.
+
+        Args:
+            enabled: Whether the Stage All button should be enabled.
+        """
+
+    _current_selection: Any | None

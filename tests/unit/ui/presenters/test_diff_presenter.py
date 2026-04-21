@@ -85,10 +85,11 @@ class TestDiffPresenterGitPath:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (wired in constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        assert calls[1]["method"] == "show_diff_tree"
-        assert calls[1]["git_path"] == "path/to/doc.FCStd"
+        assert calls[2]["method"] == "show_diff_tree"
+        assert calls[2]["git_path"] == "path/to/doc.FCStd"
 
     def test_present_diff_uses_document_name_when_git_path_empty(self) -> None:
         """Falls back to document_name when git_path is empty."""
@@ -114,10 +115,11 @@ class TestDiffPresenterGitPath:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (wired in constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        assert calls[1]["method"] == "show_diff_tree"
-        assert calls[1]["git_path"] == "MyDocument"
+        assert calls[2]["method"] == "show_diff_tree"
+        assert calls[2]["git_path"] == "MyDocument"
 
 
 class TestDiffPresenter:
@@ -139,12 +141,13 @@ class TestDiffPresenter:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - 3 calls: set_history_selection_callback (constructor), show_diff_tree, show_summary
-        assert fake_view.get_call_count() == 3
+        # Assert - 4 calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree, show_summary
+        assert fake_view.get_call_count() == 4
         calls = fake_view.get_calls()
         assert calls[0]["method"] == "set_history_selection_callback"
-        assert calls[1]["method"] == "show_diff_tree"
-        assert calls[2]["method"] == "show_summary"
+        assert calls[2]["method"] == "show_diff_tree"
+        assert calls[3]["method"] == "show_summary"
 
     def test_formats_node_diffs_correctly(self) -> None:
         """Transforms NodeDiff to NodePresentation correctly."""
@@ -166,9 +169,10 @@ class TestDiffPresenter:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        nodes = calls[1]["nodes"]
+        nodes = calls[2]["nodes"]
         assert len(nodes) == 1
         presentation = nodes[0]
         assert isinstance(presentation, NodePresentation)
@@ -200,9 +204,10 @@ class TestDiffPresenter:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        nodes = calls[1]["nodes"]
+        nodes = calls[2]["nodes"]
         presentation = nodes[0]
         assert presentation.has_changes is True
         assert presentation.state == DiffState.MODIFIED
@@ -220,14 +225,15 @@ class TestDiffPresenter:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree, show_summary
         calls = fake_view.get_calls()
-        assert calls[1]["method"] == "show_diff_tree"
-        assert calls[1]["nodes"] == []
-        assert calls[2]["method"] == "show_summary"
-        assert calls[2]["added"] == 0
-        assert calls[2]["deleted"] == 0
-        assert calls[2]["modified"] == 0
+        assert calls[2]["method"] == "show_diff_tree"
+        assert calls[2]["nodes"] == []
+        assert calls[3]["method"] == "show_summary"
+        assert calls[3]["added"] == 0
+        assert calls[3]["deleted"] == 0
+        assert calls[3]["modified"] == 0
 
     def test_calculates_summary_counts(self) -> None:
         """Calculates correct added/deleted/modified counts."""
@@ -265,9 +271,10 @@ class TestDiffPresenter:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree, show_summary
         calls = fake_view.get_calls()
-        summary_call = calls[2]
+        summary_call = calls[3]
         assert summary_call["added"] == 1
         assert summary_call["deleted"] == 1
         assert summary_call["modified"] == 1
@@ -310,9 +317,10 @@ class TestDiffPresenterFormatsChildren:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        presentations = calls[1]["nodes"]
+        presentations = calls[2]["nodes"]
         assert len(presentations) == 1
 
         # Check parent presentation
@@ -363,9 +371,10 @@ class TestDiffPresenterFormatsChildren:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        presentations = calls[1]["nodes"]
+        presentations = calls[2]["nodes"]
 
         # Root level
         assert len(presentations) == 1
@@ -419,9 +428,10 @@ class TestDiffPresenterFormatsChildren:
         # Act
         presenter.present_diff(diff_result)
 
-        # Assert - first call is set_history_selection_callback (constructor)
+        # Assert - calls: set_history_selection_callback (constructor),
+        # set_stage_all_callback (constructor), show_diff_tree
         calls = fake_view.get_calls()
-        presentations = calls[1]["nodes"]
+        presentations = calls[2]["nodes"]
         assert len(presentations) == 1
         assert presentations[0].path == "Part/Leaf"
         assert presentations[0].children == []
@@ -1052,6 +1062,45 @@ class TestDiffPresenterWorkingTreeOrchestration:
         assert show_trees_call is not None
         assert len(show_trees_call["diff_trees"]) == 2
 
+    def test_on_working_tree_selected_no_repo_hides_stage_all(self) -> None:
+        """Selecting Working Tree with no git repository hides Stage All and clears state."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Pre-populate stale state (simulating a prior selection)
+        old_snapshot = Snapshot(
+            snapshot_id="s1",
+            document_name="old.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="old.FCStd",
+        )
+        presenter._diff_results_by_path = {
+            "old.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=old_snapshot,
+                hierarchy=DiffHierarchy(),
+            ),
+        }
+
+        # No git repository set (ui_state.git_repository is None by default)
+
+        # Act
+        presenter._on_working_tree_selected()
+
+        # Assert - stale state is cleared
+        assert presenter._diff_results_by_path == {}
+
+        calls = fake_view.get_calls()
+        show_trees_call = next((c for c in calls if c["method"] == "show_diff_trees"), None)
+        assert show_trees_call is not None
+        assert show_trees_call["diff_trees"] == []
+
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
 
 class TestDiffPresenterPresentDiffsDirtyPaths:
     """Tests for DiffPresenter.present_diffs() with dirty_paths parameter."""
@@ -1197,6 +1246,647 @@ class TestDiffPresenterAddButton:
         fake_view.collapse_tree_item.assert_called_once_with("doc.FCStd")
         fake_view.set_stage_button_enabled.assert_called_once_with("doc.FCStd", enabled=False)
 
+    def test_on_add_button_clicked_clears_dirty_paths(self) -> None:
+        """Only removes the staged file from _dirty_paths, not all paths."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Setup mock working snapshot
+        mock_working_snapshot = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc.FCStd",
+        )
+
+        # Setup mock diff result
+        mock_diff_result = DiffResult(
+            old_snapshot=None,
+            new_snapshot=mock_working_snapshot,
+            hierarchy=DiffHierarchy(),
+        )
+        presenter._diff_results_by_path = {"doc.FCStd": mock_diff_result}
+
+        # Pre-populate multiple dirty paths
+        presenter._dirty_paths = {"doc.FCStd", "other.FCStd", "another.FCStd"}
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_add_button_clicked("doc.FCStd")
+
+        # Assert - only the staged path is removed, others remain
+        assert presenter._dirty_paths == {"other.FCStd", "another.FCStd"}
+
+
+class TestDiffPresenterStageAllClicked:
+    """Tests for DiffPresenter.on_stage_all_clicked() method."""
+
+    def test_on_stage_all_clicked_stages_all_documents(self) -> None:
+        """Stages all documents when git repository and snapshots exist."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Create multiple snapshots with hierarchies that have changes
+        hierarchy1 = DiffHierarchy()
+        hierarchy1.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot1 = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc1.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc1.FCStd",
+        )
+
+        hierarchy2 = DiffHierarchy()
+        hierarchy2.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot2 = Snapshot(
+            snapshot_id="ws2",
+            document_name="doc2.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc2.FCStd",
+        )
+
+        # Populate _diff_results_by_path with multiple diff results
+        presenter._diff_results_by_path = {
+            "doc1.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot1,
+                hierarchy=hierarchy1,
+            ),
+            "doc2.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot2,
+                hierarchy=hierarchy2,
+            ),
+        }
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - stage was called with all snapshots
+        presenter._stage_documents.execute.assert_called_once_with(mock_repo, [snapshot1, snapshot2])
+
+    def test_on_stage_all_clicked_no_repo_returns_early(self) -> None:
+        """Returns early without staging when no git repository is available."""
+        fake_view, presenter = _create_test_presenter()
+
+        # No git repository set (ui_state.git_repository is None by default)
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - stage was never called
+        presenter._stage_documents.execute.assert_not_called()
+
+    def test_on_stage_all_clicked_empty_snapshots_returns_early(self) -> None:
+        """Returns early when no snapshots exist in diff results."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Populate _diff_results_by_path with results that have no new_snapshot
+        presenter._diff_results_by_path = {
+            "doc.FCStd": DiffResult(
+                old_snapshot=Snapshot(
+                    snapshot_id="s1",
+                    document_name="doc.FCStd",
+                    timestamp=datetime.datetime.now(),
+                ),
+                new_snapshot=None,
+                hierarchy=DiffHierarchy(),
+            ),
+        }
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - stage was never called
+        presenter._stage_documents.execute.assert_not_called()
+
+    def test_on_stage_all_clicked_ignores_documents_without_changes(self) -> None:
+        """Only stages documents that have has_changes=True in their hierarchy."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Create a snapshot with changes (staggable)
+        hierarchy_with_changes = DiffHierarchy()
+        hierarchy_with_changes.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot_with_changes = Snapshot(
+            snapshot_id="ws1",
+            document_name="changed.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="changed.FCStd",
+        )
+
+        # Create a snapshot without changes (not staggable)
+        hierarchy_no_changes = DiffHierarchy()
+        hierarchy_no_changes.add_node(NodeDiff(path="Part", type_id="Part::Feature"))
+        snapshot_no_changes = Snapshot(
+            snapshot_id="ws2",
+            document_name="unchanged.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="unchanged.FCStd",
+        )
+
+        # Populate _diff_results_by_path with both types
+        presenter._diff_results_by_path = {
+            "changed.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot_with_changes,
+                hierarchy=hierarchy_with_changes,
+            ),
+            "unchanged.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot_no_changes,
+                hierarchy=hierarchy_no_changes,
+            ),
+        }
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - only the document with changes is staged
+        presenter._stage_documents.execute.assert_called_once_with(mock_repo, [snapshot_with_changes])
+
+    def test_on_stage_all_clicked_refreshes_view_on_success(self) -> None:
+        """Refreshes the working tree view after successful staging."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        hierarchy = DiffHierarchy()
+        hierarchy.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc.FCStd",
+        )
+
+        presenter._diff_results_by_path = {
+            "doc.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot,
+                hierarchy=hierarchy,
+            ),
+        }
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Mock the refresh method to verify it's called
+        with MagicMock() as mock_refresh:
+            presenter._on_working_tree_selected = mock_refresh
+
+            # Act
+            presenter.on_stage_all_clicked()
+
+            # Assert
+            mock_refresh.assert_called_once()
+
+    def test_on_stage_all_clicked_failure_logs_warning(self) -> None:
+        """Logs warning when staging fails and does not refresh view."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        snapshot = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc.FCStd",
+        )
+
+        presenter._diff_results_by_path = {
+            "doc.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot,
+                hierarchy=DiffHierarchy(),
+            ),
+        }
+
+        # Setup mock stage action to fail
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = False
+        mock_stage_result.message = "Stage failed"
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Mock the refresh method to verify it's NOT called
+        with MagicMock() as mock_refresh:
+            presenter._on_working_tree_selected = mock_refresh
+
+            # Act
+            presenter.on_stage_all_clicked()
+
+            # Assert - refresh was NOT called on failure
+            mock_refresh.assert_not_called()
+
+    def test_on_stage_all_clicked_clears_dirty_paths(self) -> None:
+        """Clears _dirty_paths after successful all staging."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        hierarchy = DiffHierarchy()
+        hierarchy.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc.FCStd",
+        )
+
+        presenter._diff_results_by_path = {
+            "doc.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot,
+                hierarchy=hierarchy,
+            ),
+        }
+
+        # Pre-populate dirty paths
+        presenter._dirty_paths = {"doc.FCStd", "other.FCStd"}
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - dirty paths cleared after successful staging
+        assert presenter._dirty_paths == set()
+
+
+class TestDiffPresenterStageAllClickedDirtyPaths:
+    """Tests for on_stage_all_clicked() including git-dirty document handling."""
+
+    def test_on_stage_all_clicked_includes_git_dirty_docs(self) -> None:
+        """Stages documents that are git-dirty even without diff changes."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Create a snapshot WITHOUT changes (not staggable by diff alone)
+        hierarchy_no_changes = DiffHierarchy()
+        hierarchy_no_changes.add_node(NodeDiff(path="Part", type_id="Part::Feature"))
+        snapshot_no_changes = Snapshot(
+            snapshot_id="ws1",
+            document_name="dirty.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="dirty.FCStd",
+        )
+
+        # Populate _diff_results_by_path with a doc that has no diff changes
+        presenter._diff_results_by_path = {
+            "dirty.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=snapshot_no_changes,
+                hierarchy=hierarchy_no_changes,
+            ),
+        }
+
+        # Set dirty_paths to include this document (simulating git-tracked changes)
+        presenter._dirty_paths = {"dirty.FCStd"}
+
+        # Setup mock stage action
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - the git-dirty document is staged despite having no diff changes
+        presenter._stage_documents.execute.assert_called_once_with(mock_repo, [snapshot_no_changes])
+
+    def test_on_stage_all_clicked_mixed_dirty_and_changed_docs(self) -> None:
+        """Stages both git-dirty docs and docs with diff changes."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Doc with changes (staggable)
+        hierarchy_changed = DiffHierarchy()
+        hierarchy_changed.add_node(NodeDiff(path="Part", type_id="Part::Feature", _force_state=DiffState.MODIFIED))
+        snapshot_changed = Snapshot(
+            snapshot_id="ws1",
+            document_name="changed.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="changed.FCStd",
+        )
+
+        # Doc that is git-dirty but has no diff changes
+        hierarchy_no_changes = DiffHierarchy()
+        hierarchy_no_changes.add_node(NodeDiff(path="Part", type_id="Part::Feature"))
+        snapshot_dirty = Snapshot(
+            snapshot_id="ws2",
+            document_name="dirty.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="dirty.FCStd",
+        )
+
+        # Doc that is neither dirty nor changed (not staggable)
+        hierarchy_unchanged = DiffHierarchy()
+        hierarchy_unchanged.add_node(NodeDiff(path="Part", type_id="Part::Feature"))
+        snapshot_unchanged = Snapshot(
+            snapshot_id="ws3",
+            document_name="clean.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="clean.FCStd",
+        )
+
+        presenter._diff_results_by_path = {
+            "changed.FCStd": DiffResult(old_snapshot=None, new_snapshot=snapshot_changed, hierarchy=hierarchy_changed),
+            "dirty.FCStd": DiffResult(old_snapshot=None, new_snapshot=snapshot_dirty, hierarchy=hierarchy_no_changes),
+            "clean.FCStd": DiffResult(
+                old_snapshot=None, new_snapshot=snapshot_unchanged, hierarchy=hierarchy_unchanged
+            ),
+        }
+        presenter._dirty_paths = {"dirty.FCStd"}
+
+        mock_stage_result = MagicMock()
+        mock_stage_result.is_success = True
+        mock_stage_result.message = ""
+        presenter._stage_documents.execute.return_value = mock_stage_result
+
+        # Act
+        presenter.on_stage_all_clicked()
+
+        # Assert - only changed and dirty docs are staged, not clean
+        presenter._stage_documents.execute.assert_called_once_with(mock_repo, [snapshot_changed, snapshot_dirty])
+
+
+class TestDiffPresenterStageAllButtonVisibility:
+    """Tests for present_diffs() Stage All button visibility logic."""
+
+    def test_present_diffs_shows_stage_all_button_during_working_tree(self) -> None:
+        """Stage All button is visible when selection is WORKING_TREE."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Set the current selection to WORKING_TREE
+        fake_view._current_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        diff_result = DiffResult(
+            old_snapshot=Snapshot(snapshot_id="s1", document_name="v1", timestamp=datetime.datetime.now()),
+            new_snapshot=Snapshot(snapshot_id="s2", document_name="v2", timestamp=datetime.datetime.now()),
+            hierarchy=DiffHierarchy(),
+        )
+
+        # Act
+        presenter.present_diffs([diff_result])
+
+        # Assert
+        calls = fake_view.get_calls()
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is True
+
+    def test_on_staging_selected_no_results_hides_stage_all(self) -> None:
+        """Selecting Staging when all staged diffs fail hides the Stage All button."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Return staged paths
+        presenter._get_staged_file_paths.execute.return_value = MagicMock(
+            is_success=True, data=["a.FCStd"]
+        )
+
+        # All staged file diffs fail (index snapshot missing) - creates warning row
+        mock_index_result = MagicMock()
+        mock_index_result.is_success = False
+        mock_index_result.data = None
+        presenter._create_commit_snapshot.execute.return_value = mock_index_result
+
+        # Act
+        presenter._on_staging_selected()
+
+        # Assert - Stage All button is hidden (warning entries have stage_button_enabled=False)
+        calls = fake_view.get_calls()
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
+    def test_present_diffs_hides_stage_all_button_during_commit(self) -> None:
+        """Stage All button is hidden when selection is COMMIT."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Set the current selection to COMMIT
+        fake_view._current_selection = HistorySelection(item_kind="COMMIT", commit_hash="abc123")
+
+        diff_result = DiffResult(
+            old_snapshot=Snapshot(snapshot_id="s1", document_name="v1", timestamp=datetime.datetime.now()),
+            new_snapshot=Snapshot(snapshot_id="s2", document_name="v2", timestamp=datetime.datetime.now()),
+            hierarchy=DiffHierarchy(),
+        )
+
+        # Act
+        presenter.present_diffs([diff_result])
+
+        # Assert
+        calls = fake_view.get_calls()
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
+    def test_present_diffs_enables_stage_all_button_when_any_staggable(self) -> None:
+        """Stage All button is enabled when at least one document is staggable."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Set the current selection to WORKING_TREE
+        fake_view._current_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        hierarchy = DiffHierarchy()
+        hierarchy.add_node(NodeDiff(path="Part", type_id="Part::Feature"))
+        diff_result = DiffResult(
+            old_snapshot=Snapshot(snapshot_id="s1", document_name="v1", timestamp=datetime.datetime.now()),
+            new_snapshot=Snapshot(
+                snapshot_id="s2",
+                document_name="v2",
+                timestamp=datetime.datetime.now(),
+                git_path="dirty.FCStd",
+            ),
+            hierarchy=hierarchy,
+        )
+
+        # Act - pass dirty_paths to make the document staggable
+        presenter.present_diffs([diff_result], dirty_paths={"dirty.FCStd"})
+
+        # Assert
+        calls = fake_view.get_calls()
+        enabled_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_enabled"),
+            None,
+        )
+        assert enabled_call is not None
+        assert enabled_call["enabled"] is True
+
+    def test_present_diffs_disables_stage_all_button_when_none_staggable(self) -> None:
+        """Stage All button is disabled when no documents are staggable."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Set the current selection to WORKING_TREE
+        fake_view._current_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        diff_result = DiffResult(
+            old_snapshot=Snapshot(snapshot_id="s1", document_name="v1", timestamp=datetime.datetime.now()),
+            new_snapshot=Snapshot(snapshot_id="s2", document_name="v2", timestamp=datetime.datetime.now()),
+            hierarchy=DiffHierarchy(),
+        )
+
+        # Act - no dirty_paths, so no documents are staggable
+        presenter.present_diffs([diff_result])
+
+        # Assert
+        calls = fake_view.get_calls()
+        enabled_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_enabled"),
+            None,
+        )
+        assert enabled_call is not None
+        assert enabled_call["enabled"] is False
+
+
+class TestDiffPresenterStageAllButtonEdgeCasesNoDiff:
+    """Tests for Stage All button visibility when no diff results are available."""
+
+    def test_on_working_tree_selected_no_diff_results_hides_stage_all(self) -> None:
+        """When eligible docs exist but diff creation fails, Stage All is hidden."""
+        from tests.fakes.fake_freecad_port import DocumentLike
+
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Pre-populate stale state (simulating a prior selection)
+        old_snapshot = Snapshot(
+            snapshot_id="s1",
+            document_name="old.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="old.FCStd",
+        )
+        presenter._diff_results_by_path = {
+            "old.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=old_snapshot,
+                hierarchy=DiffHierarchy(),
+            ),
+        }
+
+        # Return eligible documents
+        mock_doc = MagicMock(spec=DocumentLike)
+        mock_doc.FileName = "/test/path/doc.FCStd"
+        mock_docs_result = MagicMock()
+        mock_docs_result.is_success = True
+        mock_docs_result.data = [mock_doc]
+        mock_docs_result.message = ""
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
+
+        # Working snapshot creation succeeds
+        mock_working_snapshot = Snapshot(
+            snapshot_id="ws1",
+            document_name="doc.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="doc.FCStd",
+        )
+        mock_working_result = MagicMock()
+        mock_working_result.is_success = True
+        mock_working_result.data = mock_working_snapshot
+        presenter._create_working_tree_snapshot.execute.return_value = mock_working_result
+
+        # Commit snapshot returns None (stub)
+        mock_commit_result = MagicMock()
+        mock_commit_result.is_success = True
+        mock_commit_result.data = None
+        presenter._create_commit_snapshot.execute.return_value = mock_commit_result
+
+        # Diff creation fails
+        mock_diff_result = MagicMock()
+        mock_diff_result.is_success = False
+        mock_diff_result.message = "Diff failed"
+        presenter._create_diff.execute.return_value = mock_diff_result
+
+        # Dirty documents returns empty
+        mock_dirty_result = MagicMock()
+        mock_dirty_result.is_success = True
+        mock_dirty_result.data = []
+        presenter._get_dirty_documents.execute.return_value = mock_dirty_result
+
+        # Act
+        presenter._on_working_tree_selected()
+
+        # Assert - stale state is cleared and Stage All is hidden
+        assert presenter._diff_results_by_path == {}
+
+        calls = fake_view.get_calls()
+        show_trees_call = next((c for c in calls if c["method"] == "show_diff_trees"), None)
+        assert show_trees_call is not None
+        assert show_trees_call["diff_trees"] == []
+
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
 
 class TestDiffPresenterStagingSelection:
     """Tests for staging selection plumbing and node lookup."""
@@ -1313,3 +2003,99 @@ class TestDiffPresenterStagingSelection:
         prop_calls = [c for c in fake_view.get_calls() if c["method"] == "show_properties"]
         assert prop_calls
         assert prop_calls[-1]["properties"] == []
+
+
+class TestDiffPresenterStageAllButtonEdgeCases:
+    """Tests for Stage All button visibility in edge cases."""
+
+    def test_present_diffs_empty_results_hides_stage_all_button(self) -> None:
+        """Calling present_diffs([], []) hides the Stage All button."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Set the current selection to WORKING_TREE
+        fake_view._current_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        # Act
+        presenter.present_diffs([])
+
+        # Assert
+        calls = fake_view.get_calls()
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
+    def test_on_staging_selected_no_staged_files_hides_stage_all_button(self) -> None:
+        """Selecting Staging with no staged files hides the Stage All button."""
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Return empty staged paths
+        presenter._get_staged_file_paths.execute.return_value = MagicMock(is_success=True, data=[])
+
+        # Act
+        presenter._on_staging_selected()
+
+        # Assert
+        calls = fake_view.get_calls()
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False
+
+    def test_on_working_tree_selected_no_eligible_docs_clears_state(self) -> None:
+        """No eligible docs clears _diff_results_by_path, trees, and hides Stage All button."""
+
+        fake_view, presenter = _create_test_presenter()
+
+        # Setup mock repo
+        mock_repo = GitRepository(name="test-repo", absolute_path="/test/path")
+        presenter._ui_state.git_repository = mock_repo
+
+        # Pre-populate stale state (simulating a prior selection)
+        old_snapshot = Snapshot(
+            snapshot_id="s1",
+            document_name="old.FCStd",
+            timestamp=datetime.datetime.now(),
+            git_path="old.FCStd",
+        )
+        presenter._diff_results_by_path = {
+            "old.FCStd": DiffResult(
+                old_snapshot=None,
+                new_snapshot=old_snapshot,
+                hierarchy=DiffHierarchy(),
+            ),
+        }
+        fake_view._current_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        # Return no eligible docs
+        mock_docs_result = MagicMock()
+        mock_docs_result.is_success = True
+        mock_docs_result.data = []
+        mock_docs_result.message = "no open documents"
+        presenter._get_eligible_docs.execute.return_value = mock_docs_result
+
+        # Act
+        presenter._on_working_tree_selected()
+
+        # Assert - stale state is cleared
+        assert presenter._diff_results_by_path == {}
+
+        calls = fake_view.get_calls()
+        show_trees_call = next((c for c in calls if c["method"] == "show_diff_trees"), None)
+        assert show_trees_call is not None
+        assert show_trees_call["diff_trees"] == []
+
+        visible_call = next(
+            (c for c in calls if c["method"] == "set_stage_all_button_visible"),
+            None,
+        )
+        assert visible_call is not None
+        assert visible_call["visible"] is False

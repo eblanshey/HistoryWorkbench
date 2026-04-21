@@ -53,6 +53,7 @@ from ..translation_strings import (
     HISTORY_LABEL,
     REPOSITORY_INFO_TEMPLATE,
     REPOSITORY_NO_REPO_MESSAGE,
+    STAGE_ALL_LABEL,
 )
 from .models import HistorySelection
 
@@ -262,6 +263,7 @@ class DiffPanelView(QWidget):
         self._on_history_selection_callback: Callable[[HistorySelection], None] | None = None
         self._on_refresh_callback: Callable[[], None] | None = None
         self._on_add_button_callback: Callable[[str], None] | None = None
+        self._on_stage_all_callback: Callable[[], None] | None = None
         self._on_node_selection_callback: Callable[[str, str], None] | None = None
         self._current_selection: HistorySelection | None = None
         # Track stage buttons by git_path for runtime updates
@@ -326,6 +328,15 @@ class DiffPanelView(QWidget):
         summary_layout.addWidget(self._added_label)
         summary_layout.addWidget(self._deleted_label)
         summary_layout.addWidget(self._modified_label)
+
+        # Stage All button (hidden by default, shown during Working Tree selection)
+        self._stage_all_button = QPushButton()
+        stage_all_text = QCoreApplication.translate("DiffView", STAGE_ALL_LABEL)
+        self._stage_all_button.setText(stage_all_text)
+        self._stage_all_button.setFixedWidth(70)
+        self._stage_all_button.hide()
+        summary_layout.addWidget(self._stage_all_button)
+        self._stage_all_button.clicked.connect(self._on_stage_all_clicked)
 
         self.tree_widget = QTreeWidget()
         self.tree_widget.setHeaderLabels(["Tree"])
@@ -533,6 +544,35 @@ class DiffPanelView(QWidget):
                       document whose '+ Stage' button was clicked.
         """
         self._on_add_button_callback = callback
+
+    def set_stage_all_button_visible(self, visible: bool) -> None:
+        """Show or hide the Stage All button.
+
+        Args:
+            visible: Whether the button should be visible.
+        """
+        self._stage_all_button.setVisible(visible)
+
+    def set_stage_all_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable the Stage All button.
+
+        Args:
+            enabled: Whether the button should be enabled.
+        """
+        self._stage_all_button.setEnabled(enabled)
+
+    def _on_stage_all_clicked(self) -> None:
+        """Handle Stage All button click by invoking the callback."""
+        if self._on_stage_all_callback:
+            self._on_stage_all_callback()
+
+    def set_stage_all_callback(self, callback: Callable[[], None]) -> None:
+        """Set the callback for Stage All button.
+
+        Args:
+            callback: A no-argument callable to invoke on click.
+        """
+        self._on_stage_all_callback = callback
 
     def set_node_selection_callback(self, callback: Callable[[str, str], None]) -> None:
         """Set callback for node selection with (git_path, node_path).

@@ -214,5 +214,16 @@ class TestProtocolValidationUtility:
             def set_stage_button_enabled(self, git_path: str, enabled: bool) -> None:
                 pass
 
+            def set_stage_all_callback(self, callback: Callable[[], None]) -> None:
+                pass
+
+            def set_stage_all_button_visible(self, visible: bool) -> None:
+                pass
+
+            def set_stage_all_button_enabled(self, enabled: bool) -> None:
+                pass
+
+            _current_selection: object | None = None
+
         violations = validate_protocol_compliance(CompliantView, DiffView, raise_on_error=False)
         assert violations == [], f"Should have no violations, got: {violations}"

@@ -23,6 +23,8 @@ class FakeDiffView:
         self._refresh_callback: Callable[[], None] | None = None
         self._history_selection_callback: Callable[[Any], None] | None = None
         self._add_button_callback: Callable[[str], None] | None = None
+        self._stage_all_callback: Callable[[], None] | None = None
+        self._current_selection: Any = None
 
     def show_loading(self) -> None:
         """Capture loading call instead of showing UI."""
@@ -136,3 +138,33 @@ class FakeDiffView:
             enabled: Whether the stage button should be enabled.
         """
         self._record_call("set_stage_button_enabled", git_path=git_path, enabled=enabled)
+
+    def set_stage_all_callback(self, callback: Callable[[], None]) -> None:
+        """Capture Stage All callback registration instead of connecting to button.
+
+        Args:
+            callback: A no-argument callable to invoke on Stage All click.
+        """
+        self._record_call("set_stage_all_callback", callback=callback)
+        self._stage_all_callback = callback
+
+    def trigger_stage_all_callback(self) -> None:
+        """Trigger the registered Stage All callback if one exists."""
+        if self._stage_all_callback is not None:
+            self._stage_all_callback()
+
+    def set_stage_all_button_visible(self, visible: bool) -> None:
+        """Capture Stage All button visibility call.
+
+        Args:
+            visible: Whether the Stage All button should be visible.
+        """
+        self._record_call("set_stage_all_button_visible", visible=visible)
+
+    def set_stage_all_button_enabled(self, enabled: bool) -> None:
+        """Capture Stage All button enabled call.
+
+        Args:
+            enabled: Whether the Stage All button should be enabled.
+        """
+        self._record_call("set_stage_all_button_enabled", enabled=enabled)

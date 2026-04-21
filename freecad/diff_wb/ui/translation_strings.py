@@ -80,6 +80,12 @@ DIFF_LOADING_MESSAGE = "Computing diff..."
 No placeholders. This is a static message.
 """
 
+STAGE_ALL_LABEL = "Stage All"
+"""Label for the Stage All button in the Working Tree view.
+
+No placeholders. This is a static label displayed above the diff tree.
+"""
+
 # ============================================================================
 # COMMON STRINGS
 # ============================================================================
@@ -201,6 +207,7 @@ __all__ = [
     "DIFF_SUMMARY_DELETED_LABEL",
     "DIFF_SUMMARY_MODIFIED_LABEL",
     "DIFF_LOADING_MESSAGE",
+    "STAGE_ALL_LABEL",
     # Common
     "ERROR_UNKNOWN",
     "ERROR_NO_DOCUMENT",

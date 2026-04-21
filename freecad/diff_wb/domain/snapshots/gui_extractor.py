@@ -3,7 +3,11 @@
 # tree structure from FreeCAD documents and converts them to Snapshot domain models.
 # It uses FreeCAD's GUI-level claimChildren() API to match the FreeCAD tree structure.
 # Requires FreeCAD GUI. Raises GuiNotAvailableError if unavailable.
-"""Snapshot extraction from FreeCAD documents using GUI-level claimChildren() API."""
+"""Snapshot extraction from FreeCAD documents using GUI-level claimChildren() API.
+
+This module provides expression path normalization for FreeCAD ExpressionEngine
+entries, building expression maps with normalized keys for nested property paths.
+"""
 
 from __future__ import annotations
 
@@ -227,28 +231,73 @@ def _init_gui_and_get_doc(doc: Any) -> Any:
     return gui_doc
 
 
-def _get_expression_for_property(obj: object, prop_name: str) -> str | None:
-    """Get the expression string for a property from ExpressionEngine.
+def _normalize_expression_path_for_property(prop_name: str, raw_path: str) -> str | None:
+    """Normalize a raw expression path relative to the given property name.
 
-    The ExpressionEngine attribute (when present) is a list of lists like:
-        [
-            ["Height", "10 mm"]
-        ]
+    FreeCAD expression paths can be dotted (e.g., '.Length') or undotted
+    (e.g., 'Length') for the same target. This function strips the property
+    name prefix and returns the relative path.
 
     Args:
-        obj: The FreeCAD object (has ExpressionEngine attribute)
-        prop_name: The property name to get expression for
+        prop_name: The property name (e.g., 'Placement', 'Constraints', 'Length')
+        raw_path: The raw path from ExpressionEngine (e.g., '.Placement.Base.x')
 
     Returns:
-        The expression string if found (e.g., "Pad.Length * 2"), None otherwise
+        The normalized relative path, or None if unrelated.
+        - '.' for root-level expressions (e.g., '.Length' -> '.')
+        - Relative path for sub-paths (e.g., '.Placement.Base.x' -> 'Base.x')
+        - Bracket key for list items (e.g., '.Constraints[0]' -> '[0]')
     """
-    expr_engine = getattr(obj, "ExpressionEngine", [])
-    if not isinstance(expr_engine, list):
-        return None
-    for entry in expr_engine:
-        if isinstance(entry, (list, tuple)) and len(entry) >= 2 and entry[0] == prop_name:
-            return str(entry[1])
+    p = raw_path.lstrip(".")
+
+    if p == prop_name:
+        return "."
+    if p.startswith(prop_name + "."):
+        return p[len(prop_name) + 1 :]
+    if p.startswith(prop_name + "["):
+        # keep bracket relative key, e.g. Constraints[0] -> [0]
+        return p[len(prop_name) :]
     return None
+
+
+def _build_expression_map_for_property(prop_name: str, expr_engine: Any) -> dict[str, str]:
+    """Build an expression map for a property from its ExpressionEngine.
+
+    The ExpressionEngine is a list of [path, expression] pairs. This function
+    normalizes paths relative to the given property name and builds a map
+    of relative keys to expression strings.
+
+    Duplicate resolution: when both dotted (e.g., '.Length') and undotted
+    (e.g., 'Length') forms exist for the same relative key, the dotted form
+    wins (is kept).
+
+    Args:
+        prop_name: The property name to build expressions for
+        expr_engine: The ExpressionEngine list from a FreeCAD object
+
+    Returns:
+        Dictionary mapping normalized relative keys to expression strings.
+        The key '.' represents a root-level expression.
+    """
+    result: dict[str, str] = {}
+    if not isinstance(expr_engine, list):
+        return result
+
+    for entry in expr_engine:
+        if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+            continue
+        raw_path = str(entry[0])
+        expr = str(entry[1])
+
+        rel = _normalize_expression_path_for_property(prop_name, raw_path)
+        if rel is None:
+            continue
+
+        # deterministic duplicate resolution: dotted form wins when both exist
+        if rel not in result or raw_path.startswith("."):
+            result[rel] = expr
+
+    return result
 
 
 def _get_property_group(obj: object, prop_name: str) -> str:
@@ -274,9 +323,9 @@ def _get_property_group(obj: object, prop_name: str) -> str:
 def _extract_property_value(obj: object, prop_name: str) -> Property | None:
     """Extract a single property value from a FreeCAD object.
 
-    Delegates to Property.from_freecad_property() which handles
-    type detection based on property names (e.g., "Placement", "Position")
-    and value-based inference for unknown properties.
+    Builds an expression map from the object's ExpressionEngine and delegates
+    to Property.from_freecad() which handles type detection and wraps the
+    value in the appropriate DataPath subclass.
 
     Args:
         obj: The FreeCAD object
@@ -286,14 +335,10 @@ def _extract_property_value(obj: object, prop_name: str) -> Property | None:
         A Property if successful, None if the property couldn't be read
     """
     try:
-        # TODO: delay instantiating props until later -- might not even be needed until their raw output is
-        #    considered different
         value = getattr(obj, prop_name)
-        expression = _get_expression_for_property(obj, prop_name)
+        expr_map = _build_expression_map_for_property(prop_name, getattr(obj, "ExpressionEngine", []))
         group = _get_property_group(obj, prop_name)
-        property_obj = Property.from_freecad_property(prop_name, value, expression=expression, group=group)
-
-        return property_obj
+        return Property.from_freecad(value, expr_map, group)
     except Exception as e:
         Log.exception(f"Failed to extract property {prop_name}: {e}")
         return None

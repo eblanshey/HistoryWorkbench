@@ -1,9 +1,16 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # File responsibility: Unit tests for the Property class including creation, equality,
-# expression support, and type detection functionality.
+# expression support, and serialization functionality via the DataPath model.
 """Unit tests for the Property class."""
 
-from freecad.diff_wb.domain import Placement, Property, PropertyType, Rotation, Vector
+from freecad.diff_wb.domain.tree.data_path import (
+    InternalType,
+    ListData,
+    PrimitiveData,
+    PropertyPathType,
+    PropertyPathValue,
+)
+from freecad.diff_wb.domain.tree.property import Property
 
 
 class MockConstraint:
@@ -21,63 +28,75 @@ class TestProperty:
     """Tests for the Property class."""
 
     # =====================================================================
-    # Property.create() Tests
+    # Property.from_freecad() Tests
     # =====================================================================
 
     def test_bool_creation(self) -> None:
         """Test boolean property value creation."""
-        pv = Property.create(PropertyType.BOOL, True)
-        assert pv.type_ == PropertyType.BOOL
-        assert pv.value is True
+        pv = Property.from_freecad(True, {}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.BOOL
+        assert pv.value.paths["."].value is True
 
     def test_int_creation(self) -> None:
         """Test integer property value creation."""
-        pv = Property.create(PropertyType.INT, 42)
-        assert pv.type_ == PropertyType.INT
-        assert pv.value == 42
+        pv = Property.from_freecad(42, {}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.INT
+        assert pv.value.paths["."].value == 42
 
     def test_float_creation(self) -> None:
         """Test float property value creation."""
-        pv = Property.create(PropertyType.FLOAT, 3.14)
-        assert pv.type_ == PropertyType.FLOAT
-        assert pv.value == 3.14
+        pv = Property.from_freecad(3.14, {}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.FLOAT
+        assert pv.value.paths["."].value == 3.14
 
     def test_string_creation(self) -> None:
         """Test string property value creation."""
-        pv = Property.create(PropertyType.STRING, "hello")
-        assert pv.type_ == PropertyType.STRING
-        assert pv.value == "hello"
+        pv = Property.from_freecad("hello", {}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.STRING
+        assert pv.value.paths["."].value == "hello"
 
-    def test_vector_creation(self) -> None:
-        """Test vector property value creation."""
-        pv = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        assert pv.type_ == PropertyType.VECTOR
-        assert isinstance(pv.value, Vector)
-        assert pv.value.x == 1.0
-        assert pv.value.y == 2.0
-        assert pv.value.z == 3.0
+    def test_unknown_type_preserves_display_value(self) -> None:
+        """Test that unknown types preserve display value and type info."""
 
-    def test_vector_with_expression(self) -> None:
-        """Test vector with expression."""
-        pv = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch001.X")
-        assert pv.expression == "Sketch001.X"
-        assert str(pv) == "(1.0, 2.0, 3.0)"
+        class CustomObj:
+            def __str__(self):
+                return "CustomObj(1, 2, 3)"
 
-    def test_placement_creation(self) -> None:
-        """Test placement property value creation."""
-        pv = Property.create(PropertyType.PLACEMENT, {"position": (0, 0, 0), "rotation": (0, 0, 1, 90)})
-        assert pv.type_ == PropertyType.PLACEMENT
-        assert isinstance(pv.value, Placement)
-        assert pv.value.position == Vector(0, 0, 0)
-        assert pv.value.rotation == Rotation(0, 0, 1, 90)
+        pv = Property.from_freecad(CustomObj(), {}, "Base")
+        # Unknown types go to UnknownData, not PrimitiveData
+        from freecad.diff_wb.domain.tree.data_path import UnknownData
 
-    def test_placement_with_expression(self) -> None:
-        """Test placement with expression."""
-        pv = Property.create(
-            PropertyType.PLACEMENT, {"position": (0, 0, 0), "rotation": (0, 0, 1, 45)}, expression="Body.Placement"
-        )
-        assert pv.type_ == PropertyType.PLACEMENT
-        assert pv.expression == "Body.Placement"
+        assert isinstance(pv.value, UnknownData)
+        assert pv.value.paths["."].value == "CustomObj(1, 2, 3)"
+        assert pv.value.paths["."].freecad_type is not None
+        assert "CustomObj" in pv.value.paths["."].freecad_type
+
+    def test_list_creation(self) -> None:
+        """Test list property value creation."""
+        pv = Property.from_freecad(["a", "b", "c"], {}, "Base")
+        assert isinstance(pv.value, ListData)
+        assert len(pv.value.items) == 3
+
+    def test_none_creation(self) -> None:
+        """Test None property value creation."""
+        pv = Property.from_freecad(None, {}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.NULL
+        assert pv.value.paths["."].value is None
+
+    def test_group_default(self) -> None:
+        """Test default group is 'Base'."""
+        pv = Property.from_freecad(42, {})
+        assert pv.group == "Base"
+
+    def test_group_custom(self) -> None:
+        """Test custom group assignment."""
+        pv = Property.from_freecad(42, {}, "Data")
+        assert pv.group == "Data"
 
     # =====================================================================
     # Equality Tests
@@ -85,21 +104,33 @@ class TestProperty:
 
     def test_equality_same_type(self) -> None:
         """Test equality for same type values."""
-        pv1 = Property.create(PropertyType.INT, 42)
-        pv2 = Property.create(PropertyType.INT, 42)
+        pv1 = Property.from_freecad(42, {}, "Base")
+        pv2 = Property.from_freecad(42, {}, "Base")
         assert pv1 == pv2
 
     def test_inequality_different_type(self) -> None:
         """Test inequality for different types."""
-        pv1 = Property.create(PropertyType.INT, 42)
-        pv2 = Property.create(PropertyType.FLOAT, 42.0)
+        pv1 = Property.from_freecad(42, {}, "Base")
+        pv2 = Property.from_freecad(42.0, {}, "Base")
         assert pv1 != pv2
 
     def test_float_approximate_equality(self) -> None:
         """Test approximate equality for floats."""
-        pv1 = Property.create(PropertyType.FLOAT, 1.0)
-        pv2 = Property.create(PropertyType.FLOAT, 1.0 + 1e-10)
+        pv1 = Property.from_freecad(1.0, {}, "Base")
+        pv2 = Property.from_freecad(1.0 + 1e-10, {}, "Base")
         assert pv1 == pv2
+
+    def test_inequality_different_values(self) -> None:
+        """Test inequality for different values."""
+        pv1 = Property.from_freecad(42, {}, "Base")
+        pv2 = Property.from_freecad(43, {}, "Base")
+        assert pv1 != pv2
+
+    def test_inequality_different_groups(self) -> None:
+        """Test inequality for different groups."""
+        pv1 = Property.from_freecad(42, {}, "Base")
+        pv2 = Property.from_freecad(42, {}, "Data")
+        assert pv1 != pv2
 
     # =====================================================================
     # Expression Support Tests
@@ -107,164 +138,114 @@ class TestProperty:
 
     def test_bool_with_expression(self) -> None:
         """Test boolean property with expression."""
-        pv = Property.create(PropertyType.BOOL, True, expression="Sketch001.Constrain")
-        assert pv.type_ == PropertyType.BOOL
-        assert pv.value is True
-        assert pv.expression == "Sketch001.Constrain"
-        assert str(pv) == "True"
+        pv = Property.from_freecad(True, {".": "Sketch001.Constrain"}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.BOOL
+        assert pv.value.paths["."].value is True
+        assert pv.value.paths["."].expression == "Sketch001.Constrain"
 
     def test_int_with_expression(self) -> None:
         """Test integer property with expression."""
-        pv = Property.create(PropertyType.INT, 10, expression="Sketch001.Count")
-        assert pv.type_ == PropertyType.INT
-        assert pv.value == 10
-        assert pv.expression == "Sketch001.Count"
-        assert str(pv) == "10"
+        pv = Property.from_freecad(10, {".": "Sketch001.Count"}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.INT
+        assert pv.value.paths["."].value == 10
+        assert pv.value.paths["."].expression == "Sketch001.Count"
 
     def test_float_with_expression(self) -> None:
         """Test float property with expression."""
-        pv = Property.create(PropertyType.FLOAT, 5.5, expression="Body.Length")
-        assert pv.type_ == PropertyType.FLOAT
-        assert pv.value == 5.5
-        assert pv.expression == "Body.Length"
-        assert str(pv) == "5.5"
+        pv = Property.from_freecad(5.5, {".": "Body.Length"}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.FLOAT
+        assert pv.value.paths["."].value == 5.5
+        assert pv.value.paths["."].expression == "Body.Length"
 
     def test_string_with_expression(self) -> None:
         """Test string property with expression."""
-        pv = Property.create(PropertyType.STRING, "test", expression="Document.Name")
-        assert pv.type_ == PropertyType.STRING
-        assert pv.value == "test"
-        assert pv.expression == "Document.Name"
-        assert str(pv) == "test"
+        pv = Property.from_freecad("test", {".": "Document.Name"}, "Base")
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].type_ == PropertyPathType.STRING
+        assert pv.value.paths["."].value == "test"
+        assert pv.value.paths["."].expression == "Document.Name"
 
     def test_equality_same_value_different_expression(self) -> None:
         """Test that same values with different expressions are NOT equal."""
-        pv1 = Property.create(PropertyType.FLOAT, 10.0)
-        pv2 = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch001.X")
+        pv1 = Property.from_freecad(10.0, {}, "Base")
+        pv2 = Property.from_freecad(10.0, {".": "Sketch001.X"}, "Base")
         assert pv1 != pv2
 
     def test_equality_expression_vs_no_expression(self) -> None:
         """Test that value with expression differs from value without."""
-        pv1 = Property.create(PropertyType.INT, 42, expression="Some.Expression")
-        pv2 = Property.create(PropertyType.INT, 42)
+        pv1 = Property.from_freecad(42, {".": "Some.Expression"}, "Base")
+        pv2 = Property.from_freecad(42, {}, "Base")
         assert pv1 != pv2
 
     def test_equality_same_expression(self) -> None:
         """Test that same value and expression are equal."""
-        pv1 = Property.create(PropertyType.STRING, "hello", expression="Doc.Name")
-        pv2 = Property.create(PropertyType.STRING, "hello", expression="Doc.Name")
+        pv1 = Property.from_freecad("hello", {".": "Doc.Name"}, "Base")
+        pv2 = Property.from_freecad("hello", {".": "Doc.Name"}, "Base")
         assert pv1 == pv2
 
     def test_equality_different_expressions(self) -> None:
         """Test that same value with different expressions are NOT equal."""
-        pv1 = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch001.X")
-        pv2 = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch002.X")
+        pv1 = Property.from_freecad((1.0, 2.0, 3.0), {".": "Sketch001.X"}, "Base")
+        pv2 = Property.from_freecad((1.0, 2.0, 3.0), {".": "Sketch002.X"}, "Base")
         assert pv1 != pv2
 
     def test_equality_both_none_expressions(self) -> None:
         """Test equality when both have no expressions."""
-        pv1 = Property.create(PropertyType.BOOL, False)
-        pv2 = Property.create(PropertyType.BOOL, False)
+        pv1 = Property.from_freecad(False, {}, "Base")
+        pv2 = Property.from_freecad(False, {}, "Base")
         assert pv1 == pv2
 
 
-class TestVectorHandler:
-    """Tests for Vector handler class."""
+class TestPropertySerialization:
+    """Tests for Property serialization and deserialization."""
 
-    def test_vector_handles_known_properties(self) -> None:
-        """Test Vector.handles() returns True for known property names."""
-        assert Vector.handles("Position") is True
-        assert Vector.handles("Axis") is True
-        assert Vector.handles("Direction") is True
-        assert Vector.handles("Normal") is True
-        assert Vector.handles("Translation") is True
-        assert Vector.handles("StartPoint") is True
-        assert Vector.handles("EndPoint") is True
+    def test_serialize_primitive(self) -> None:
+        """Test serialization of a primitive property."""
+        pv = Property.from_freecad(42, {".": "Sketch.X"}, "Base")
+        serialized = pv.to_serialized()
+        assert serialized["type_"] == InternalType.Primitive.value
+        assert serialized["group"] == "Base"
+        assert serialized["paths"]["."]["value"] == 42
+        assert serialized["paths"]["."]["expression"] == "Sketch.X"
 
-    def test_vector_handles_unknown_properties(self) -> None:
-        """Test Vector.handles() returns False for unknown property names."""
-        assert Vector.handles("Placement") is False
-        assert Vector.handles("Length") is False
-        assert Vector.handles("Label") is False
+    def test_serialize_string(self) -> None:
+        """Test serialization of a string property."""
+        pv = Property.from_freecad("hello", {}, "Base")
+        serialized = pv.to_serialized()
+        assert serialized["type_"] == InternalType.Primitive.value
+        assert serialized["paths"]["."]["value"] == "hello"
 
-    def test_vector_from_freecad_value(self) -> None:
-        """Test Vector.from_freecad_value() converts FreeCAD object to Property."""
+    def test_deserialize_primitive(self) -> None:
+        """Test deserialization of a primitive property."""
+        data = {
+            "type_": InternalType.Primitive.value,
+            "paths": {
+                ".": {"type_": "INT", "value": 42, "expression": "Sketch.X"},
+            },
+            "group": "Data",
+        }
+        pv = Property.from_serialized(data)
+        assert isinstance(pv.value, PrimitiveData)
+        assert pv.value.paths["."].value == 42
+        assert pv.value.paths["."].expression == "Sketch.X"
+        assert pv.group == "Data"
 
-        class MockVector:
-            x, y, z = 1.0, 2.0, 3.0
+    def test_roundtrip(self) -> None:
+        """Test that serialize -> deserialize roundtrip preserves data."""
+        original = Property.from_freecad(3.14, {".": "Body.Length"}, "View")
+        serialized = original.to_serialized()
+        restored = Property.from_serialized(serialized)
+        assert original == restored
 
-        prop = Vector.from_freecad_value(MockVector())
-        assert prop.type_ == PropertyType.VECTOR
-        assert isinstance(prop.value, Vector)
-        assert prop.value.x == 1.0
-        assert prop.value.y == 2.0
-        assert prop.value.z == 3.0
-
-    def test_vector_from_freecad_value_with_expression(self) -> None:
-        """Test Vector.from_freecad_value() with expression."""
-
-        class MockVector:
-            x, y, z = 1.0, 2.0, 3.0
-
-        prop = Vector.from_freecad_value(MockVector(), expression="Sketch001.X")
-        assert prop.expression == "Sketch001.X"
-
-
-class TestPlacementHandler:
-    """Tests for Placement handler class."""
-
-    def test_placement_handles_placement_property(self) -> None:
-        """Test Placement.handles() returns True for Placement property."""
-        assert Placement.handles("Placement") is True
-
-    def test_placement_handles_other_properties(self) -> None:
-        """Test Placement.handles() returns False for other properties."""
-        assert Placement.handles("Position") is False
-        assert Placement.handles("Length") is False
-        assert Placement.handles("Label") is False
-
-    def test_placement_from_freecad_value(self) -> None:
-        """Test Placement.from_freecad_value() converts FreeCAD object to Property."""
-
-        class MockAxis:
-            x, y, z = 0.0, 0.0, 1.0
-
-        class MockRotation:
-            Axis = MockAxis()
-            Angle = 90.0
-
-        class MockBase:
-            x, y, z = 1.0, 2.0, 3.0
-
-        class MockPlacement:
-            Base = MockBase()
-            Rotation = MockRotation()
-
-        prop = Placement.from_freecad_value(MockPlacement())
-        assert prop.type_ == PropertyType.PLACEMENT
-        assert isinstance(prop.value, Placement)
-        assert prop.value.position == Vector(1.0, 2.0, 3.0)
-        assert prop.value.rotation == Rotation(0.0, 0.0, 1.0, 90.0)
-
-    def test_placement_from_freecad_value_with_expression(self) -> None:
-        """Test Placement.from_freecad_value() with expression."""
-
-        class MockAxis:
-            x, y, z = 0.0, 0.0, 1.0
-
-        class MockRotation:
-            Axis = MockAxis()
-            Angle = 45.0
-
-        class MockBase:
-            x, y, z = 0.0, 0.0, 0.0
-
-        class MockPlacement:
-            Base = MockBase()
-            Rotation = MockRotation()
-
-        prop = Placement.from_freecad_value(MockPlacement(), expression="Body.Placement")
-        assert prop.expression == "Body.Placement"
+    def test_roundtrip_string(self) -> None:
+        """Test that serialize -> deserialize roundtrip preserves string data."""
+        original = Property.from_freecad("test_label", {".": "Doc.Label"}, "Base")
+        serialized = original.to_serialized()
+        restored = Property.from_serialized(serialized)
+        assert original == restored
 
 
 class TestPropertyListComparison:
@@ -281,8 +262,8 @@ class TestPropertyListComparison:
             MockConstraint("Distance1", "Distance"),
         ]
 
-        prop1 = Property.create(PropertyType.LIST, constraints1)
-        prop2 = Property.create(PropertyType.LIST, constraints2)
+        prop1 = Property.from_freecad(constraints1, {}, "Base")
+        prop2 = Property.from_freecad(constraints2, {}, "Base")
 
         # Different objects but same string representation -> should be equal
         assert prop1 == prop2
@@ -298,8 +279,8 @@ class TestPropertyListComparison:
             MockConstraint("Distance2", "Distance"),  # Different name
         ]
 
-        prop1 = Property.create(PropertyType.LIST, constraints1)
-        prop2 = Property.create(PropertyType.LIST, constraints2)
+        prop1 = Property.from_freecad(constraints1, {}, "Base")
+        prop2 = Property.from_freecad(constraints2, {}, "Base")
 
         # Different string representations -> should not be equal
         assert prop1 != prop2
@@ -316,22 +297,22 @@ class TestPropertyListComparison:
             MockConstraint("Angle1", "Angle"),  # Extra constraint
         ]
 
-        prop1 = Property.create(PropertyType.LIST, constraints1)
-        prop2 = Property.create(PropertyType.LIST, constraints2)
+        prop1 = Property.from_freecad(constraints1, {}, "Base")
+        prop2 = Property.from_freecad(constraints2, {}, "Base")
 
         assert prop1 != prop2
 
     def test_list_with_simple_values(self) -> None:
         """Lists with simple values (strings, ints) should work correctly."""
-        prop1 = Property.create(PropertyType.LIST, ["a", "b", "c"])
-        prop2 = Property.create(PropertyType.LIST, ["a", "b", "c"])
+        prop1 = Property.from_freecad(["a", "b", "c"], {}, "Base")
+        prop2 = Property.from_freecad(["a", "b", "c"], {}, "Base")
 
         assert prop1 == prop2
 
     def test_list_with_mixed_types(self) -> None:
         """Lists with mixed types should compare correctly."""
-        prop1 = Property.create(PropertyType.LIST, [1, "a", 3.14])
-        prop2 = Property.create(PropertyType.LIST, [1, "a", 3.14])
+        prop1 = Property.from_freecad([1, "a", 3.14], {}, "Base")
+        prop2 = Property.from_freecad([1, "a", 3.14], {}, "Base")
 
         assert prop1 == prop2
 
@@ -344,156 +325,10 @@ class TestPropertyListComparison:
 
         obj1 = MockObj(1)
         obj2 = MockObj(2)
-        props = Property.create(PropertyType.LIST, [obj1, obj2])
+        props = Property.from_freecad([obj1, obj2], {}, "Base")
 
-        assert isinstance(props.value, list)
-        assert len(props.value) == 2
-        assert props.value[0].value == 1
-        assert props.value[1].value == 2
-
-
-class TestRegistry:
-    """Tests for the handler registry."""
-
-    def test_handlers_are_registered(self) -> None:
-        """Test that Vector and Placement handlers are registered."""
-        from freecad.diff_wb.domain.tree.property import _PROPERTY_HANDLERS
-
-        assert len(_PROPERTY_HANDLERS) >= 2
-        handler_classes = [h.__name__ for h in _PROPERTY_HANDLERS]
-        assert "Vector" in handler_classes
-        assert "Placement" in handler_classes
-
-
-class TestPropertyGetChildren:
-    """Tests for the Property.get_children() method."""
-
-    def test_get_children_placement(self) -> None:
-        """Placement returns Position + Rotation."""
-        pv = Property.create(PropertyType.PLACEMENT, {"position": (1.0, 2.0, 3.0), "rotation": (0, 0, 1, 90)})
-        children = pv.get_children()
-
-        assert len(children) == 2
-        names = [name for name, _ in children]
-        assert "Position" in names
-        assert "Rotation" in names
-
-    def test_get_children_rotation(self) -> None:
-        """Rotation returns Angle + Axis."""
-
-        # Create a Rotation-like object with angle/axis attributes
-        class MockAxis:
-            x, y, z = 0.0, 0.0, 1.0
-
-        class MockRotation:
-            Angle = 90.0
-            Axis = MockAxis()
-
-        # Create a Property with type that has angle/axis (not Placement)
-        pv = Property(type_=PropertyType.UNKNOWN, value=MockRotation())
-        children = pv.get_children()
-
-        assert len(children) == 2
-        names = [name for name, _ in children]
-        assert "Angle" in names
-        assert "Axis" in names
-
-    def test_get_children_vector(self) -> None:
-        """Vector returns x, y, z."""
-        pv = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        children = pv.get_children()
-
-        assert len(children) == 3
-        names = [name for name, _ in children]
-        assert "x" in names
-        assert "y" in names
-        assert "z" in names
-
-    def test_get_children_list(self) -> None:
-        """List returns indexed items."""
-        pv = Property.create(PropertyType.LIST, ["a", "b", "c"])
-        children = pv.get_children()
-
-        assert len(children) == 3
-        assert children[0] == ("0", "a")
-        assert children[1] == ("1", "b")
-        assert children[2] == ("2", "c")
-
-    def test_get_children_dict(self) -> None:
-        """Dict returns key-value pairs."""
-        pv = Property(type_=PropertyType.UNKNOWN, value={"key1": "val1", "key2": "val2"})
-        children = pv.get_children()
-
-        assert len(children) == 2
-        child_dict = dict(children)
-        assert child_dict["key1"] == "val1"
-        assert child_dict["key2"] == "val2"
-
-    def test_get_children_primitive(self) -> None:
-        """Primitive returns empty list."""
-        pv_int = Property.create(PropertyType.INT, 42)
-        assert pv_int.get_children() == []
-
-        pv_float = Property.create(PropertyType.FLOAT, 3.14)
-        assert pv_float.get_children() == []
-
-        pv_string = Property.create(PropertyType.STRING, "hello")
-        assert pv_string.get_children() == []
-
-        pv_bool = Property.create(PropertyType.BOOL, True)
-        assert pv_bool.get_children() == []
-
-    def test_get_children_none(self) -> None:
-        """None value returns empty list."""
-        pv = Property(type_=PropertyType.INT, value=None)
-        assert pv.get_children() == []
-
-    def test_get_children_empty_list(self) -> None:
-        """Empty list returns empty list."""
-        pv = Property.create(PropertyType.LIST, [])
-        assert pv.get_children() == []
-
-    def test_get_children_empty_dict(self) -> None:
-        """Empty dict returns empty list."""
-        pv = Property(type_=PropertyType.UNKNOWN, value={})
-        assert pv.get_children() == []
-
-    def test_get_children_vector_with_lowercase_attributes(self) -> None:
-        """Vector-like objects with lowercase x,y,z attributes work."""
-
-        class MockVector:
-            def __init__(self):
-                self.x = 1.0
-                self.y = 2.0
-                self.z = 3.0
-
-        pv = Property(type_=PropertyType.UNKNOWN, value=MockVector())
-        children = pv.get_children()
-
-        assert len(children) == 3
-        child_dict = dict(children)
-        assert child_dict["x"] == 1.0
-        assert child_dict["y"] == 2.0
-        assert child_dict["z"] == 3.0
-
-    def test_get_children_rotation_with_lowercase_attributes(self) -> None:
-        """Rotation with lowercase angle/axis attributes works."""
-
-        class MockAxis:
-            def __init__(self):
-                self.x = 0.0
-                self.y = 0.0
-                self.z = 1.0
-
-        class MockRotation:
-            def __init__(self):
-                self.angle = 45.0
-                self.axis = MockAxis()
-
-        pv = Property(type_=PropertyType.UNKNOWN, value=MockRotation())
-        children = pv.get_children()
-
-        assert len(children) == 2
-        names = [name for name, _ in children]
-        assert "Angle" in names
-        assert "Axis" in names
+        assert isinstance(props.value, ListData)
+        assert len(props.value.items) == 2
+        # Items are wrapped as PrimitiveData with the object's string repr
+        assert props.value.items[0].paths["."].value == str(obj1)
+        assert props.value.items[1].paths["."].value == str(obj2)

@@ -171,8 +171,10 @@ class TestPropertyViewerPhase6:
     def test_expandable_placement_property(self, freecad_app: AppLike, project_root: object) -> None:
         """Verify Placement property expands correctly (Phase 4).
 
-        Placement should expand to Position and Rotation.
+        Placement should have nested path entries for Base coordinates
+        and Rotation properties.
         """
+        from freecad.diff_wb.domain.tree.data_path import PlacementData
         from freecad.diff_wb.domain.tree.property import Property
 
         # Open BasicFile
@@ -185,18 +187,19 @@ class TestPropertyViewerPhase6:
                 if hasattr(obj, "Placement") and obj.Placement is not None:
                     placement = obj.Placement
 
-                    # Create Property from FreeCAD value
-                    prop = Property.from_freecad_property("Placement", placement)
+                    # Create Property from FreeCAD value using the new API
+                    prop = Property.from_freecad(placement, {}, "Base")
 
-                    # Check it's expandable
-                    children = prop.get_children()
-                    assert len(children) > 0, "Placement should be expandable"
-
-                    # Should have Position and Rotation (or Angle, Axis)
-                    child_names = [c[0] for c in children]
-                    assert "Position" in child_names or "Rotation" in child_names, (
-                        f"Placement should have Position or Rotation, got {child_names}"
+                    # Verify it's a PlacementData with nested paths
+                    assert isinstance(prop.value, PlacementData), (
+                        f"Placement should produce PlacementData, got {type(prop.value)}"
                     )
+                    paths = prop.value.paths
+                    # Should have Base coordinates and Rotation properties
+                    assert "Base.x" in paths, f"Placement should have Base.x, got {list(paths.keys())}"
+                    assert "Base.y" in paths, f"Placement should have Base.y, got {list(paths.keys())}"
+                    assert "Base.z" in paths, f"Placement should have Base.z, got {list(paths.keys())}"
+                    assert "Rotation.Angle" in paths, f"Placement should have Rotation.Angle, got {list(paths.keys())}"
                     return
 
             pytest.skip("No object with Placement found in document")
@@ -206,6 +209,7 @@ class TestPropertyViewerPhase6:
 
     def test_expandable_vector_property(self, freecad_app: AppLike, project_root: object) -> None:
         """Verify vector properties expand to x, y, z (Phase 4)."""
+        from freecad.diff_wb.domain.tree.data_path import VectorData
         from freecad.diff_wb.domain.tree.property import Property
 
         # Open BasicFile
@@ -220,18 +224,17 @@ class TestPropertyViewerPhase6:
                     if hasattr(placement, "Base") and placement.Base is not None:
                         position = placement.Base
 
-                        # Create Property from FreeCAD value
-                        prop = Property.from_freecad_property("Position", position)
+                        # Create Property from FreeCAD value using the new API
+                        prop = Property.from_freecad(position, {}, "Base")
 
-                        # Check it's expandable
-                        children = prop.get_children()
-                        assert len(children) > 0, "Position should be expandable"
-
-                        # Should have x, y, z
-                        child_names = [c[0] for c in children]
-                        assert "x" in child_names, f"Position should have x, got {child_names}"
-                        assert "y" in child_names, f"Position should have y, got {child_names}"
-                        assert "z" in child_names, f"Position should have z, got {child_names}"
+                        # Verify it's a VectorData with x, y, z paths
+                        assert isinstance(prop.value, VectorData), (
+                            f"Vector should produce VectorData, got {type(prop.value)}"
+                        )
+                        paths = prop.value.paths
+                        assert "x" in paths, f"Vector should have x, got {list(paths.keys())}"
+                        assert "y" in paths, f"Vector should have y, got {list(paths.keys())}"
+                        assert "z" in paths, f"Vector should have z, got {list(paths.keys())}"
                         return
 
             pytest.skip("No object with Position found in document")

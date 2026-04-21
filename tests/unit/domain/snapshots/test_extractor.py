@@ -401,11 +401,17 @@ class TestSnapshotExtractor:
 
         assert len(result.nodes) == 1
         node = result.nodes[0]
-        # Length property should have expression (with non-empty group)
+        # Length property should have expression stored in DataPath
         assert "Length" in node.properties
         length_prop = node.properties["Length"]
-        assert length_prop.expression == "Sketch.Length * 0.5"
-        assert length_prop.value == 10.0
+        # The expression is stored in the PropertyPathValue within PrimitiveData
+        from freecad.diff_wb.domain.tree.data_path import PrimitiveData
+
+        assert isinstance(length_prop.value, PrimitiveData)
+        root_pv = length_prop.value.paths.get(".")
+        assert root_pv is not None
+        assert root_pv.expression == "Sketch.Length * 0.5"
+        assert root_pv.value == 10.0
 
     def test_extract_tree_discovers_children_via_group(self) -> None:
         """Test that ViewProvider.claimChildren() discovers children correctly.

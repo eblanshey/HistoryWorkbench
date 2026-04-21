@@ -15,7 +15,7 @@ from freecad.diff_wb.application.actions.get_staged_file_paths import GetStagedF
 from freecad.diff_wb.application.actions.stage_documents import StageDocumentsAction
 from freecad.diff_wb.domain.diff.models import DiffHierarchy, DiffResult, DiffState, NodeDiff, PropertyDiff
 from freecad.diff_wb.domain.snapshots import Snapshot
-from freecad.diff_wb.domain.tree import Property, PropertyType
+from freecad.diff_wb.domain.tree import Property
 from freecad.diff_wb.ui.presenters.diff_presenter import DiffPresenter
 from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
 from freecad.diff_wb.ui.state import UIState
@@ -64,8 +64,8 @@ class TestDiffPresenterPropertyHandling:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_prop = Property.create(PropertyType.FLOAT, 10.0)
-        new_prop = Property.create(PropertyType.FLOAT, 20.0)
+        old_prop = Property.from_freecad(10.0, {}, "Base")
+        new_prop = Property.from_freecad(20.0, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -153,8 +153,8 @@ class TestDiffPresenterPropertyHandling:
         fake_view, presenter = _create_test_presenter()
 
         # Test MODIFIED property with expression change (old has expression, new doesn't)
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch.X")
-        new_prop = Property.create(PropertyType.FLOAT, 20.0, expression=None)
+        old_prop = Property.from_freecad(10.0, {".": "Sketch.X"}, "Base")
+        new_prop = Property.from_freecad(20.0, {".": None}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -209,8 +209,8 @@ class TestDiffPresenterPropertyHandling:
         fake_view, presenter = _create_test_presenter()
 
         # Old property has expression, new property has same value but no expression
-        old_prop = Property.create(PropertyType.FLOAT, 3.0, expression="Sketch.X")
-        new_prop = Property.create(PropertyType.FLOAT, 3.0, expression=None)
+        old_prop = Property.from_freecad(3.0, {".": "Sketch.X"}, "Base")
+        new_prop = Property.from_freecad(3.0, {".": None}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -259,7 +259,7 @@ class TestDiffPresenterPropertyHandling:
         fake_view, presenter = _create_test_presenter()
 
         # Test ADDED property (old_value is None)
-        new_prop = Property.create(PropertyType.STRING, "NewValue")
+        new_prop = Property.from_freecad("NewValue", {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -301,7 +301,7 @@ class TestDiffPresenterPropertyHandling:
         fake_view, presenter = _create_test_presenter()
 
         # Test DELETED property (new_value is None)
-        old_prop = Property.create(PropertyType.INT, 42)
+        old_prop = Property.from_freecad(42, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -348,8 +348,8 @@ class TestDiffPresenterPropertyHandling:
             property_diffs=[
                 PropertyDiff(
                     property_name="Length",
-                    old_value=Property.create(PropertyType.FLOAT, 5.0),
-                    new_value=Property.create(PropertyType.FLOAT, 10.0),
+                    old_value=Property.from_freecad(5.0, {}, "Base"),
+                    new_value=Property.from_freecad(10.0, {}, "Base"),
                 )
             ],
             _force_state=DiffState.MODIFIED,
@@ -436,10 +436,10 @@ class TestPropertyValueTypeExtraction:
         fake_view, presenter = _create_test_presenter()
 
         # Simulate a list of constraint objects as property value
-        # Using UNKNOWN type preserves the raw list value (as FreeCAD integration does)
-        constraint_values = ["Constraint1", "Constraint2", "Constraint3"]
-        old_prop = Property(type_=PropertyType.UNKNOWN, value=constraint_values, group="Sketch")
-        new_prop = Property(type_=PropertyType.UNKNOWN, value=constraint_values + ["Constraint4"], group="Sketch")
+        old_list = ["Constraint1", "Constraint2", "Constraint3", "Constraint4"]
+        new_list = ["Constraint1", "Constraint2", "Constraint3"]
+        old_prop = Property.from_freecad(old_list, {}, "Sketch")
+        new_prop = Property.from_freecad(new_list, {}, "Sketch")
         node_diff = NodeDiff(
             path="Sketch",
             type_id="Sketcher::SketchObject",
@@ -449,15 +449,15 @@ class TestPropertyValueTypeExtraction:
             _force_state=DiffState.MODIFIED,
         )
         diff_result = DiffResult(
-            old_snapshot=Snapshot(snapshot_id="s1", document_name="", timestamp=datetime.datetime.now()),
-            new_snapshot=Snapshot(snapshot_id="s2", document_name="", timestamp=datetime.datetime.now()),
+            old_snapshot=Snapshot(snapshot_id="s1", document_name="doc1", timestamp=datetime.datetime.now()),
+            new_snapshot=Snapshot(snapshot_id="s2", document_name="doc2", timestamp=datetime.datetime.now()),
             hierarchy=(lambda h: (h.add_node(node_diff), h)[1])(DiffHierarchy()),
         )
 
         presenter.present_diff(diff_result)
 
         # Act
-        presenter.on_node_selected("", "Sketch")
+        presenter.on_node_selected("doc2", "Sketch")
 
         # Assert
         calls = fake_view.get_calls()
@@ -473,20 +473,20 @@ class TestPropertyValueTypeExtraction:
         # CRITICAL: The new_value should be the actual list, NOT the Property object
         # If it were the Property object, str(new_value) would show "Property(type_=...)"
         # Instead, it should show the list itself
-        assert prop_pres.new_value == ["Constraint1", "Constraint2", "Constraint3", "Constraint4"]
+        assert prop_pres.new_value == ["Constraint1", "Constraint2", "Constraint3"]
         # Verify it's NOT a Property object
         assert not isinstance(prop_pres.new_value, Property)
 
     def test_property_with_dict_value_expands_correctly(self) -> None:
-        """Property with dict value passes the dict (not Property) to presentation.new_value."""
+        """Property with dict value passes the dict repr (not Property) to presentation.new_value.
+
+        In the DataPath model, dicts are stored as UnknownData with string repr.
+        """
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        # Simulate a dict value using UNKNOWN type to preserve raw dict
-        old_dict = {"key1": "value1", "key2": "value2"}
-        new_dict = {"key1": "value1", "key2": "modified"}
-        old_prop = Property(type_=PropertyType.UNKNOWN, value=old_dict)
-        new_prop = Property(type_=PropertyType.UNKNOWN, value=new_dict)
+        old_prop = Property.from_freecad({"key1": "value1", "key2": "value2"}, {}, "Base")
+        new_prop = Property.from_freecad({"key1": "value1", "key2": "modified"}, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -517,22 +517,33 @@ class TestPropertyValueTypeExtraction:
         prop_pres = properties[0]
         assert prop_pres.name == "Data"
 
-        # CRITICAL: The new_value should be the actual dict, NOT the Property object
-        assert prop_pres.new_value == {"key1": "value1", "key2": "modified"}
-        # Verify it's a dict, not a Property
-        assert isinstance(prop_pres.new_value, dict)
+        # In the DataPath model, dicts become UnknownData with string repr
+        # The new_value should be the string representation, NOT the Property wrapper
+        assert prop_pres.new_value == "{'key1': 'value1', 'key2': 'modified'}"
+        # Verify it's a string, not a Property
+        assert isinstance(prop_pres.new_value, str)
 
     def test_property_with_vector_expands_correctly(self) -> None:
-        """Property with Vector value passes the Vector (not Property) to presentation.new_value."""
-        # Arrange
-        from freecad.diff_wb.domain.tree import Vector
+        """Property with Vector-like value passes the repr (not Property) to presentation.new_value.
 
+        In the DataPath model, non-FreeCAD vector objects become UnknownData.
+        """
+        # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_vec = Vector(x=1.0, y=2.0, z=3.0)
-        new_vec = Vector(x=4.0, y=5.0, z=6.0)
-        old_prop = Property(type_=PropertyType.VECTOR, value=old_vec)
-        new_prop = Property(type_=PropertyType.VECTOR, value=new_vec)
+        class MockVector:
+            def __init__(self, x, y, z):
+                self.x = x
+                self.y = y
+                self.z = z
+
+            def __str__(self):
+                return f"Vector({self.x}, {self.y}, {self.z})"
+
+        old_vec = MockVector(1.0, 2.0, 3.0)
+        new_vec = MockVector(4.0, 5.0, 6.0)
+        old_prop = Property.from_freecad(old_vec, {}, "Base")
+        new_prop = Property.from_freecad(new_vec, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -563,25 +574,35 @@ class TestPropertyValueTypeExtraction:
         prop_pres = properties[0]
         assert prop_pres.name == "Position"
 
-        # CRITICAL: The new_value should be the Vector object, NOT the Property wrapper
-        assert isinstance(prop_pres.new_value, Vector)
-        assert prop_pres.new_value.x == 4.0
-        assert prop_pres.new_value.y == 5.0
-        assert prop_pres.new_value.z == 6.0
-        # Verify it's NOT a Property object
-        assert not hasattr(prop_pres.new_value, "expression")
+        # In the DataPath model, mock vectors become UnknownData with string repr
+        assert prop_pres.new_value == "Vector(4.0, 5.0, 6.0)"
+        # Verify it's a string, not a Property
+        assert isinstance(prop_pres.new_value, str)
 
     def test_property_with_placement_expands_correctly(self) -> None:
-        """Property with Placement value passes the Placement (not Property) to presentation.new_value."""
-        # Arrange
-        from freecad.diff_wb.domain.tree import Placement, Rotation, Vector
+        """Property with Placement-like value passes the repr (not Property) to presentation.new_value.
 
+        In the DataPath model, non-FreeCAD placement objects become UnknownData.
+        """
+        # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_placement = Placement(position=Vector(0, 0, 0), rotation=Rotation(0, 0, 1, 0))
-        new_placement = Placement(position=Vector(10, 20, 30), rotation=Rotation(0, 0, 1, 90))
-        old_prop = Property(type_=PropertyType.PLACEMENT, value=old_placement)
-        new_prop = Property(type_=PropertyType.PLACEMENT, value=new_placement)
+        class MockAxis:
+            x, y, z = 0.0, 0.0, 1.0
+
+        class MockRotation:
+            Axis = MockAxis()
+            Angle = 90.0
+
+        class MockBase:
+            x, y, z = 10.0, 20.0, 30.0
+
+        class MockPlacement:
+            Base = MockBase()
+            Rotation = MockRotation()
+
+        old_prop = Property.from_freecad(MockPlacement(), {}, "Base")
+        new_prop = Property.from_freecad(MockPlacement(), {".": None}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -612,12 +633,8 @@ class TestPropertyValueTypeExtraction:
         prop_pres = properties[0]
         assert prop_pres.name == "Placement"
 
-        # CRITICAL: The new_value should be the Placement object, NOT the Property wrapper
-        assert isinstance(prop_pres.new_value, Placement)
-        assert prop_pres.new_value.position.x == 10
-        assert prop_pres.new_value.position.y == 20
-        assert prop_pres.new_value.position.z == 30
-        assert prop_pres.new_value.rotation.angle_degrees == 90
+        # In the DataPath model, mock placements become UnknownData with string repr
+        assert isinstance(prop_pres.new_value, str)
         # Verify it's NOT a Property object
         assert not hasattr(prop_pres.new_value, "expression")
 
@@ -627,7 +644,7 @@ class TestPropertyValueTypeExtraction:
         fake_view, presenter = _create_test_presenter()
 
         old_list = ["item1", "item2"]
-        old_prop = Property(type_=PropertyType.UNKNOWN, value=old_list)
+        old_prop = Property.from_freecad(old_list, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -669,7 +686,7 @@ class TestPropertyValueTypeExtraction:
         fake_view, presenter = _create_test_presenter()
 
         new_list = ["new_item"]
-        new_prop = Property(type_=PropertyType.UNKNOWN, value=new_list)
+        new_prop = Property.from_freecad(new_list, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -751,8 +768,8 @@ class TestPhase2OldValueAndExpression:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_prop = Property.create(PropertyType.FLOAT, 10.0)
-        new_prop = Property.create(PropertyType.FLOAT, 20.0)
+        old_prop = Property.from_freecad(10.0, {}, "Base")
+        new_prop = Property.from_freecad(20.0, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -785,19 +802,19 @@ class TestPhase2OldValueAndExpression:
         assert prop_pres.new_value == 20.0
 
     def test_expandable_property_passes_both_old_and_new_values(self) -> None:
-        """Expandable properties pass both old and new dict values for child diff computation."""
+        """Expandable properties pass both old and new values for child diff computation."""
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_dict = {"x": 1.0, "y": 2.0, "z": 3.0}
-        new_dict = {"x": 4.0, "y": 5.0, "z": 6.0}
-        old_prop = Property(type_=PropertyType.UNKNOWN, value=old_dict)
-        new_prop = Property(type_=PropertyType.UNKNOWN, value=new_dict)
+        old_list = [1.0, 2.0, 3.0]
+        new_list = [4.0, 5.0, 6.0]
+        old_prop = Property.from_freecad(old_list, {}, "Base")
+        new_prop = Property.from_freecad(new_list, {}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
             property_diffs=[
-                PropertyDiff(property_name="Vector", old_value=old_prop, new_value=new_prop),
+                PropertyDiff(property_name="Values", old_value=old_prop, new_value=new_prop),
             ],
             _force_state=DiffState.MODIFIED,
         )
@@ -820,17 +837,17 @@ class TestPhase2OldValueAndExpression:
         properties = prop_call["properties"]
         prop_pres = properties[0]
 
-        # Both old and new values should be the actual dicts
-        assert prop_pres.old_value == {"x": 1.0, "y": 2.0, "z": 3.0}
-        assert prop_pres.new_value == {"x": 4.0, "y": 5.0, "z": 6.0}
+        # Both old and new values should be the actual lists
+        assert prop_pres.old_value == [1.0, 2.0, 3.0]
+        assert prop_pres.new_value == [4.0, 5.0, 6.0]
 
     def test_expression_row_has_correct_display_name(self) -> None:
         """Expression rows have name "-> Expression" instead of just "Expression"."""
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch.X")
-        new_prop = Property.create(PropertyType.FLOAT, 20.0, expression="Sketch.Y")
+        old_prop = Property.from_freecad(10.0, {".": "Sketch.X"}, "Base")
+        new_prop = Property.from_freecad(20.0, {".": "Sketch.Y"}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -869,8 +886,8 @@ class TestPhase2OldValueAndExpression:
 
         old_expr_str = "Sketch.X"
         new_expr_str = "Sketch.Y"
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression=old_expr_str)
-        new_prop = Property.create(PropertyType.FLOAT, 20.0, expression=new_expr_str)
+        old_prop = Property.from_freecad(10.0, {".": old_expr_str}, "Base")
+        new_prop = Property.from_freecad(20.0, {".": new_expr_str}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -907,8 +924,8 @@ class TestPhase2OldValueAndExpression:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression=None)
-        new_prop = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch.X")
+        old_prop = Property.from_freecad(10.0, {".": None}, "Base")
+        new_prop = Property.from_freecad(10.0, {".": "Sketch.X"}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -946,8 +963,8 @@ class TestPhase2OldValueAndExpression:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch.X")
-        new_prop = Property.create(PropertyType.FLOAT, 10.0, expression=None)
+        old_prop = Property.from_freecad(10.0, {".": "Sketch.X"}, "Base")
+        new_prop = Property.from_freecad(10.0, {".": None}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",

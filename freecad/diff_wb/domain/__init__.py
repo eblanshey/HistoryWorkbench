@@ -14,7 +14,7 @@ from .diff import DiffEngine, DiffResult, DiffState, NodeDiff, PropertyComparato
 from .freecad_ports import AppPort, FreeCadContext, FreeCadPort
 from .snapshots import InMemorySnapshotRepository, Snapshot, SnapshotMetadata, SnapshotRepository
 from .snapshots.gui_extractor import SnapshotExtractor
-from .tree import Placement, Property, PropertyType, Rotation, TreeNode, Vector
+from .tree import Property, TreeNode
 
 
 __all__ = [
@@ -25,10 +25,6 @@ __all__ = [
     # Tree models
     "TreeNode",
     "Property",
-    "PropertyType",
-    "Vector",
-    "Rotation",
-    "Placement",
     # Snapshots
     "Snapshot",
     "SnapshotMetadata",

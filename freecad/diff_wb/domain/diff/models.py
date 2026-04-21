@@ -10,11 +10,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any
+from typing import Any, cast
 
-from ...utils import Log
 from ..snapshots import Snapshot
-from ..tree import Property, PropertyType
+from ..tree import Property
+from ..tree.data_path import (
+    DataPath,
+    ListData,
+    PlacementData,
+    PrimitiveData,
+    PropertyPathType,
+    PropertyPathValue,
+    RotationData,
+    VectorData,
+)
 
 
 class DiffState(Enum):
@@ -37,163 +46,96 @@ class DiffState(Enum):
 WARNING_OLD_SNAPSHOT_MISSING = "Old snapshot missing"
 
 
-# TODO: The generic attribute-based comparison for UNKNOWN types works for many FreeCAD
-# objects (Constraint, Vector, Placement, etc.), but may need refinement for specific types.
-# Known edge cases and potential improvements:
-# - Some FreeCAD objects may have attributes that aren't captured by dir()/getattr()
-# - Nested objects may need deep comparison instead of just attribute comparison
-# - Performance: The current implementation iterates all attributes for each comparison,
-#   which may be slow for objects with many attributes
-# Future work: Consider type-specific comparison strategies for known FreeCAD types
-
-
-def _unknown_values_equal(old_obj: Any, new_obj: Any, float_tolerance: float = 1e-9, prop_name: str = "") -> bool:
-    """Compare two UNKNOWN type objects by their attribute values.
-
-    This provides a generic comparison that works for FreeCAD objects like
-    Constraint, Vector, Placement, etc., where string representation alone
-    doesn't capture actual value differences.
+def _data_path_values_equal_ignoring_expression(old_pv: PropertyPathValue, new_pv: PropertyPathValue) -> bool:
+    """Compare two PropertyPathValue instances ignoring expression differences.
 
     Args:
-        old_obj: The old object value
-        new_obj: The new object value
-        float_tolerance: Tolerance for comparing float values
-        prop_name: The property name for logging purposes
+        old_pv: Value in the old snapshot
+        new_pv: Value in the new snapshot
 
     Returns:
-        True if objects have equal attribute values
+        True if values are equal ignoring expression differences
     """
-    if old_obj is new_obj:
-        return True
-    if old_obj is None or new_obj is None:
-        return old_obj is new_obj
-
-    # Get all public attributes (not starting with underscore, not callable)
-    old_attrs = _get_comparable_attrs(old_obj)
-    new_attrs = _get_comparable_attrs(new_obj)
-
-    # Must have the same attributes
-    if old_attrs.keys() != new_attrs.keys():
+    if old_pv.type_ != new_pv.type_:
         return False
-
-    # Compare each attribute value
-    for attr_name in old_attrs:
-        old_val = old_attrs[attr_name]
-        new_val = new_attrs[attr_name]
-
-        if not _attribute_values_equal(old_val, new_val, float_tolerance, prop_name, attr_name):
-            return False
-
-    return True
+    # PropertyPathValue.__eq__ already handles float tolerance and expression
+    # comparison. For expression-ignoring comparison, compare values only.
+    if old_pv.type_ == PropertyPathType.FLOAT:
+        tolerance = 1e-9
+        return bool(abs(float(old_pv.value) - float(new_pv.value)) < tolerance)
+    return old_pv.value == new_pv.value
 
 
-def _get_comparable_attrs(obj: Any) -> dict[str, Any]:
-    """Get a dict of comparable public attributes from an object.
+def _data_paths_equal_ignoring_expression(old_dp: Any, new_dp: Any) -> bool:
+    """Compare two DataPath objects ignoring expression differences.
 
-    Filters out methods, private attributes, and built-in properties.
+    Uses float-tolerant comparison for PropertyPathValue instances
+    via _data_path_values_equal_ignoring_expression.
 
     Args:
-        obj: The object to inspect
+        old_dp: Old DataPath
+        new_dp: New DataPath
 
     Returns:
-        Dict of attribute name -> value for comparable attributes
+        True if DataPaths are equal ignoring expressions
     """
-    attrs = {}
-    for attr_name in dir(obj):
-        # Skip private/magic attributes
-        if attr_name.startswith("_"):
-            continue
-        # Skip methods and callables
-        try:
-            attr_val = getattr(obj, attr_name)
-        except AttributeError:
-            continue
-        if callable(attr_val) and not isinstance(attr_val, type):
-            continue
-        # Skip non-comparable types (some FreeCAD objects have complex internal state)
-        if hasattr(attr_val, "__dict__") and not hasattr(attr_val, "__iter__"):
-            # Skip objects that are themselves complex (like other FreeCAD objects)
-            continue
-        attrs[attr_name] = attr_val
-    return attrs
+    if type(old_dp) is not type(new_dp):
+        return False
+
+    # For types with paths, compare paths ignoring expressions
+    if isinstance(old_dp, PrimitiveData):
+        return all(
+            _data_path_values_equal_ignoring_expression(
+                old_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+                new_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+            )
+            for k in set(old_dp.paths) | set(new_dp.paths)
+        )
+
+    if isinstance(old_dp, ListData):
+        if len(old_dp.items) != len(new_dp.items):
+            return False
+        # Compare paths ignoring expressions
+        if not all(
+            _data_path_values_equal_ignoring_expression(
+                old_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+                new_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+            )
+            for k in set(old_dp.paths) | set(new_dp.paths)
+        ):
+            return False
+        # Compare items recursively
+        return all(
+            _data_paths_equal_ignoring_expression(old_item, new_item)
+            for old_item, new_item in zip(old_dp.items, new_dp.items, strict=True)
+        )
+
+    # For VectorData, RotationData, PlacementData, QuantityData, ConstraintData, UnknownData
+    # Compare paths ignoring expressions
+    if hasattr(old_dp, "paths") and hasattr(new_dp, "paths"):
+        return all(
+            _data_path_values_equal_ignoring_expression(
+                old_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+                new_dp.paths.get(k, PropertyPathValue(PropertyPathType.NULL, None)),
+            )
+            for k in set(old_dp.paths) | set(new_dp.paths)
+        )
+
+    return False
 
 
-def _attribute_values_equal(  # noqa: C901
-    old_val: Any, new_val: Any, float_tolerance: float, prop_name: str = "", attr_name: str = ""
-) -> bool:
-    """Compare two attribute values for equality.
-
-    Handles floats with tolerance, and iterables by element comparison.
+def _get_data_path_value(dp: Any) -> PropertyPathValue | None:
+    """Extract the root PropertyPathValue from a DataPath.
 
     Args:
-        old_val: First value
-        new_val: Second value
-        float_tolerance: Tolerance for float comparison
-        prop_name: The top-level property name for logging
-        attr_name: The attribute name being compared
+        dp: A DataPath instance (PrimitiveData, ListData, etc.)
 
     Returns:
-        True if values are equal
+        The root PropertyPathValue, or None if not a PrimitiveData
     """
-    # Same object identity
-    if old_val is new_val:
-        return True
-
-    # None check
-    if old_val is None or new_val is None:
-        if old_val is None and new_val is None:
-            return True
-        # Log the difference
-        if prop_name and attr_name:
-            Log.debug(f"[DIFF] Property '{prop_name}' attribute '{attr_name}' changed: {old_val!r} -> {new_val!r}")
-        return False
-
-    # Float comparison with tolerance
-    if isinstance(old_val, (int, float)) and isinstance(new_val, (int, float)):
-        if isinstance(old_val, float) or isinstance(new_val, float):
-            if abs(old_val - new_val) >= float_tolerance:
-                if prop_name and attr_name:
-                    Log.debug(f"[DIFF] Property '{prop_name}' attribute '{attr_name}' changed: {old_val} -> {new_val}")
-                return False
-            return True
-        if old_val != new_val:
-            if prop_name and attr_name:
-                Log.debug(f"[DIFF] Property '{prop_name}' attribute '{attr_name}' changed: {old_val} -> {new_val}")
-            return False
-        return True
-
-    # Bool comparison (must be exact)
-    if isinstance(old_val, bool) or isinstance(new_val, bool):
-        if old_val != new_val:
-            if prop_name and attr_name:
-                Log.debug(f"[DIFF] Property '{prop_name}' attribute '{attr_name}' changed: {old_val} -> {new_val}")
-            return False
-        return True
-
-    # Iterable comparison (lists, tuples)
-    if isinstance(old_val, (list, tuple)) and isinstance(new_val, (list, tuple)):
-        if len(old_val) != len(new_val):
-            if prop_name and attr_name:
-                Log.debug(
-                    f"[DIFF] Property '{prop_name}' attribute '{attr_name}' "
-                    f"length changed: {len(old_val)} -> {len(new_val)}"
-                )
-            return False
-        for i, (old_item, new_item) in enumerate(zip(old_val, new_val, strict=True)):
-            if not _attribute_values_equal(old_item, new_item, float_tolerance, prop_name, f"{attr_name}[{i}]"):
-                return False
-        return True
-
-    # Direct equality for other types (str, int, etc.)
-    try:
-        if old_val == new_val:
-            return True
-        if prop_name and attr_name:
-            Log.debug(f"[DIFF] Property '{prop_name}' attribute '{attr_name}' changed: {old_val!r} -> {new_val!r}")
-        return False
-    except TypeError:
-        # Some objects don't support direct comparison
-        return False
+    if isinstance(dp, PrimitiveData):
+        return dp.paths.get(".")
+    return None
 
 
 def _values_are_equal_ignoring_expression(old_value: Property, new_value: Property, prop_name: str = "") -> bool:
@@ -207,18 +149,22 @@ def _values_are_equal_ignoring_expression(old_value: Property, new_value: Proper
     Returns:
         True if values are equal ignoring expression differences
     """
-    if old_value.type_ != new_value.type_:
+    old_dp = old_value.value
+    new_dp = new_value.value
+
+    # Compare internal types first
+    if type(old_dp).INTERNAL_TYPE != type(new_dp).INTERNAL_TYPE:
         return False
-    if old_value.type_ == PropertyType.FLOAT:
-        tolerance = 1e-9
-        return bool(abs(old_value.value - new_value.value) < tolerance)
-    if old_value.type_ == PropertyType.LIST:
-        return Property._compare_lists_as_strings(old_value.value, new_value.value)
-    # For UNKNOWN types, compare using a generic attribute-based approach
-    # that handles FreeCAD objects (e.g., Constraint, Vector, Placement, etc.)
-    if old_value.type_ == PropertyType.UNKNOWN:
-        return _unknown_values_equal(old_value.value, new_value.value, prop_name=prop_name)
-    return bool(old_value.value == new_value.value)
+
+    # For PrimitiveData, compare the root path value
+    old_pv = _get_data_path_value(old_dp)
+    new_pv = _get_data_path_value(new_dp)
+
+    if old_pv is not None and new_pv is not None:
+        return _data_path_values_equal_ignoring_expression(old_pv, new_pv)
+
+    # For other DataPath types, compare by stripping expressions
+    return _data_paths_equal_ignoring_expression(old_dp, new_dp)
 
 
 def _calculate_property_diff_state(
@@ -268,64 +214,61 @@ def _is_placement_like(value: Any) -> bool:
     return hasattr(value, "position") and hasattr(value, "rotation")
 
 
-def _get_property_type_for_primitive(value: Any) -> PropertyType:
-    """Infer PropertyType for primitive Python types."""
-    if isinstance(value, bool):
-        return PropertyType.BOOL
-    if isinstance(value, int):
-        return PropertyType.INT
-    if isinstance(value, float):
-        return PropertyType.FLOAT
-    if isinstance(value, str):
-        return PropertyType.STRING
-    return PropertyType.UNKNOWN
+def _create_property_from_child_value(value: Any, group: str = "Base") -> Property | None:
+    """Create a Property from a raw child value or DataPath.
 
-
-def _create_property_from_child_value(value: Any, group: str = "Base") -> Property:
-    """Create a Property from a raw child value.
-
-    This wraps raw values from get_children() into Property objects.
-    The type is inferred from the value structure.
+    This wraps raw values from DataPath children into Property objects.
+    If the value is already a DataPath, it wraps it directly.
 
     Args:
-        value: The raw value (Vector, float, Rotation, etc.)
+        value: The raw value (DataPath, Vector, float, dict, etc.)
         group: The property group
 
     Returns:
-        A Property object with inferred type
+        A Property object, or None if value is None
     """
     if value is None:
-        return Property(type_=PropertyType.UNKNOWN, value=None, group=group)
+        return None
+
+    # If it's already a DataPath, wrap it directly
+    if isinstance(value, DataPath):
+        return Property(value=value, group=group)
 
     # Check if it's a Vector object
     if _is_vector_like(value):
-        return Property(type_=PropertyType.VECTOR, value=value, group=group)
+        return Property(value=PrimitiveData(paths={".": PropertyPathValue.from_python(value)}), group=group)
 
     # Check if it's a Rotation-like object (has angle and axis)
     if _is_rotation_like(value):
-        return Property(type_=PropertyType.PLACEMENT, value=value, group=group)
+        return Property(value=PrimitiveData(paths={".": PropertyPathValue.from_python(value)}), group=group)
 
     # Check if it's a Placement object
     if _is_placement_like(value):
-        return Property(type_=PropertyType.PLACEMENT, value=value, group=group)
+        return Property(value=PrimitiveData(paths={".": PropertyPathValue.from_python(value)}), group=group)
 
     # Check if it's a list or tuple
     if isinstance(value, (list, tuple)):
-        return Property(type_=PropertyType.LIST, value=value, group=group)
+        items = [PrimitiveData(paths={".": PropertyPathValue.from_python(v)}) for v in value]
+        return Property(value=ListData(paths={}, items=cast(list, items)), group=group)
 
     # Check if it's a dict
     if isinstance(value, dict):
-        return Property(type_=PropertyType.UNKNOWN, value=value, group=group)
+        return Property(value=PrimitiveData(paths={".": PropertyPathValue.from_python(value)}), group=group)
 
-    # For primitives, infer type from Python type
-    prop_type = _get_property_type_for_primitive(value)
-    return Property(type_=prop_type, value=value, group=group)
+    # For primitives, wrap in PrimitiveData
+    return Property(value=PrimitiveData(paths={".": PropertyPathValue.from_python(value)}), group=group)
 
 
 def _compute_property_children(
     old_value: Property | None, new_value: Property | None, parent_prop_name: str = ""
 ) -> list[PropertyDiff]:
     """Compute child property diffs for expandable properties.
+
+    Handles:
+    - ListData: each item becomes a child (indexed by position)
+    - VectorData: x, y, z become children
+    - RotationData: Angle, Axis.x, Axis.y, Axis.z become children
+    - PlacementData: Base.x/y/z and Rotation.* become children, grouped as Position/Rotation
 
     Args:
         old_value: Value in the old snapshot (None if added)
@@ -337,17 +280,14 @@ def _compute_property_children(
     """
     children: list[PropertyDiff] = []
 
-    old_children = old_value.get_children() if old_value else []
-    new_children = new_value.get_children() if new_value else []
+    old_children: dict[str, Any] = _extract_data_path_children(old_value)
+    new_children: dict[str, Any] = _extract_data_path_children(new_value)
 
-    old_child_map = dict(old_children)
-    new_child_map = dict(new_children)
-
-    all_child_names = set(old_child_map.keys()) | set(new_child_map.keys())
+    all_child_names = set(old_children.keys()) | set(new_children.keys())
 
     for child_name in sorted(all_child_names):
-        raw_old_child = old_child_map.get(child_name)
-        raw_new_child = new_child_map.get(child_name)
+        raw_old_child = old_children.get(child_name)
+        raw_new_child = new_children.get(child_name)
 
         # Wrap raw values in Property objects
         old_child_prop = _create_property_from_child_value(raw_old_child) if raw_old_child is not None else None
@@ -368,11 +308,111 @@ def _compute_property_children(
     return children
 
 
+def _extract_data_path_children(prop: Property | None) -> dict[str, Any]:
+    """Extract child values from a DataPath for child diff computation.
+
+    Args:
+        prop: A Property object or None
+
+    Returns:
+        Dict mapping child name to child value
+    """
+    if prop is None:
+        return {}
+
+    dp = prop.value
+
+    # Dispatch to type-specific handler
+    if isinstance(dp, ListData):
+        return _children_list(dp)
+    if isinstance(dp, VectorData):
+        return _children_vector(dp)
+    if isinstance(dp, RotationData):
+        return _children_rotation(dp)
+    if isinstance(dp, PlacementData):
+        return _children_placement(dp)
+
+    return {}
+
+
+def _children_list(dp: ListData) -> dict[str, Any]:
+    """Extract children from ListData as indexed items."""
+    return {str(i): item for i, item in enumerate(dp.items)}
+
+
+def _children_vector(dp: VectorData) -> dict[str, Any]:
+    """Extract children from VectorData (x, y, z)."""
+    return {k: v.value for k, v in dp.paths.items() if k != "."}
+
+
+def _children_rotation(dp: RotationData) -> dict[str, Any]:
+    """Extract children from RotationData (Angle, Axis.x/y/z)."""
+    result: dict[str, Any] = {}
+    for k, v in dp.paths.items():
+        if k == "." or k == "Axis":
+            continue
+        result[k] = v.value
+    return result
+
+
+def _children_placement(dp: PlacementData) -> dict[str, Any]:
+    """Extract children from PlacementData grouped as Position/Rotation."""
+    position: dict[str, Any] = {}
+    rotation: dict[str, Any] = {}
+    for k, v in dp.paths.items():
+        if k in (".", "Rotation", "Rotation.Axis"):
+            continue
+        if k.startswith("Base."):
+            position[k.replace("Base.", "")] = v.value
+        elif k.startswith("Rotation."):
+            rotation[k.replace("Rotation.", "")] = v.value
+        else:
+            position[k] = v.value
+
+    result: dict[str, Any] = {}
+    if position:
+        result["Position"] = position
+    if rotation:
+        result["Rotation"] = rotation
+    return result
+
+
+def _property_value_str(prop: Property | None) -> str:
+    """Extract a string representation of a property's value.
+
+    Args:
+        prop: A Property object or None
+
+    Returns:
+        A string representation of the property value
+    """
+    if prop is None:
+        return "None"
+    dp = prop.value
+    if isinstance(dp, PrimitiveData):
+        pv = dp.paths.get(".")
+        if pv is not None:
+            return str(pv.value) if pv.value is not None else "None"
+    # For complex types, use the internal type as identifier
+    return dp.INTERNAL_TYPE.value
+
+
 def _has_expression_change(old_value: Property | None, new_value: Property | None) -> bool:
-    """Check if there's an expression change between two property values."""
+    """Check if there's an expression change between two property values.
+
+    With the DataPath-based model, expression tracking is embedded in the
+    PropertyPathValue objects within the DataPath structure.
+    """
     if old_value is None or new_value is None:
         return True
-    return old_value.expression != new_value.expression
+
+    old_pv = _get_data_path_value(old_value.value)
+    new_pv = _get_data_path_value(new_value.value)
+
+    if old_pv is None or new_pv is None:
+        return False
+
+    return old_pv.expression != new_pv.expression
 
 
 def _are_properties_modified(property_diffs: list[PropertyDiff], children: list[NodeDiff]) -> bool:
@@ -446,13 +486,15 @@ class PropertyDiff:
         )
 
     def __str__(self) -> str:
+        old_str = _property_value_str(self.old_value)
+        new_str = _property_value_str(self.new_value)
         if self.state == DiffState.ADDED:
-            return f"{self.property_name}: +{self.new_value}"
+            return f"{self.property_name}: +{new_str}"
         elif self.state == DiffState.DELETED:
-            return f"{self.property_name}: -{self.old_value}"
+            return f"{self.property_name}: -{old_str}"
         elif self.state == DiffState.MODIFIED:
-            return f"{self.property_name}: {self.old_value} -> {self.new_value}"
-        return f"{self.property_name}: {self.old_value}"
+            return f"{self.property_name}: {old_str} -> {new_str}"
+        return f"{self.property_name}: {old_str}"
 
 
 @dataclass(frozen=True)

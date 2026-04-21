@@ -6,7 +6,7 @@
 import datetime
 import uuid
 
-from freecad.diff_wb.domain import Property, PropertyType
+from freecad.diff_wb.domain import Property
 from freecad.diff_wb.domain.diff import (
     WARNING_OLD_SNAPSHOT_MISSING,
     DiffHierarchy,
@@ -36,29 +36,29 @@ class TestPropertyDiff:
 
     def test_added_property(self) -> None:
         """Test added property diff - state auto-calculated."""
-        new_val = Property.create(PropertyType.FLOAT, 10.0)
+        new_val = Property.from_freecad(10.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=None, new_value=new_val)
         assert diff.state == DiffState.ADDED
         assert "+10.0" in str(diff)
 
     def test_deleted_property(self) -> None:
         """Test deleted property diff - state auto-calculated."""
-        old_val = Property.create(PropertyType.FLOAT, 5.0)
+        old_val = Property.from_freecad(5.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=None)
         assert diff.state == DiffState.DELETED
         assert "-5.0" in str(diff)
 
     def test_modified_property(self) -> None:
         """Test modified property diff - state auto-calculated."""
-        old_val = Property.create(PropertyType.FLOAT, 5.0)
-        new_val = Property.create(PropertyType.FLOAT, 10.0)
+        old_val = Property.from_freecad(5.0, {}, "Base")
+        new_val = Property.from_freecad(10.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
         assert "5.0 -> 10.0" in str(diff)
 
     def test_unchanged_property(self) -> None:
         """Test unchanged property diff - state auto-calculated."""
-        val = Property.create(PropertyType.FLOAT, 10.0)
+        val = Property.from_freecad(10.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=val, new_value=val)
         assert diff.state == DiffState.UNCHANGED
 
@@ -68,15 +68,15 @@ class TestPropertyDiff:
 
     def test_expression_only_change_detected(self) -> None:
         """Test that expression-only change shows as UNCHANGED (expression tracked separately)."""
-        old_val = Property.create(PropertyType.FLOAT, 10.0)
-        new_val = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch001.X")
+        old_val = Property.from_freecad(10.0, {}, "Base")
+        new_val = Property.from_freecad(10.0, {".": "Sketch001.X"}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
     def test_value_only_change_detected(self) -> None:
         """Test that value-only change is detected as modified."""
-        old_val = Property.create(PropertyType.INT, 10, expression="Sketch001.Count")
-        new_val = Property.create(PropertyType.INT, 20, expression="Sketch001.Count")
+        old_val = Property.from_freecad(10, {".": "Sketch001.Count"}, "Base")
+        new_val = Property.from_freecad(20, {".": "Sketch001.Count"}, "Base")
         diff = PropertyDiff(property_name="Count", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
         # String format: "Count: 10 (via Sketch001.Count) -> 20 (via Sketch001.Count)"
@@ -86,8 +86,8 @@ class TestPropertyDiff:
 
     def test_both_expression_and_value_change(self) -> None:
         """Test that both expression and value change is detected."""
-        old_val = Property.create(PropertyType.FLOAT, 5.0, expression="Sketch001.X")
-        new_val = Property.create(PropertyType.FLOAT, 15.0, expression="Sketch002.Y")
+        old_val = Property.from_freecad(5.0, {".": "Sketch001.X"}, "Base")
+        new_val = Property.from_freecad(15.0, {".": "Sketch002.Y"}, "Base")
         diff = PropertyDiff(property_name="Dimension", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
         assert "Dimension:" in str(diff)
@@ -96,22 +96,22 @@ class TestPropertyDiff:
 
     def test_expression_changed_to_none(self) -> None:
         """Test that removing expression with same value shows UNCHANGED."""
-        old_val = Property.create(PropertyType.STRING, "test", expression="Doc.Name")
-        new_val = Property.create(PropertyType.STRING, "test")
+        old_val = Property.from_freecad("test", {".": "Doc.Name"}, "Base")
+        new_val = Property.from_freecad("test", {}, "Base")
         diff = PropertyDiff(property_name="Name", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
     def test_expression_added_from_none(self) -> None:
         """Test that adding expression with same value shows UNCHANGED."""
-        old_val = Property.create(PropertyType.INT, 42)
-        new_val = Property.create(PropertyType.INT, 42, expression="Some.Expr")
+        old_val = Property.from_freecad(42, {}, "Base")
+        new_val = Property.from_freecad(42, {".": "Some.Expr"}, "Base")
         diff = PropertyDiff(property_name="Value", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
     def test_different_expressions_same_value(self) -> None:
         """Test different expressions with same value shows UNCHANGED."""
-        old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch001.X")
-        new_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0), expression="Sketch002.X")
+        old_val = Property.from_freecad((1.0, 2.0, 3.0), {".": "Sketch001.X"}, "Base")
+        new_val = Property.from_freecad((1.0, 2.0, 3.0), {".": "Sketch002.X"}, "Base")
         diff = PropertyDiff(property_name="Position", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.UNCHANGED  # Value unchanged, expression tracked separately
 
@@ -130,8 +130,8 @@ class TestNodeDiff:
         """Test that state is auto-calculated based on property diffs."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 5.0),
-            new_value=Property.create(PropertyType.FLOAT, 10.0),
+            old_value=Property.from_freecad(5.0, {}, "Base"),
+            new_value=Property.from_freecad(10.0, {}, "Base"),
         )
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
         # State should be MODIFIED because there's a changed property
@@ -148,8 +148,8 @@ class TestNodeDiff:
         """Test has_changes when there are property diffs."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 5.0),
-            new_value=Property.create(PropertyType.FLOAT, 10.0),
+            old_value=Property.from_freecad(5.0, {}, "Base"),
+            new_value=Property.from_freecad(10.0, {}, "Base"),
         )
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
         assert diff.has_changes is True
@@ -158,13 +158,13 @@ class TestNodeDiff:
         """Test getting only changed properties."""
         changed = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 5.0),
-            new_value=Property.create(PropertyType.FLOAT, 10.0),
+            old_value=Property.from_freecad(5.0, {}, "Base"),
+            new_value=Property.from_freecad(10.0, {}, "Base"),
         )
         unchanged = PropertyDiff(
             property_name="Type",
-            old_value=Property.create(PropertyType.STRING, "Dimension"),
-            new_value=Property.create(PropertyType.STRING, "Dimension"),
+            old_value=Property.from_freecad("Dimension", {}, "Base"),
+            new_value=Property.from_freecad("Dimension", {}, "Base"),
         )
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[changed, unchanged])
         changed_props = diff.changed_properties
@@ -265,8 +265,8 @@ class TestDiffResult:
         """Test has_changes when there are changes."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0),
-            new_value=Property.create(PropertyType.FLOAT, 20.0),
+            old_value=Property.from_freecad(10.0, {}, "Base"),
+            new_value=Property.from_freecad(20.0, {}, "Base"),
         )
         node_diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
         hierarchy = DiffHierarchy()
@@ -290,14 +290,14 @@ class TestDiffResult:
         """Test getting all changed paths."""
         child_prop = PropertyDiff(
             property_name="Width",
-            old_value=Property.create(PropertyType.FLOAT, 5.0),
-            new_value=Property.create(PropertyType.FLOAT, 15.0),
+            old_value=Property.from_freecad(5.0, {}, "Base"),
+            new_value=Property.from_freecad(15.0, {}, "Base"),
         )
         child = NodeDiff(path="Body/Pad/Sub", type_id="Part::Feature", property_diffs=[child_prop])
         parent_prop = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0),
-            new_value=Property.create(PropertyType.FLOAT, 20.0),
+            old_value=Property.from_freecad(10.0, {}, "Base"),
+            new_value=Property.from_freecad(20.0, {}, "Base"),
         )
         parent = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[parent_prop], children=[child])
         unchanged = NodeDiff(path="Body", type_id="PartDesign::Body")
@@ -421,7 +421,7 @@ class TestDiffEngineComputeDiff:
             label="Body",
             path="Body",
             after=None,
-            properties={"Length": Property.create(PropertyType.FLOAT, 10.0)},
+            properties={"Length": Property.from_freecad(10.0, {}, "Base")},
         )
         new_node = TreeNode(
             id=1,
@@ -430,7 +430,7 @@ class TestDiffEngineComputeDiff:
             label="Body",
             path="Body",
             after=None,
-            properties={"Length": Property.create(PropertyType.FLOAT, 20.0)},
+            properties={"Length": Property.from_freecad(20.0, {}, "Base")},
         )
         old_snapshot = Snapshot(
             snapshot_id=str(uuid.uuid4()),
@@ -628,8 +628,8 @@ class TestDiffEngineComputeDiffWithSettings:
             path="Body",
             after=None,
             properties={
-                "Length": Property.create(PropertyType.FLOAT, 10.0),
-                "Label": Property.create(PropertyType.STRING, "Body"),
+                "Length": Property.from_freecad(10.0, {}, "Base"),
+                "Label": Property.from_freecad("Body", {}, "Base"),
             },
         )
         new_node = TreeNode(
@@ -640,8 +640,8 @@ class TestDiffEngineComputeDiffWithSettings:
             path="Body",
             after=None,
             properties={
-                "Length": Property.create(PropertyType.FLOAT, 20.0),
-                "Label": Property.create(PropertyType.STRING, "Body"),
+                "Length": Property.from_freecad(20.0, {}, "Base"),
+                "Label": Property.from_freecad("Body", {}, "Base"),
             },
         )
 

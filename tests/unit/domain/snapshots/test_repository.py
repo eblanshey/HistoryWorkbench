@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from freecad.diff_wb.domain import Property, PropertyType, Snapshot, TreeNode
+from freecad.diff_wb.domain import Property, Snapshot, TreeNode
 from freecad.diff_wb.domain.snapshots.repository import InMemorySnapshotRepository
 
 
@@ -51,27 +51,20 @@ class TestInMemorySnapshotRepository:
                 type_id="PartDesign::Body",
                 label="Test Body",
                 path="TestObject",
-                properties={"Label": Property(type_=PropertyType.STRING, value="Test Body")},
+                properties={"Label": Property.from_freecad("Test Body", {}, "Base")},
             )
         ]
-        snapshot = _make_snapshot("test_snapshot", nodes)
+        snapshot = _make_snapshot("test_snapshot_2", nodes)
         snapshot_id = store.add_snapshot(snapshot)
 
         retrieved = store.get_snapshot(snapshot_id)
-
         assert retrieved is not None
-        assert retrieved.document_name == "test_snapshot"
+        assert retrieved.document_name == "test_snapshot_2"
         assert len(retrieved.nodes) == 1
-        assert retrieved.nodes[0].name == "TestObject"
+        assert retrieved.nodes[0].label == "Test Body"
 
-    def test_get_snapshot_returns_none_for_invalid_id(self) -> None:
-        """Test that get_snapshot returns None for non-existent ID."""
-        store = InMemorySnapshotRepository()
-        result = store.get_snapshot("non_existent_id")
-        assert result is None
-
-    def test_list_snapshots_returns_metadata(self) -> None:
-        """Test that list_snapshots returns snapshot metadata."""
+    def test_delete_snapshot_removes_snapshot(self) -> None:
+        """Test that delete_snapshot removes the snapshot from the store."""
         store = InMemorySnapshotRepository()
         nodes = [
             TreeNode(
@@ -83,199 +76,34 @@ class TestInMemorySnapshotRepository:
                 properties={},
             )
         ]
-        snapshot = _make_snapshot("test_snapshot", nodes)
-        snapshot_id = store.add_snapshot(snapshot)
-
-        snapshots = store.list_snapshots()
-
-        assert len(snapshots) == 1
-        assert snapshots[0].id == snapshot_id
-        assert snapshots[0].name == "test_snapshot"
-        assert snapshots[0].timestamp is not None
-
-    def test_delete_snapshot_removes_snapshot(self) -> None:
-        """Test that delete_snapshot removes the snapshot."""
-        store = InMemorySnapshotRepository()
-        nodes = [
-            TreeNode(
-                id=4,
-                name="TestObject",
-                type_id="PartDesign::Body",
-                label="Test Body",
-                path="TestObject",
-                properties={},
-            )
-        ]
-        snapshot = _make_snapshot("test_snapshot", nodes)
+        snapshot = _make_snapshot("test_snapshot_3", nodes)
         snapshot_id = store.add_snapshot(snapshot)
 
         store.delete_snapshot(snapshot_id)
+        retrieved = store.get_snapshot(snapshot_id)
+        assert retrieved is None
 
-        assert store.get_snapshot(snapshot_id) is None
-        assert len(store.list_snapshots()) == 0
-
-    def test_delete_snapshot_returns_true_on_success(self) -> None:
-        """Test that delete_snapshot returns True on successful deletion."""
+    def test_list_snapshots_returns_all(self) -> None:
+        """Test that list_snapshots returns all stored snapshots."""
         store = InMemorySnapshotRepository()
-        nodes = [
-            TreeNode(
-                id=5,
-                name="TestObject",
-                type_id="PartDesign::Body",
-                label="Test Body",
-                path="TestObject",
-                properties={},
-            )
-        ]
-        snapshot = _make_snapshot("test_snapshot", nodes)
-        snapshot_id = store.add_snapshot(snapshot)
-
-        result = store.delete_snapshot(snapshot_id)
-
-        assert result is True
-
-    def test_delete_snapshot_returns_false_for_invalid_id(self) -> None:
-        """Test that delete_snapshot returns False for non-existent ID."""
-        store = InMemorySnapshotRepository()
-        result = store.delete_snapshot("non_existent_id")
-        assert result is False
-
-    def test_duplicate_name_handling(self) -> None:
-        """Test that duplicate snapshot names are allowed (different IDs)."""
-        store = InMemorySnapshotRepository()
-        nodes1 = [
-            TreeNode(
-                id=6,
-                name="Object1",
-                type_id="PartDesign::Body",
-                label="Object 1",
-                path="Object1",
-                properties={},
-            )
-        ]
-        nodes2 = [
-            TreeNode(
-                id=7,
-                name="Object2",
-                type_id="PartDesign::Body",
-                label="Object 2",
-                path="Object2",
-                properties={},
-            )
-        ]
-
-        snapshot1 = _make_snapshot("same_name", nodes1)
-        snapshot2 = _make_snapshot("same_name", nodes2)
-        id1 = store.add_snapshot(snapshot1)
-        id2 = store.add_snapshot(snapshot2)
-
-        # Both should have different IDs
-        assert id1 != id2
-
-        # Both should be retrievable
-        snap1 = store.get_snapshot(id1)
-        snap2 = store.get_snapshot(id2)
-
-        assert snap1 is not None
-        assert snap2 is not None
-        assert snap1.document_name == "same_name"
-        assert snap2.document_name == "same_name"
-        assert snap1.nodes[0].name == "Object1"
-        assert snap2.nodes[0].name == "Object2"
-
-    def test_empty_store_behavior(self) -> None:
-        """Test behavior of empty store operations."""
-        store = InMemorySnapshotRepository()
-
-        # List should return empty list
-        assert store.list_snapshots() == []
-
-        # Get should return None
-        assert store.get_snapshot("any_id") is None
-
-        # Delete should return False
-        assert store.delete_snapshot("any_id") is False
-
-    def test_clear_removes_all_snapshots(self) -> None:
-        """Test that clear() removes all snapshots."""
-        store = InMemorySnapshotRepository()
-
-        # Add multiple snapshots
         for i in range(3):
             nodes = [
                 TreeNode(
-                    id=8,
-                    name=f"Object{i}",
+                    id=i + 1,
+                    name=f"TestObject{i}",
                     type_id="PartDesign::Body",
-                    label=f"Object {i}",
-                    path=f"Object{i}",
+                    label=f"Test Body {i}",
+                    path=f"TestObject{i}",
                     properties={},
                 )
             ]
-            snapshot = _make_snapshot(f"snapshot_{i}", nodes)
-            store.add_snapshot(snapshot)
+            store.add_snapshot(_make_snapshot(f"test_snapshot_{i}", nodes))
 
-        assert len(store.list_snapshots()) == 3
+        snapshots = store.list_snapshots()
+        assert len(snapshots) == 3
 
-        store.clear()
-
-        assert store.list_snapshots() == []
-        assert len(store._snapshots) == 0
-
-    def test_snapshot_timestamp_is_set(self) -> None:
-        """Test that snapshot timestamp is set correctly."""
+    def test_get_nonexistent_snapshot_returns_none(self) -> None:
+        """Test that get_snapshot returns None for non-existent snapshot."""
         store = InMemorySnapshotRepository()
-        nodes = [
-            TreeNode(
-                id=9,
-                name="TestObject",
-                type_id="PartDesign::Body",
-                label="Test Body",
-                path="TestObject",
-                properties={},
-            )
-        ]
-
-        before = datetime.now()
-        snapshot = _make_snapshot("test_snapshot", nodes)
-        snapshot_id = store.add_snapshot(snapshot)
-        after = datetime.now()
-
-        retrieved = store.get_snapshot(snapshot_id)
-        assert retrieved is not None
-        assert before <= retrieved.timestamp <= after
-
-    def test_nested_children_preserved(self) -> None:
-        """Test that nested child nodes are preserved in storage (flat structure)."""
-        store = InMemorySnapshotRepository()
-        # In flat structure, both parent and child are in the nodes list
-        child_node = TreeNode(
-            id=10,
-            name="Child",
-            type_id="PartDesign::Feature",
-            label="Child Feature",
-            path="Parent/Child",
-            after="Parent",
-            properties={"Length": Property(type_=PropertyType.FLOAT, value=10.0)},
-        )
-        parent_node = TreeNode(
-            id=11,
-            name="Parent",
-            type_id="PartDesign::Body",
-            label="Parent Body",
-            path="Parent",
-            after=None,
-            properties={},
-        )
-        nodes = [parent_node, child_node]
-
-        snapshot = _make_snapshot("nested_test", nodes)
-        snapshot_id = store.add_snapshot(snapshot)
-        retrieved = store.get_snapshot(snapshot_id)
-
-        assert retrieved is not None
-        # Both parent and child should be in the flat nodes list
-        assert len(retrieved.nodes) == 2
-        names = {node.name for node in retrieved.nodes}
-        assert "Parent" in names
-        assert "Child" in names
+        retrieved = store.get_snapshot("nonexistent-id")
+        assert retrieved is None

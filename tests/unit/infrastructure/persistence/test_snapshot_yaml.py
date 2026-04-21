@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from freecad.diff_wb.domain import Property, PropertyType, Snapshot, TreeNode
+from freecad.diff_wb.domain import Property, Snapshot, TreeNode
 from freecad.diff_wb.infrastructure.persistence import SnapshotYamlSerializer
 
 
@@ -41,7 +41,7 @@ class TestSnapshotYamlSerializer:
                 label="Pad",
                 path="Body/Pad",
                 after="Sketch",
-                properties={"Length": Property.create(PropertyType.FLOAT, 10.0)},
+                properties={"Length": Property.from_freecad(10.0, {}, "Base")},
             ),
         ]
         return Snapshot(

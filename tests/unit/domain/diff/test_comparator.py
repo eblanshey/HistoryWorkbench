@@ -12,7 +12,7 @@ from freecad.diff_wb.domain.diff.comparator import PropertyComparator, TreeCompa
 from freecad.diff_wb.domain.diff.models import DiffState, NodeDiff, PropertyDiff
 from freecad.diff_wb.domain.snapshots.models import Snapshot
 from freecad.diff_wb.domain.tree.node import TreeNode
-from freecad.diff_wb.domain.tree.property import Property, PropertyType
+from freecad.diff_wb.domain.tree.property import Property
 
 
 # Test fixtures - create comparator instances
@@ -85,132 +85,120 @@ class TestValuesAreEqual:
 
     def test_old_none_new_value(self) -> None:
         """Test that None vs value returns False."""
-        new_val = Property.create(PropertyType.STRING, "test")
+        new_val = Property.from_freecad("test", {}, "Base")
         assert values_are_equal(None, new_val) is False
 
     def test_old_value_new_none(self) -> None:
         """Test that value vs None returns False."""
-        old_val = Property.create(PropertyType.STRING, "test")
+        old_val = Property.from_freecad("test", {}, "Base")
         assert values_are_equal(old_val, None) is False
 
     def test_identical_bool_values(self) -> None:
         """Test BOOL type with same values."""
-        old_val = Property.create(PropertyType.BOOL, True)
-        new_val = Property.create(PropertyType.BOOL, True)
+        old_val = Property.from_freecad(True, {}, "Base")
+        new_val = Property.from_freecad(True, {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_bool_values(self) -> None:
         """Test BOOL type with different values."""
-        old_val = Property.create(PropertyType.BOOL, True)
-        new_val = Property.create(PropertyType.BOOL, False)
+        old_val = Property.from_freecad(True, {}, "Base")
+        new_val = Property.from_freecad(False, {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_identical_int_values(self) -> None:
         """Test INT type with same values."""
-        old_val = Property.create(PropertyType.INT, 42)
-        new_val = Property.create(PropertyType.INT, 42)
+        old_val = Property.from_freecad(42, {}, "Base")
+        new_val = Property.from_freecad(42, {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_int_values(self) -> None:
         """Test INT type with different values."""
-        old_val = Property.create(PropertyType.INT, 42)
-        new_val = Property.create(PropertyType.INT, 43)
+        old_val = Property.from_freecad(42, {}, "Base")
+        new_val = Property.from_freecad(43, {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_identical_float_values(self) -> None:
         """Test FLOAT type with same values."""
-        old_val = Property.create(PropertyType.FLOAT, 3.14)
-        new_val = Property.create(PropertyType.FLOAT, 3.14)
+        old_val = Property.from_freecad(3.14, {}, "Base")
+        new_val = Property.from_freecad(3.14, {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_float_values(self) -> None:
         """Test FLOAT type with different values."""
-        old_val = Property.create(PropertyType.FLOAT, 3.14)
-        new_val = Property.create(PropertyType.FLOAT, 2.71)
+        old_val = Property.from_freecad(3.14, {}, "Base")
+        new_val = Property.from_freecad(2.71, {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_float_within_tolerance(self) -> None:
         """Test FLOAT type with values within tolerance (1e-9)."""
-        old_val = Property.create(PropertyType.FLOAT, 1.0)
-        new_val = Property.create(PropertyType.FLOAT, 1.0 + 1e-10)
+        old_val = Property.from_freecad(1.0, {}, "Base")
+        new_val = Property.from_freecad(1.0 + 1e-10, {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_float_exceeds_tolerance(self) -> None:
         """Test FLOAT type with values exceeding tolerance (1e-9)."""
-        old_val = Property.create(PropertyType.FLOAT, 1.0)
-        new_val = Property.create(PropertyType.FLOAT, 1.0 + 1e-8)
+        old_val = Property.from_freecad(1.0, {}, "Base")
+        new_val = Property.from_freecad(1.0 + 1e-8, {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_identical_string_values(self) -> None:
         """Test STRING type with same values."""
-        old_val = Property.create(PropertyType.STRING, "hello")
-        new_val = Property.create(PropertyType.STRING, "hello")
+        old_val = Property.from_freecad("hello", {}, "Base")
+        new_val = Property.from_freecad("hello", {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_string_values(self) -> None:
         """Test STRING type with different values."""
-        old_val = Property.create(PropertyType.STRING, "hello")
-        new_val = Property.create(PropertyType.STRING, "world")
+        old_val = Property.from_freecad("hello", {}, "Base")
+        new_val = Property.from_freecad("world", {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_identical_vector_values(self) -> None:
         """Test VECTOR type with same values."""
-        old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        new_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
+        old_val = Property.from_freecad((1.0, 2.0, 3.0), {}, "Base")
+        new_val = Property.from_freecad((1.0, 2.0, 3.0), {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_vector_values(self) -> None:
         """Test VECTOR type with different values."""
-        old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        new_val = Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0))
+        old_val = Property.from_freecad((1.0, 2.0, 3.0), {}, "Base")
+        new_val = Property.from_freecad((4.0, 5.0, 6.0), {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_vector_within_tolerance(self) -> None:
         """Test VECTOR type with components within tolerance."""
-        old_val = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        new_val = Property.create(PropertyType.VECTOR, (1.0 + 1e-10, 2.0, 3.0))
+        old_val = Property.from_freecad((1.0, 2.0, 3.0), {}, "Base")
+        new_val = Property.from_freecad((1.0 + 1e-10, 2.0, 3.0), {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_identical_placement_values(self) -> None:
         """Test PLACEMENT type with same values."""
-        old_val = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-        )
-        new_val = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-        )
+        old_val = Property.from_freecad({"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base")
+        new_val = Property.from_freecad({"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_placement_values(self) -> None:
         """Test PLACEMENT type with different values."""
-        old_val = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-        )
-        new_val = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-        )
+        old_val = Property.from_freecad({"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base")
+        new_val = Property.from_freecad({"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_identical_expression_values(self) -> None:
         """Test STRING type with same values and identical expressions."""
-        old_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
-        new_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
+        old_val = Property.from_freecad("Body.Length", {".": "Body.Length"}, "Base")
+        new_val = Property.from_freecad("Body.Length", {".": "Body.Length"}, "Base")
         assert values_are_equal(old_val, new_val) is True
 
     def test_different_expression_values(self) -> None:
         """Test STRING type with different values and different expressions."""
-        old_val = Property.create(PropertyType.STRING, "Body.Length", expression="Body.Length")
-        new_val = Property.create(PropertyType.STRING, "Cube.Size", expression="Cube.Size")
+        old_val = Property.from_freecad("Body.Length", {".": "Body.Length"}, "Base")
+        new_val = Property.from_freecad("Cube.Size", {".": "Cube.Size"}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
     def test_same_value_different_expression(self) -> None:
         """Test that same value with different expression returns False."""
-        old_val = Property.create(PropertyType.FLOAT, 10.0, expression="Body.Length")
-        new_val = Property.create(PropertyType.FLOAT, 10.0, expression="Cube.Size")
+        old_val = Property.from_freecad(10.0, {".": "Body.Length"}, "Base")
+        new_val = Property.from_freecad(10.0, {".": "Cube.Size"}, "Base")
         assert values_are_equal(old_val, new_val) is False
 
 
@@ -222,7 +210,7 @@ class TestPropertyDiffState:
         prop_diff = PropertyDiff(
             property_name="NewProperty",
             old_value=None,
-            new_value=Property.create(PropertyType.STRING, "value"),
+            new_value=Property.from_freecad("value", {}, "Base"),
         )
         assert prop_diff.state == DiffState.ADDED
 
@@ -230,7 +218,7 @@ class TestPropertyDiffState:
         """Test DELETED state when new_value is None."""
         prop_diff = PropertyDiff(
             property_name="OldProperty",
-            old_value=Property.create(PropertyType.STRING, "value"),
+            old_value=Property.from_freecad("value", {}, "Base"),
             new_value=None,
         )
         assert prop_diff.state == DiffState.DELETED
@@ -239,8 +227,8 @@ class TestPropertyDiffState:
         """Test MODIFIED state when values differ."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0),
-            new_value=Property.create(PropertyType.FLOAT, 20.0),
+            old_value=Property.from_freecad(10.0, {}, "Base"),
+            new_value=Property.from_freecad(20.0, {}, "Base"),
         )
         assert prop_diff.state == DiffState.MODIFIED
 
@@ -248,8 +236,8 @@ class TestPropertyDiffState:
         """Test UNCHANGED state when values are equal."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0),
-            new_value=Property.create(PropertyType.FLOAT, 10.0),
+            old_value=Property.from_freecad(10.0, {}, "Base"),
+            new_value=Property.from_freecad(10.0, {}, "Base"),
         )
         assert prop_diff.state == DiffState.UNCHANGED
 
@@ -257,8 +245,8 @@ class TestPropertyDiffState:
         """Test UNCHANGED state when values are same (expression tracked separately)."""
         prop_diff = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0, expression="Body.Length"),
-            new_value=Property.create(PropertyType.FLOAT, 10.0, expression="Cube.Size"),
+            old_value=Property.from_freecad(10.0, {".": "Body.Length"}, "Base"),
+            new_value=Property.from_freecad(10.0, {".": "Cube.Size"}, "Base"),
         )
         assert prop_diff.state == DiffState.UNCHANGED
 
@@ -275,8 +263,8 @@ class TestCompareProperties:
         """Test when all properties are new (added)."""
         old_props = {}
         new_props = {
-            "NewProp1": Property.create(PropertyType.STRING, "value1"),
-            "NewProp2": Property.create(PropertyType.INT, 42),
+            "NewProp1": Property.from_freecad("value1", {}, "Base"),
+            "NewProp2": Property.from_freecad(42, {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 2
@@ -286,8 +274,8 @@ class TestCompareProperties:
     def test_only_deletions(self) -> None:
         """Test when all properties are removed (deleted)."""
         old_props = {
-            "OldProp1": Property.create(PropertyType.STRING, "value1"),
-            "OldProp2": Property.create(PropertyType.INT, 42),
+            "OldProp1": Property.from_freecad("value1", {}, "Base"),
+            "OldProp2": Property.from_freecad(42, {}, "Base"),
         }
         new_props = {}
         result = compare_properties(old_props, new_props)
@@ -298,12 +286,12 @@ class TestCompareProperties:
     def test_only_modifications(self) -> None:
         """Test when all properties are modified."""
         old_props = {
-            "Prop1": Property.create(PropertyType.FLOAT, 10.0),
-            "Prop2": Property.create(PropertyType.STRING, "old"),
+            "Prop1": Property.from_freecad(10.0, {}, "Base"),
+            "Prop2": Property.from_freecad("old", {}, "Base"),
         }
         new_props = {
-            "Prop1": Property.create(PropertyType.FLOAT, 20.0),
-            "Prop2": Property.create(PropertyType.STRING, "new"),
+            "Prop1": Property.from_freecad(20.0, {}, "Base"),
+            "Prop2": Property.from_freecad("new", {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 2
@@ -313,12 +301,12 @@ class TestCompareProperties:
     def test_only_unchanged_included(self) -> None:
         """Test that unchanged properties are included in result."""
         old_props = {
-            "Prop1": Property.create(PropertyType.FLOAT, 10.0),
-            "Prop2": Property.create(PropertyType.STRING, "same"),
+            "Prop1": Property.from_freecad(10.0, {}, "Base"),
+            "Prop2": Property.from_freecad("same", {}, "Base"),
         }
         new_props = {
-            "Prop1": Property.create(PropertyType.FLOAT, 10.0),
-            "Prop2": Property.create(PropertyType.STRING, "same"),
+            "Prop1": Property.from_freecad(10.0, {}, "Base"),
+            "Prop2": Property.from_freecad("same", {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 2
@@ -328,14 +316,14 @@ class TestCompareProperties:
     def test_mixed_changes(self) -> None:
         """Test combination of added, deleted, modified and unchanged properties."""
         old_props = {
-            "DeletedProp": Property.create(PropertyType.STRING, "gone"),
-            "ModifiedProp": Property.create(PropertyType.FLOAT, 10.0),
-            "UnchangedProp": Property.create(PropertyType.INT, 5),
+            "DeletedProp": Property.from_freecad("gone", {}, "Base"),
+            "ModifiedProp": Property.from_freecad(10.0, {}, "Base"),
+            "UnchangedProp": Property.from_freecad(5, {}, "Base"),
         }
         new_props = {
-            "AddedProp": Property.create(PropertyType.STRING, "new"),
-            "ModifiedProp": Property.create(PropertyType.FLOAT, 20.0),
-            "UnchangedProp": Property.create(PropertyType.INT, 5),
+            "AddedProp": Property.from_freecad("new", {}, "Base"),
+            "ModifiedProp": Property.from_freecad(20.0, {}, "Base"),
+            "UnchangedProp": Property.from_freecad(5, {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 4
@@ -349,12 +337,12 @@ class TestCompareProperties:
     def test_excludes_time_stamp(self) -> None:
         """Test that TimeStamp property is filtered out."""
         old_props = {
-            "TimeStamp": Property.create(PropertyType.STRING, "2024-01-01T00:00:00"),
-            "Length": Property.create(PropertyType.FLOAT, 10.0),
+            "TimeStamp": Property.from_freecad("2024-01-01T00:00:00", {}, "Base"),
+            "Length": Property.from_freecad(10.0, {}, "Base"),
         }
         new_props = {
-            "TimeStamp": Property.create(PropertyType.STRING, "2024-01-01T00:00:01"),
-            "Length": Property.create(PropertyType.FLOAT, 10.0),
+            "TimeStamp": Property.from_freecad("2024-01-01T00:00:01", {}, "Base"),
+            "Length": Property.from_freecad(10.0, {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         # TimeStamp is excluded, Length is unchanged but included
@@ -365,12 +353,12 @@ class TestCompareProperties:
     def test_excludes_label2(self) -> None:
         """Test that Label2 property is filtered out."""
         old_props = {
-            "Label2": Property.create(PropertyType.STRING, "AutoLabel"),
-            "Length": Property.create(PropertyType.FLOAT, 10.0),
+            "Label2": Property.from_freecad("AutoLabel", {}, "Base"),
+            "Length": Property.from_freecad(10.0, {}, "Base"),
         }
         new_props = {
-            "Label2": Property.create(PropertyType.STRING, "NewLabel"),
-            "Length": Property.create(PropertyType.FLOAT, 20.0),
+            "Label2": Property.from_freecad("NewLabel", {}, "Base"),
+            "Length": Property.from_freecad(20.0, {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 1
@@ -380,23 +368,23 @@ class TestCompareProperties:
     def test_all_property_types(self) -> None:
         """Test comparison of all property types in a single call."""
         old_props = {
-            "BoolProp": Property.create(PropertyType.BOOL, True),
-            "IntProp": Property.create(PropertyType.INT, 42),
-            "FloatProp": Property.create(PropertyType.FLOAT, 3.14),
-            "StringProp": Property.create(PropertyType.STRING, "hello"),
-            "VectorProp": Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0)),
-            "PlacementProp": Property.create(
-                PropertyType.PLACEMENT, {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}
+            "BoolProp": Property.from_freecad(True, {}, "Base"),
+            "IntProp": Property.from_freecad(42, {}, "Base"),
+            "FloatProp": Property.from_freecad(3.14, {}, "Base"),
+            "StringProp": Property.from_freecad("hello", {}, "Base"),
+            "VectorProp": Property.from_freecad((1.0, 2.0, 3.0), {}, "Base"),
+            "PlacementProp": Property.from_freecad(
+                {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),
         }
         new_props = {
-            "BoolProp": Property.create(PropertyType.BOOL, False),  # Changed
-            "IntProp": Property.create(PropertyType.INT, 42),  # Same
-            "FloatProp": Property.create(PropertyType.FLOAT, 2.71),  # Changed
-            "StringProp": Property.create(PropertyType.STRING, "world"),  # Changed
-            "VectorProp": Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0)),  # Changed
-            "PlacementProp": Property.create(
-                PropertyType.PLACEMENT, {"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}
+            "BoolProp": Property.from_freecad(False, {}, "Base"),  # Changed
+            "IntProp": Property.from_freecad(42, {}, "Base"),  # Same
+            "FloatProp": Property.from_freecad(2.71, {}, "Base"),  # Changed
+            "StringProp": Property.from_freecad("world", {}, "Base"),  # Changed
+            "VectorProp": Property.from_freecad((4.0, 5.0, 6.0), {}, "Base"),  # Changed
+            "PlacementProp": Property.from_freecad(
+                {"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),  # Changed
         }
         result = compare_properties(old_props, new_props)
@@ -417,10 +405,10 @@ class TestCompareProperties:
         """Test float tolerance with various edge cases."""
         # Very small difference within tolerance
         old_props = {
-            "FloatProp": Property.create(PropertyType.FLOAT, 1.0),
+            "FloatProp": Property.from_freecad(1.0, {}, "Base"),
         }
         new_props = {
-            "FloatProp": Property.create(PropertyType.FLOAT, 1.0 + 1e-10),
+            "FloatProp": Property.from_freecad(1.0 + 1e-10, {}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 1  # Within tolerance, so unchanged but included
@@ -428,7 +416,7 @@ class TestCompareProperties:
 
         # Difference exceeding tolerance
         new_props_exceed = {
-            "FloatProp": Property.create(PropertyType.FLOAT, 1.0 + 1e-8),
+            "FloatProp": Property.from_freecad(1.0 + 1e-8, {}, "Base"),
         }
         result_exceed = compare_properties(old_props, new_props_exceed)
         assert len(result_exceed) == 1
@@ -440,14 +428,14 @@ class TestCompareProperties:
         added = PropertyDiff(
             property_name="NewProp",
             old_value=None,
-            new_value=Property.create(PropertyType.STRING, "value"),
+            new_value=Property.from_freecad("value", {}, "Base"),
         )
         assert "+value" in str(added)
 
         # DELETED
         deleted = PropertyDiff(
             property_name="OldProp",
-            old_value=Property.create(PropertyType.STRING, "value"),
+            old_value=Property.from_freecad("value", {}, "Base"),
             new_value=None,
         )
         assert "-value" in str(deleted)
@@ -455,8 +443,8 @@ class TestCompareProperties:
         # MODIFIED
         modified = PropertyDiff(
             property_name="Length",
-            old_value=Property.create(PropertyType.FLOAT, 10.0),
-            new_value=Property.create(PropertyType.FLOAT, 20.0),
+            old_value=Property.from_freecad(10.0, {}, "Base"),
+            new_value=Property.from_freecad(20.0, {}, "Base"),
         )
         assert "10.0" in str(modified)
         assert "20.0" in str(modified)
@@ -465,10 +453,10 @@ class TestCompareProperties:
     def test_same_value_different_expression_is_unchanged(self) -> None:
         """Test that same value with different expression returns UNCHANGED."""
         old_props = {
-            "Length": Property.create(PropertyType.FLOAT, 10.0, expression="Body.Length"),
+            "Length": Property.from_freecad(10.0, {".": "Body.Length"}, "Base"),
         }
         new_props = {
-            "Length": Property.create(PropertyType.FLOAT, 10.0, expression="Cube.Size"),
+            "Length": Property.from_freecad(10.0, {".": "Cube.Size"}, "Base"),
         }
         result = compare_properties(old_props, new_props)
         assert len(result) == 1
@@ -483,94 +471,73 @@ class TestPropertyDiffChildrenAutoComputed:
     This is Phase 3 of the refactor-diff-architecture task.
     """
 
-    def test_placement_property_diff_has_position_and_rotation_children(self) -> None:
-        """Test that PropertyDiff for Placement has Position and Rotation children."""
-        # Create two Placement properties that differ in position
+    def test_list_property_diff_has_indexed_children(self) -> None:
+        """Test that PropertyDiff for list has indexed children."""
+        # Create two list properties that differ
         old_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-            ),
+            "Vector": Property.from_freecad([1.0, 2.0, 3.0], {}, "Base"),
         }
         new_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-            ),
+            "Vector": Property.from_freecad([10.0, 2.0, 3.0], {}, "Base"),
         }
 
         result = compare_properties(old_props, new_props)
 
         assert len(result) == 1
         prop_diff = result[0]
-        assert prop_diff.property_name == "Placement"
+        assert prop_diff.property_name == "Vector"
         assert prop_diff.state == DiffState.MODIFIED
 
-        # Verify children are auto-computed
-        assert len(prop_diff.children) == 2
+        # Verify children are auto-computed (indexed list items)
+        assert len(prop_diff.children) == 3
         child_names = {child.property_name for child in prop_diff.children}
-        assert "Position" in child_names
-        assert "Rotation" in child_names
+        assert child_names == {"0", "1", "2"}
 
-    def test_placement_property_diff_position_child_has_correct_state(self) -> None:
-        """Test that Position child of Placement diff has MODIFIED state when position changes."""
-        # Create two Placement properties with different positions
+    def test_list_property_diff_first_child_has_correct_state(self) -> None:
+        """Test that first child of list diff has MODIFIED state when value changes."""
+        # Create two list properties with different first element
         old_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-            ),
+            "Vector": Property.from_freecad([1.0, 2.0, 3.0], {}, "Base"),
         }
         new_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-            ),
+            "Vector": Property.from_freecad([10.0, 2.0, 3.0], {}, "Base"),
         }
 
         result = compare_properties(old_props, new_props)
         prop_diff = result[0]
 
-        # Find Position child
-        position_child = next(child for child in prop_diff.children if child.property_name == "Position")
-        assert position_child.state == DiffState.MODIFIED
+        # Find first child (index 0)
+        first_child = next(child for child in prop_diff.children if child.property_name == "0")
+        assert first_child.state == DiffState.MODIFIED
 
-    def test_placement_property_diff_rotation_child_has_correct_state(self) -> None:
-        """Test that Rotation child of Placement diff has MODIFIED state when rotation changes."""
-        # Create two Placement properties with different rotations
+    def test_list_property_diff_second_child_has_unchanged_state(self) -> None:
+        """Test that second child of list diff has UNCHANGED state when value is same."""
+        # Create two list properties with same second element
         old_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 45.0)},
-            ),
+            "Vector": Property.from_freecad([1.0, 2.0, 3.0], {}, "Base"),
         }
         new_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-            ),
+            "Vector": Property.from_freecad([1.0, 2.0, 30.0], {}, "Base"),
         }
 
         result = compare_properties(old_props, new_props)
         prop_diff = result[0]
 
-        # Find Rotation child
-        rotation_child = next(child for child in prop_diff.children if child.property_name == "Rotation")
-        assert rotation_child.state == DiffState.MODIFIED
+        # Find second child (index 1) - should be UNCHANGED
+        second_child = next(child for child in prop_diff.children if child.property_name == "1")
+        assert second_child.state == DiffState.UNCHANGED
 
     def test_unchanged_placement_has_unchanged_children(self) -> None:
         """Test that unchanged Placement has UNCHANGED children."""
         # Create identical Placement properties
         old_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
+            "Placement": Property.from_freecad(
+                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),
         }
         new_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
+            "Placement": Property.from_freecad(
+                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),
         }
 
@@ -586,10 +553,10 @@ class TestPropertyDiffChildrenAutoComputed:
     def test_primitive_property_has_empty_children(self) -> None:
         """Test that primitive property (e.g., FLOAT) has empty children list."""
         old_props = {
-            "Length": Property.create(PropertyType.FLOAT, 10.0),
+            "Length": Property.from_freecad(10.0, {}, "Base"),
         }
         new_props = {
-            "Length": Property.create(PropertyType.FLOAT, 20.0),
+            "Length": Property.from_freecad(20.0, {}, "Base"),
         }
 
         result = compare_properties(old_props, new_props)
@@ -599,31 +566,30 @@ class TestPropertyDiffChildrenAutoComputed:
         # Primitive types have no children
         assert len(prop_diff.children) == 0
 
-    def test_vector_property_has_x_y_z_children(self) -> None:
-        """Test that VECTOR property has x, y, z children."""
+    def test_list_property_has_indexed_children(self) -> None:
+        """Test that LIST property has indexed children."""
         old_props = {
-            "Position": Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0)),
+            "Position": Property.from_freecad([1.0, 2.0, 3.0], {}, "Base"),
         }
         new_props = {
-            "Position": Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0)),
+            "Position": Property.from_freecad([4.0, 5.0, 6.0], {}, "Base"),
         }
 
         result = compare_properties(old_props, new_props)
         prop_diff = result[0]
 
         assert prop_diff.state == DiffState.MODIFIED
-        # Vector has x, y, z children
+        # List has indexed children
         assert len(prop_diff.children) == 3
         child_names = {child.property_name for child in prop_diff.children}
-        assert child_names == {"x", "y", "z"}
+        assert child_names == {"0", "1", "2"}
 
     def test_added_placement_has_children(self) -> None:
         """Test that added Placement has Position and Rotation children with ADDED state."""
         old_props: dict[str, Property] = {}
         new_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
+            "Placement": Property.from_freecad(
+                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),
         }
 
@@ -639,9 +605,8 @@ class TestPropertyDiffChildrenAutoComputed:
     def test_deleted_placement_has_children(self) -> None:
         """Test that deleted Placement has Position and Rotation children with DELETED state."""
         old_props = {
-            "Placement": Property.create(
-                PropertyType.PLACEMENT,
-                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
+            "Placement": Property.from_freecad(
+                {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)}, {}, "Base"
             ),
         }
         new_props: dict[str, Property] = {}
@@ -662,7 +627,7 @@ class TestCompareNodesById:
     def test_identical_nodes_returns_unchanged(self) -> None:
         """Test comparing identical nodes returns UNCHANGED."""
         props = {
-            "Label": Property.create(PropertyType.STRING, "Body"),
+            "Label": Property.from_freecad("Body", {}, "Base"),
         }
         old_node = TreeNode(
             id=1,
@@ -694,10 +659,10 @@ class TestCompareNodesById:
     def test_modified_property_returns_modified(self) -> None:
         """Test detecting a modified property returns MODIFIED."""
         old_props = {
-            "Length": Property.create(PropertyType.FLOAT, 10.0),
+            "Length": Property.from_freecad(10.0, {}, "Base"),
         }
         new_props = {
-            "Length": Property.create(PropertyType.FLOAT, 20.0),
+            "Length": Property.from_freecad(20.0, {}, "Base"),
         }
         old_node = TreeNode(
             id=1,
@@ -941,7 +906,7 @@ class TestIdBasedCompareSnapshots:
             label="Pad",
             path="Body/Pad",
             after="Body",
-            properties={"Length": Property.create(PropertyType.FLOAT, 10.0)},
+            properties={"Length": Property.from_freecad(10.0, {}, "Base")},
         )
         old_snapshot = Snapshot(
             snapshot_id="old",
@@ -958,7 +923,7 @@ class TestIdBasedCompareSnapshots:
             label="Pad",
             path="Body/Pad",
             after="Body",
-            properties={"Length": Property.create(PropertyType.FLOAT, 20.0)},
+            properties={"Length": Property.from_freecad(20.0, {}, "Base")},
         )
         new_snapshot = Snapshot(
             snapshot_id="new",
@@ -1009,7 +974,7 @@ class TestIdBasedCompareSnapshots:
                 label="Pad",
                 path="Body/Pad",
                 after="Body",
-                properties={"Length": Property.create(PropertyType.FLOAT, 20.0)},
+                properties={"Length": Property.from_freecad(20.0, {}, "Base")},
             ),
             TreeNode(id=4, name="Box", type_id="Part::Box", label="Box", path="Box", after=None),  # Added
         ]

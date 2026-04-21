@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: This module provides YAML serialization and deserialization
-# for Snapshot objects. It follows the ProjectState.md YAML format specification.
+# File responsibility: YAML serialization and deserialization for Snapshot objects
+# using the DataPath-based Property model.
 """YAML persistence for snapshot storage and retrieval."""
 
 from datetime import UTC, datetime
@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from freecad.diff_wb.domain import Property, PropertyType, Snapshot, TreeNode
+from freecad.diff_wb.domain import Property, Snapshot, TreeNode
 
 
 class SnapshotYamlSerializer:
@@ -140,71 +140,23 @@ class SnapshotYamlSerializer:
     def _serialize_properties(properties: dict[str, Property]) -> dict[str, Any]:
         """Serialize property dict to YAML-compatible format.
 
+        Delegates to Property.to_serialized() which returns the DataPath-based
+        envelope with type_, paths/items, and group keys.
+
         Args:
             properties: Dictionary of property name to Property
 
         Returns:
             Dictionary suitable for YAML serialization
         """
-        result: dict[str, Any] = {}
-        for name, prop in properties.items():
-            result[name] = {
-                "type_": prop.type_.name,
-                "value": SnapshotYamlSerializer._serialize_property_value(prop.value, prop.type_),
-                "expression": prop.expression,
-                "group": prop.group,
-            }
-        return result
-
-    @staticmethod
-    def _serialize_property_value(value: Any, type_: PropertyType) -> Any:
-        """Serialize a property value to YAML-compatible format.
-
-        Args:
-            value: The property value
-            type_: The property type
-
-        Returns:
-            YAML-serializable value
-        """
-        if type_ == PropertyType.VECTOR:
-            return {"x": value.x, "y": value.y, "z": value.z}
-        elif type_ == PropertyType.PLACEMENT:
-            return {
-                "position": {
-                    "x": value.position.x,
-                    "y": value.position.y,
-                    "z": value.position.z,
-                },
-                "rotation": {
-                    "axis_x": value.rotation.axis_x,
-                    "axis_y": value.rotation.axis_y,
-                    "axis_z": value.rotation.axis_z,
-                    "angle_degrees": value.rotation.angle_degrees,
-                },
-            }
-        elif type_ == PropertyType.LIST:
-            # Convert list items to strings for serialization
-            return [str(item) for item in value] if value else []
-        elif type_ == PropertyType.UNKNOWN:
-            # For unknown types, try to convert to string to avoid serialization errors
-            # This handles FreeCAD objects that can't be pickled
-            try:
-                # Try YAML serialization first to check if it's serializable
-                import yaml
-
-                yaml.dump(value)
-                return value
-            except (TypeError, AttributeError):
-                # Fall back to string representation
-                return str(value) if value is not None else None
-        else:
-            # Primitive types can be serialized directly
-            return value
+        return {name: prop.to_serialized() for name, prop in properties.items()}
 
     @staticmethod
     def _deserialize_properties(data: dict[str, Any]) -> dict[str, Property]:
         """Deserialize property dict from YAML format.
+
+        Delegates to Property.from_serialized() which reconstructs the DataPath
+        value from the envelope.
 
         Args:
             data: Dictionary from YAML
@@ -214,55 +166,7 @@ class SnapshotYamlSerializer:
         """
         if not data:
             return {}
-
-        result = {}
-        for name, prop_data in data.items():
-            type_name = prop_data.get("type_", "STRING")
-            try:
-                type_ = PropertyType[type_name]
-            except KeyError:
-                type_ = PropertyType.UNKNOWN
-
-            value = SnapshotYamlSerializer._deserialize_property_value(prop_data.get("value"), type_)
-
-            result[name] = Property(
-                type_=type_,
-                value=value,
-                expression=prop_data.get("expression"),
-                group=prop_data.get("group", "Base"),
-            )
-        return result
-
-    @staticmethod
-    def _deserialize_property_value(data: Any, type_: PropertyType) -> Any:
-        """Deserialize a property value from YAML format.
-
-        Args:
-            data: The serialized value from YAML
-            type_: The property type
-
-        Returns:
-            The deserialized value (as proper domain object if needed)
-        """
-        if type_ == PropertyType.VECTOR and isinstance(data, dict):
-            return Property.create(PropertyType.VECTOR, (data.get("x", 0), data.get("y", 0), data.get("z", 0)))
-        elif type_ == PropertyType.PLACEMENT and isinstance(data, dict):
-            pos = data.get("position", {})
-            rot = data.get("rotation", {})
-            return Property.create(
-                PropertyType.PLACEMENT,
-                {
-                    "position": (pos.get("x", 0), pos.get("y", 0), pos.get("z", 0)),
-                    "rotation": (
-                        rot.get("axis_x", 0),
-                        rot.get("axis_y", 0),
-                        rot.get("axis_z", 1),
-                        rot.get("angle_degrees", 0),
-                    ),
-                },
-            )
-        else:
-            return data
+        return {name: Property.from_serialized(payload) for name, payload in data.items()}
 
 
 __all__ = ["SnapshotYamlSerializer"]

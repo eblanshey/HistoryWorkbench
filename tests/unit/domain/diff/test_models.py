@@ -3,7 +3,7 @@
 """Unit tests for domain diff models."""
 
 from freecad.diff_wb.domain.diff.models import WARNING_OLD_SNAPSHOT_MISSING, DiffState, PropertyDiff
-from freecad.diff_wb.domain.tree import Property, PropertyType
+from freecad.diff_wb.domain.tree import Property
 
 
 class TestPropertyDiffChildren:
@@ -11,31 +11,25 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_computes_children(self) -> None:
         """PropertyDiff has children after creation for expandable properties."""
-        # Create a Placement property with Position and Rotation
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
-        )
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (1.0, 2.0, 3.0), "rotation": (0.0, 0.0, 1.0, 90.0)},
-        )
+        # Create a Vector property which has x, y, z children
+        old_vector = Property.from_freecad([1.0, 2.0, 3.0], {}, "Base")
+        new_vector = Property.from_freecad([4.0, 5.0, 6.0], {}, "Base")
 
         prop_diff = PropertyDiff(
-            property_name="Placement",
-            old_value=old_placement,
-            new_value=new_placement,
+            property_name="Vector",
+            old_value=old_vector,
+            new_value=new_vector,
         )
 
-        # Should have Position and Rotation children
-        assert len(prop_diff.children) == 2
+        # Should have 3 children (indexed list items)
+        assert len(prop_diff.children) == 3
         child_names = {child.property_name for child in prop_diff.children}
-        assert child_names == {"Position", "Rotation"}
+        assert child_names == {"0", "1", "2"}
 
     def test_property_diff_no_children_for_primitives(self) -> None:
         """Primitive properties have empty children."""
-        old_value = Property.create(PropertyType.FLOAT, 10.0)
-        new_value = Property.create(PropertyType.FLOAT, 20.0)
+        old_value = Property.from_freecad(10.0, {}, "Base")
+        new_value = Property.from_freecad(20.0, {}, "Base")
 
         prop_diff = PropertyDiff(
             property_name="Length",
@@ -47,8 +41,8 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_no_children_for_string(self) -> None:
         """String properties have empty children."""
-        old_value = Property.create(PropertyType.STRING, "hello")
-        new_value = Property.create(PropertyType.STRING, "world")
+        old_value = Property.from_freecad("hello", {}, "Base")
+        new_value = Property.from_freecad("world", {}, "Base")
 
         prop_diff = PropertyDiff(
             property_name="Label",
@@ -60,13 +54,11 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_children_states_unchanged(self) -> None:
         """Children have correct UNCHANGED state when values are equal."""
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
+        old_placement = Property.from_freecad(
+            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)}, {}, "Base"
         )
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
+        new_placement = Property.from_freecad(
+            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)}, {}, "Base"
         )
 
         prop_diff = PropertyDiff(
@@ -84,37 +76,31 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_children_states_modified(self) -> None:
         """Children have correct MODIFIED state when values differ."""
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
-        )
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (1.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
-        )
+        # Use a list property which has indexed children
+        old_list = Property.from_freecad([1.0, 2.0, 3.0], {}, "Base")
+        new_list = Property.from_freecad([10.0, 2.0, 3.0], {}, "Base")
 
         prop_diff = PropertyDiff(
-            property_name="Placement",
-            old_value=old_placement,
-            new_value=new_placement,
+            property_name="Vector",
+            old_value=old_list,
+            new_value=new_list,
         )
 
         # Parent should be MODIFIED
         assert prop_diff.state == DiffState.MODIFIED
 
-        # Position should be MODIFIED
-        position_child = next(c for c in prop_diff.children if c.property_name == "Position")
-        assert position_child.state == DiffState.MODIFIED
+        # First item (index 0) should be MODIFIED (1.0 -> 10.0)
+        first_child = next(c for c in prop_diff.children if c.property_name == "0")
+        assert first_child.state == DiffState.MODIFIED
 
-        # Rotation should be UNCHANGED
-        rotation_child = next(c for c in prop_diff.children if c.property_name == "Rotation")
-        assert rotation_child.state == DiffState.UNCHANGED
+        # Second item (index 1) should be UNCHANGED (2.0 -> 2.0)
+        second_child = next(c for c in prop_diff.children if c.property_name == "1")
+        assert second_child.state == DiffState.UNCHANGED
 
     def test_property_diff_children_added(self) -> None:
         """Children have ADDED state when property is new."""
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
+        new_placement = Property.from_freecad(
+            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)}, {}, "Base"
         )
 
         prop_diff = PropertyDiff(
@@ -132,9 +118,8 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_children_deleted(self) -> None:
         """Children have DELETED state when property is removed."""
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
+        old_placement = Property.from_freecad(
+            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)}, {}, "Base"
         )
 
         prop_diff = PropertyDiff(
@@ -151,9 +136,9 @@ class TestPropertyDiffChildren:
             assert child.state == DiffState.DELETED
 
     def test_property_diff_vector_children(self) -> None:
-        """Vector properties have x, y, z children."""
-        old_vector = Property.create(PropertyType.VECTOR, (1.0, 2.0, 3.0))
-        new_vector = Property.create(PropertyType.VECTOR, (4.0, 5.0, 6.0))
+        """List/tuple properties have indexed children."""
+        old_vector = Property.from_freecad([1.0, 2.0, 3.0], {}, "Base")
+        new_vector = Property.from_freecad([4.0, 5.0, 6.0], {}, "Base")
 
         prop_diff = PropertyDiff(
             property_name="Position",
@@ -161,10 +146,10 @@ class TestPropertyDiffChildren:
             new_value=new_vector,
         )
 
-        # Should have x, y, z children
+        # Should have 3 children (indexed list items)
         assert len(prop_diff.children) == 3
         child_names = {child.property_name for child in prop_diff.children}
-        assert child_names == {"x", "y", "z"}
+        assert child_names == {"0", "1", "2"}
 
         # All should be MODIFIED since values differ
         for child in prop_diff.children:
@@ -185,8 +170,8 @@ class TestPropertyDiffChildren:
 
     def test_property_diff_children_empty_both_sides(self) -> None:
         """PropertyDiff handles both sides having no children."""
-        old_value = Property.create(PropertyType.STRING, "hello")
-        new_value = Property.create(PropertyType.STRING, "world")
+        old_value = Property.from_freecad("hello", {}, "Base")
+        new_value = Property.from_freecad("world", {}, "Base")
 
         prop_diff = PropertyDiff(
             property_name="Label",

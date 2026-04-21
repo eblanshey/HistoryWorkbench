@@ -3,7 +3,7 @@
 # children handling, and string representation.
 """Unit tests for the TreeNode class."""
 
-from freecad.diff_wb.domain import Property, PropertyType, TreeNode
+from freecad.diff_wb.domain import Property, TreeNode
 
 
 class TestTreeNode:
@@ -68,7 +68,7 @@ class TestTreeNode:
 
     def test_creation_with_properties(self) -> None:
         """Test tree node with properties."""
-        prop = Property.create(PropertyType.FLOAT, 10.0)
+        prop = Property.from_freecad(10.0, {}, "Base")
         node = TreeNode(
             id=5,
             name="Pad",
@@ -79,7 +79,11 @@ class TestTreeNode:
             properties={"Length": prop},
         )
         assert "Length" in node.properties
-        assert node.properties["Length"].value == 10.0
+        # Property.value is now a DataPath (PrimitiveData), not the raw value
+        from freecad.diff_wb.domain.tree.data_path import PrimitiveData
+
+        assert isinstance(node.properties["Length"].value, PrimitiveData)
+        assert node.properties["Length"].value.paths["."].value == 10.0
 
     def test_serialization_to_dict_includes_all_new_fields(self) -> None:
         """Test serializing TreeNode to dict includes id, path, after fields."""

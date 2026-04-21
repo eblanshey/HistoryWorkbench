@@ -16,7 +16,7 @@ from freecad.diff_wb.application.actions.stage_documents import StageDocumentsAc
 from freecad.diff_wb.domain.diff.models import DiffHierarchy, DiffResult, DiffState, NodeDiff, PropertyDiff
 from freecad.diff_wb.domain.git.models import GitRepository
 from freecad.diff_wb.domain.snapshots import Snapshot
-from freecad.diff_wb.domain.tree import Property, PropertyType
+from freecad.diff_wb.domain.tree import Property
 from freecad.diff_wb.ui.presenters.diff_presenter import DiffPresenter
 from freecad.diff_wb.ui.presenters.presentation_models import NodePresentation, PropertyPresentation
 from freecad.diff_wb.ui.state import UIState
@@ -181,8 +181,8 @@ class TestDiffPresenter:
         """Formats PropertyDiff with expressions correctly."""
         # Arrange
         fake_view, presenter = _create_test_presenter()
-        old_prop = Property.create(PropertyType.FLOAT, 10.0, expression="Sketch.X")
-        new_prop = Property.create(PropertyType.FLOAT, 20.0, expression=None)
+        old_prop = Property.from_freecad(10.0, {".": "Sketch.X"}, "Base")
+        new_prop = Property.from_freecad(20.0, {".": None}, "Base")
         node_diff = NodeDiff(
             path="Part",
             type_id="Part::Feature",
@@ -241,8 +241,8 @@ class TestDiffPresenter:
             property_diffs=[
                 PropertyDiff(
                     property_name="Length",
-                    old_value=Property.create(PropertyType.FLOAT, 10.0),
-                    new_value=Property.create(PropertyType.FLOAT, 20.0),
+                    old_value=Property.from_freecad(10.0, {}, "Base"),
+                    new_value=Property.from_freecad(20.0, {}, "Base"),
                 )
             ],
             _force_state=DiffState.MODIFIED,
@@ -435,20 +435,14 @@ class TestTransformPropertyDiffsWithChildren:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        # Create property with children (simulating Placement with Position/Rotation)
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
-        )
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (10.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 45.0)},
-        )
+        # Create property with children (list property with indexed children)
+        old_list = Property.from_freecad([1.0, 2.0, 3.0], {}, "Base")
+        new_list = Property.from_freecad([10.0, 2.0, 30.0], {}, "Base")
 
         prop_diff = PropertyDiff(
-            property_name="Placement",
-            old_value=old_placement,
-            new_value=new_placement,
+            property_name="Vector",
+            old_value=old_list,
+            new_value=new_list,
         )
 
         node_diff = NodeDiff(
@@ -484,8 +478,8 @@ class TestTransformPropertyDiffsWithChildren:
 
         prop_presentation = properties[0]
         assert isinstance(prop_presentation, PropertyPresentation)
-        assert prop_presentation.name == "Placement"
-        # Children should be populated from domain PropertyDiff
+        assert prop_presentation.name == "Vector"
+        # Children should be populated from domain PropertyDiff (indexed list items)
         assert len(prop_presentation.children) > 0
 
     def test_transform_children_recursive(self) -> None:
@@ -493,9 +487,9 @@ class TestTransformPropertyDiffsWithChildren:
         # Arrange
         fake_view, presenter = _create_test_presenter()
 
-        # Create a property with nested children (e.g., Position with x, y, z)
-        old_position = Property.create(PropertyType.VECTOR, (0.0, 0.0, 0.0))
-        new_position = Property.create(PropertyType.VECTOR, (10.0, 20.0, 30.0))
+        # Create a list property with indexed children
+        old_position = Property.from_freecad([0.0, 0.0, 0.0], {}, "Base")
+        new_position = Property.from_freecad([10.0, 20.0, 30.0], {}, "Base")
 
         prop_diff = PropertyDiff(
             property_name="Position",
@@ -534,10 +528,10 @@ class TestTransformPropertyDiffsWithChildren:
         properties = show_props_call["properties"]
         position_pres = properties[0]
 
-        # Should have children (x, y, z)
+        # Should have children (indexed list items)
         assert len(position_pres.children) > 0
         child_names = {child.name for child in position_pres.children}
-        assert "x" in child_names or "y" in child_names or "z" in child_names
+        assert "0" in child_names or "1" in child_names or "2" in child_names
 
     def test_transform_children_preserves_parent_values(self) -> None:
         """Test that parent old_value and new_value are preserved alongside children."""
@@ -545,13 +539,11 @@ class TestTransformPropertyDiffsWithChildren:
         fake_view, presenter = _create_test_presenter()
 
         # Create a property with both parent value and children
-        old_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)},
+        old_placement = Property.from_freecad(
+            {"position": (0.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 0.0)}, {}, "Base"
         )
-        new_placement = Property.create(
-            PropertyType.PLACEMENT,
-            {"position": (10.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 45.0)},
+        new_placement = Property.from_freecad(
+            {"position": (10.0, 0.0, 0.0), "rotation": (0.0, 0.0, 1.0, 45.0)}, {}, "Base"
         )
 
         prop_diff = PropertyDiff(
@@ -601,8 +593,8 @@ class TestTransformPropertyDiffsWithChildren:
         fake_view, presenter = _create_test_presenter()
 
         # Need to set up a diff_result first because on_node_selected requires it
-        old_prop = Property.create(PropertyType.FLOAT, 10.0)
-        new_prop = Property.create(PropertyType.FLOAT, 20.0)
+        old_prop = Property.from_freecad(10.0, {}, "Base")
+        new_prop = Property.from_freecad(20.0, {}, "Base")
         prop_diff = PropertyDiff(
             property_name="Length",
             old_value=old_prop,

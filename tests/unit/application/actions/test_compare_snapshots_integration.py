@@ -50,7 +50,7 @@ class TestCompareSnapshotsAction:
         settings_repo = FakeSettingsRepository()
         diff_engine = DiffEngine(settings_repo=settings_repo)
 
-        from freecad.diff_wb.domain.tree.property import Property, PropertyType
+        from freecad.diff_wb.domain.tree.property import Property
 
         # Create and add old snapshot with a Label property
         old_snapshot = Snapshot(
@@ -65,7 +65,7 @@ class TestCompareSnapshotsAction:
                     label="OldPart",
                     path="Part",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="OldPart")},
+                    properties={"Label": Property.from_freecad("OldPart", {}, "Base")},
                 )
             ],
             git_path="",
@@ -85,7 +85,7 @@ class TestCompareSnapshotsAction:
                     label="NewPart",
                     path="Part",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="NewPart")},
+                    properties={"Label": Property.from_freecad("NewPart", {}, "Base")},
                 )
             ],
             git_path="",
@@ -116,9 +116,9 @@ class TestCompareSnapshotsAction:
         assert prop_diff.property_name == "Label"
         assert prop_diff.state == DiffState.MODIFIED
         assert prop_diff.old_value is not None
-        assert prop_diff.old_value.value == "OldPart"
+        assert prop_diff.old_value.value.paths["."].value == "OldPart"
         assert prop_diff.new_value is not None
-        assert prop_diff.new_value.value == "NewPart"
+        assert prop_diff.new_value.value.paths["."].value == "NewPart"
 
     def test_compare_snapshots_old_not_found(self) -> None:
         """Test comparison when old snapshot doesn't exist."""
@@ -444,7 +444,7 @@ class TestCompareSnapshotsAction:
         settings_repo = FakeSettingsRepository()
         diff_engine = DiffEngine(settings_repo=settings_repo)
 
-        from freecad.diff_wb.domain.tree.property import Property, PropertyType
+        from freecad.diff_wb.domain.tree.property import Property
 
         # Old snapshot
         old_snapshot = Snapshot(
@@ -460,7 +460,7 @@ class TestCompareSnapshotsAction:
                     label="UnchangedPart",
                     path="UnchangedPart",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="UnchangedPart")},
+                    properties={"Label": Property.from_freecad("UnchangedPart", {}, "Base")},
                 ),
                 # This node will be modified (Label changed)
                 TreeNode(
@@ -470,7 +470,7 @@ class TestCompareSnapshotsAction:
                     label="ModifiedPart",
                     path="ModifiedPart",
                     after="UnchangedPart",
-                    properties={"Label": Property(type_=PropertyType.STRING, value="ModifiedPart")},
+                    properties={"Label": Property.from_freecad("ModifiedPart", {}, "Base")},
                 ),
                 # This node will be deleted
                 TreeNode(
@@ -501,7 +501,7 @@ class TestCompareSnapshotsAction:
                     label="UnchangedPart",
                     path="UnchangedPart",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="UnchangedPart")},
+                    properties={"Label": Property.from_freecad("UnchangedPart", {}, "Base")},
                 ),
                 # Modified - Label changed
                 TreeNode(
@@ -511,7 +511,7 @@ class TestCompareSnapshotsAction:
                     label="NewLabel",
                     path="ModifiedPart",
                     after="UnchangedPart",
-                    properties={"Label": Property(type_=PropertyType.STRING, value="NewLabel")},
+                    properties={"Label": Property.from_freecad("NewLabel", {}, "Base")},
                 ),
                 # Added - new node
                 TreeNode(
@@ -563,7 +563,7 @@ class TestCompareSnapshotsAction:
         settings_repo = FakeSettingsRepository()
         diff_engine = DiffEngine(settings_repo=settings_repo)
 
-        from freecad.diff_wb.domain.tree.property import Property, PropertyType
+        from freecad.diff_wb.domain.tree.property import Property
 
         # Old snapshot with child nodes (flat structure)
         old_snapshot = Snapshot(
@@ -578,7 +578,7 @@ class TestCompareSnapshotsAction:
                     label="Body",
                     path="Body",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="Body")},
+                    properties={"Label": Property.from_freecad("Body", {}, "Base")},
                 ),
                 TreeNode(
                     id=2,
@@ -587,7 +587,7 @@ class TestCompareSnapshotsAction:
                     label="Pad",
                     path="Body/Pad",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="Pad")},
+                    properties={"Label": Property.from_freecad("Pad", {}, "Base")},
                 ),
                 TreeNode(
                     id=3,
@@ -596,7 +596,7 @@ class TestCompareSnapshotsAction:
                     label="Pocket",
                     path="Body/Pocket",
                     after="Pad",
-                    properties={"Label": Property(type_=PropertyType.STRING, value="Pocket")},
+                    properties={"Label": Property.from_freecad("Pocket", {}, "Base")},
                 ),
             ],
             git_path="",
@@ -616,7 +616,7 @@ class TestCompareSnapshotsAction:
                     label="Body",
                     path="Body",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="Body")},
+                    properties={"Label": Property.from_freecad("Body", {}, "Base")},
                 ),
                 # Pad modified - Label changed
                 TreeNode(
@@ -626,7 +626,7 @@ class TestCompareSnapshotsAction:
                     label="NewPad",
                     path="Body/Pad",
                     after=None,
-                    properties={"Label": Property(type_=PropertyType.STRING, value="NewPad")},
+                    properties={"Label": Property.from_freecad("NewPad", {}, "Base")},
                 ),
                 # Pocket deleted (not present in new snapshot)
                 # Added: Fillet child
@@ -637,7 +637,7 @@ class TestCompareSnapshotsAction:
                     label="Fillet",
                     path="Body/Fillet",
                     after="Pad",
-                    properties={"Label": Property(type_=PropertyType.STRING, value="Fillet")},
+                    properties={"Label": Property.from_freecad("Fillet", {}, "Base")},
                 ),
             ],
             git_path="",
@@ -689,7 +689,7 @@ class TestCompareSnapshotsAction:
         settings_repo = FakeSettingsRepository()
         diff_engine = DiffEngine(settings_repo=settings_repo)
 
-        from freecad.diff_wb.domain.tree.property import Property, PropertyType
+        from freecad.diff_wb.domain.tree.property import Property
 
         # Old snapshot with various property types
         old_snapshot = Snapshot(
@@ -705,9 +705,9 @@ class TestCompareSnapshotsAction:
                     path="Part",
                     after=None,
                     properties={
-                        "Label": Property(type_=PropertyType.STRING, value="OldLabel"),
-                        "Length": Property(type_=PropertyType.FLOAT, value=10.0),
-                        "Width": Property(type_=PropertyType.FLOAT, value=5.0),
+                        "Label": Property.from_freecad("OldLabel", {}, "Base"),
+                        "Length": Property.from_freecad(10.0, {}, "Base"),
+                        "Width": Property.from_freecad(5.0, {}, "Base"),
                     },
                 ),
             ],
@@ -729,9 +729,9 @@ class TestCompareSnapshotsAction:
                     path="Part",
                     after=None,
                     properties={
-                        "Label": Property(type_=PropertyType.STRING, value="NewLabel"),
-                        "Length": Property(type_=PropertyType.FLOAT, value=20.0),
-                        "Width": Property(type_=PropertyType.FLOAT, value=5.0),  # Unchanged
+                        "Label": Property.from_freecad("NewLabel", {}, "Base"),
+                        "Length": Property.from_freecad(20.0, {}, "Base"),
+                        "Width": Property.from_freecad(5.0, {}, "Base"),  # Unchanged
                     },
                 ),
             ],
@@ -764,16 +764,16 @@ class TestCompareSnapshotsAction:
         assert len(label_props) == 1
         assert label_props[0].state == DiffState.MODIFIED
         assert label_props[0].old_value is not None
-        assert label_props[0].old_value.value == "OldLabel"
+        assert label_props[0].old_value.value.paths["."].value == "OldLabel"
         assert label_props[0].new_value is not None
-        assert label_props[0].new_value.value == "NewLabel"
+        assert label_props[0].new_value.value.paths["."].value == "NewLabel"
         length_props = [p for p in node_diff.property_diffs if p.property_name == "Length"]
         assert len(length_props) == 1
         assert length_props[0].state == DiffState.MODIFIED
         assert length_props[0].old_value is not None
-        assert length_props[0].old_value.value == 10.0
+        assert length_props[0].old_value.value.paths["."].value == 10.0
         assert length_props[0].new_value is not None
-        assert length_props[0].new_value.value == 20.0
+        assert length_props[0].new_value.value.paths["."].value == 20.0
         # Width should be in the diff as unchanged
         width_props = [p for p in node_diff.property_diffs if p.property_name == "Width"]
         assert len(width_props) == 1

@@ -11,7 +11,7 @@ import FreeCAD
 
 from freecad.diff_wb.domain.snapshots.models import Snapshot
 from freecad.diff_wb.domain.tree.node import TreeNode
-from freecad.diff_wb.domain.tree.property import Property, PropertyType
+from freecad.diff_wb.domain.tree.property import Property
 
 
 def print_section(title: str) -> None:
@@ -153,8 +153,7 @@ def test_treenode_construction(doc: FreeCAD.Document) -> None:
         try:
             value = getattr(test_obj, prop_name)
             # Include all properties (including None values for completeness)
-            prop_type = PropertyType.STRING if value is None else PropertyType.STRING
-            properties[prop_name] = Property.create(type_=prop_type, value=value)
+            properties[prop_name] = Property.from_freecad(value, {}, group="Base")
         except Exception as e:
             print(f"  Warning: Could not extract {prop_name}: {e}")
 
@@ -233,8 +232,7 @@ def test_snapshot_domain_model(doc: FreeCAD.Document) -> None:
             try:
                 value = getattr(obj, prop_name)
                 # Include all properties (including None values)
-                prop_type = PropertyType.STRING if value is None else PropertyType.STRING
-                properties[prop_name] = Property.create(type_=prop_type, value=value)
+                properties[prop_name] = Property.from_freecad(value, {}, group="Base")
             except Exception as e:
                 print(f"  Warning: Could not extract {obj.Name}.{prop_name}: {e}")
 

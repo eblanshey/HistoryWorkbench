@@ -86,14 +86,16 @@ After implementer completes fixes, return to STEP 2 (Code Review).
 **Maximum 5 iterations**: If the same issue persists after 5 fix attempts, STOP and ask the user for clarification.
 
 ### STEP 5: Final Validation
-Delegate to **reviewer** with:
+Delegate to **final-reviewer** with:
 - Task file path
 - Instruction to verify COMPLETE task fulfillment
-- Check all phases are implemented correctly
+- Check all phases are implemented correctly, efficiently, and cleanly
 
 **Decision point:**
 - If reviewer approves whole task → Continue to STEP 6
-- If reviewer finds issues → Identify which phase needs fixes, return to STEP 1 with that phase
+- If reviewer finds issues, including nitpicks → Identify which phase needs fixes, return to STEP 1 with that phase
+
+Only use the **final-reviewer** agent to review whole task completion
 
 ### STEP 6: Final Quality Checks
 Run these in sequence:

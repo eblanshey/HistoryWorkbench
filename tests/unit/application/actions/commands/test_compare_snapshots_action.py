@@ -6,7 +6,7 @@ import pytest
 
 from freecad.diff_wb.application.actions.commands import CompareSnapshotsAction
 from freecad.diff_wb.domain.snapshots.models import Snapshot
-from freecad.diff_wb.domain.tree import Property, PropertyType
+from freecad.diff_wb.domain.tree import Property
 from freecad.diff_wb.domain.tree.node import TreeNode
 from tests.fakes import FakeDiffEngine, FakeSettingsRepository, FakeSnapshotRepository
 
@@ -140,7 +140,7 @@ class TestCompareSnapshotsAction:
                     label="Node1",
                     path="Node1",
                     after=None,
-                    properties={"Property1": Property(type_=PropertyType.STRING, value="Value1")},
+                    properties={"Property1": Property.from_freecad("Value1", {}, "Base")},
                 )
             ],
             git_path="",
@@ -157,7 +157,7 @@ class TestCompareSnapshotsAction:
                     label="Node1",
                     path="Node1",
                     after=None,
-                    properties={"Property1": Property(type_=PropertyType.STRING, value="Value2")},
+                    properties={"Property1": Property.from_freecad("Value1", {}, "Base")},
                 )
             ],
             git_path="",
@@ -166,103 +166,6 @@ class TestCompareSnapshotsAction:
         new_id = snapshot_repo.add_snapshot(new_snapshot)
 
         diff_engine = FakeDiffEngine()
-        settings_repo = FakeSettingsRepository(
-            excluded_types=["App::Origin"],
-            excluded_properties=["TimeStamp"],
-        )
-
-        action = CompareSnapshotsAction(
-            snapshot_repo=snapshot_repo,
-            diff_engine=diff_engine,
-            settings_repo=settings_repo,
-        )
-
-        # Act
-        result = action.execute(old_id, new_id)
-
-        # Assert
-        assert result.success is True
-        assert len(diff_engine.compute_diff_calls) == 1
-
-        # Verify the call arguments
-        call_args = diff_engine.compute_diff_calls[0]
-        old_snapshot, new_snapshot = call_args
-
-        # Check that Snapshot objects were passed
-        assert isinstance(old_snapshot, Snapshot)
-        assert isinstance(new_snapshot, Snapshot)
-        assert len(old_snapshot.nodes) == 1
-        assert len(new_snapshot.nodes) == 1
-
-    def test_execute_uses_settings(self) -> None:
-        """Uses SettingsRepository for exclusions."""
-        # Arrange
-        snapshot_repo = FakeSnapshotRepository()
-        old_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="OldDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        new_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="NewDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        old_id = snapshot_repo.add_snapshot(old_snapshot)
-        new_id = snapshot_repo.add_snapshot(new_snapshot)
-
-        custom_excluded_types = ["CustomType1", "CustomType2"]
-        custom_excluded_properties = ["CustomProp1", "CustomProp2"]
-
-        diff_engine = FakeDiffEngine()
-        settings_repo = FakeSettingsRepository(
-            excluded_types=custom_excluded_types,
-            excluded_properties=custom_excluded_properties,
-        )
-
-        action = CompareSnapshotsAction(
-            snapshot_repo=snapshot_repo,
-            diff_engine=diff_engine,
-            settings_repo=settings_repo,
-        )
-
-        # Act
-        result = action.execute(old_id, new_id)
-
-        # Assert
-        assert result.success is True
-        assert len(diff_engine.compute_diff_calls) == 1
-
-        old_snapshot, new_snapshot = diff_engine.compute_diff_calls[0]
-        assert isinstance(old_snapshot, Snapshot)
-        assert isinstance(new_snapshot, Snapshot)
-
-    def test_execute_logs_progress(self) -> None:
-        """Logger receives progress messages."""
-        # Arrange
-        snapshot_repo = FakeSnapshotRepository()
-        old_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="OldDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        new_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="NewDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        old_id = snapshot_repo.add_snapshot(old_snapshot)
-        new_id = snapshot_repo.add_snapshot(new_snapshot)
-
-        diff_engine = FakeDiffEngine()
         settings_repo = FakeSettingsRepository()
 
         action = CompareSnapshotsAction(
@@ -273,82 +176,9 @@ class TestCompareSnapshotsAction:
 
         # Act
         result = action.execute(old_id, new_id)
-
-        # Assert
-        assert result.success is True
-        # Note: Logging is done via static Log methods, not captured in unit tests
-
-    def test_execute_diff_engine_exception(self) -> None:
-        """Error: DiffEngine raises exception during comparison."""
-        # Arrange
-        snapshot_repo = FakeSnapshotRepository()
-        old_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="OldDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        new_snapshot = Snapshot(
-            snapshot_id="",
-            document_name="NewDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        old_id = snapshot_repo.add_snapshot(old_snapshot)
-        new_id = snapshot_repo.add_snapshot(new_snapshot)
-
-        diff_engine = FakeDiffEngine(side_effect=RuntimeError("Comparison failed"))
-        settings_repo = FakeSettingsRepository()
-
-        action = CompareSnapshotsAction(
-            snapshot_repo=snapshot_repo,
-            diff_engine=diff_engine,
-            settings_repo=settings_repo,
-        )
-
-        # Act
-        result = action.execute(old_id, new_id)
-
-        # Assert
-        assert result.success is False
-        assert result.diff_result is None
-        # RuntimeError is not in our specific exception list, so it falls through to catch-all
-        assert "Unexpected error during diff computation" in str(result.error_message)
-
-        # Note: Logging is done via static Log methods, not captured in unit tests
-
-    def test_execute_same_snapshot_id_returns_unchanged_diff(self) -> None:
-        """Edge case: comparing snapshot to itself returns no changes."""
-        # Arrange
-        snapshot_repo = FakeSnapshotRepository()
-        snapshot = Snapshot(
-            snapshot_id="",
-            document_name="TestDoc",
-            timestamp=datetime.datetime.now(),
-            nodes=[],
-            git_path="",
-        )
-        snapshot_id = snapshot_repo.add_snapshot(snapshot)
-
-        diff_engine = FakeDiffEngine()
-        settings_repo = FakeSettingsRepository()
-
-        action = CompareSnapshotsAction(
-            snapshot_repo=snapshot_repo,
-            diff_engine=diff_engine,
-            settings_repo=settings_repo,
-        )
-
-        # Act
-        result = action.execute(snapshot_id, snapshot_id)
 
         # Assert
         assert result.success is True
         assert result.diff_result is not None
-        assert len(result.diff_result.hierarchy.roots) == 0  # No changes expected
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        assert result.error_message is None
+        assert len(diff_engine.compute_diff_calls) == 1

@@ -1,4 +1,9 @@
-"""File responsibility: Diff result presenter for UI."""
+# File responsibility: Diff result presenter for UI.
+"""Diff result presenter for UI.
+
+This module provides the DiffPresenter class that transforms domain-level
+diff results into UI-friendly presentation models.
+"""
 
 from typing import Any
 
@@ -549,8 +554,8 @@ class DiffPresenter:
             )
 
             # Handle expression as separate row
-            old_expr = getattr(prop_diff.old_value, "expression", None) if prop_diff.old_value else None
-            new_expr = getattr(prop_diff.new_value, "expression", None) if prop_diff.new_value else None
+            old_expr = self._extract_property_expression(prop_diff.old_value)
+            new_expr = self._extract_property_expression(prop_diff.new_value)
 
             if old_expr or new_expr:
                 # Determine expression state using DiffState enum
@@ -575,9 +580,31 @@ class DiffPresenter:
 
         return presentations
 
+    def _extract_property_expression(self, prop: Property | None) -> str | None:
+        """Extract the expression string from a Property object.
+
+        For the new DataPath-based model, the expression is stored in the
+        root PropertyPathValue (path ".") within the DataPath.
+        """
+        if prop is None:
+            return None
+        dp = prop.value
+        if hasattr(dp, "paths"):
+            pv = dp.paths.get(".")
+            return pv.expression if pv is not None else None
+        return None
+
     def _extract_property_value(self, prop: Property | None) -> Any:
-        """Extract the underlying value from a Property object."""
-        return prop.value if prop is not None else None
+        """Extract the underlying value from a Property object.
+
+        For the new DataPath-based model, this extracts the actual value
+        from the DataPath wrapper for UI display and expansion.
+        """
+        if prop is None:
+            return None
+
+        dp = prop.value
+        return dp.to_python()
 
     def _extract_property_group(self, prop: Property | None) -> str | None:
         """Extract the group attribute from a Property object."""

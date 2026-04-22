@@ -28,6 +28,7 @@ AUTO_EXCLUDED_PROPERTIES = [
     # Internal state tracking
     "EditorMode",  # UI-only property
     "EditorObject",  # UI-only property
+    "Proxy",  # Contains custom logic not useful for diffing, e.g. assembly joint logic
 ]
 
 # Additional properties to exclude (can be overridden by user configuration)

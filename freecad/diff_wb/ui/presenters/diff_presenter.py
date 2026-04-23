@@ -705,8 +705,7 @@ class DiffPresenter:
             Log.warning("No git repository detected")
             return
 
-        # Collect snapshots for documents that have diff changes OR are git-dirty
-        # (matching individual "+ Stage" button staggability: has_changes or is_git_dirty)
+        # Collect snapshots matching staging button criteria: changes OR git-dirty OR old snapshot missing
         snapshots = [
             result.new_snapshot
             for result in self._diff_results_by_path.values()
@@ -714,6 +713,7 @@ class DiffPresenter:
             and (
                 any(node.has_changes for node in result.hierarchy.roots)
                 or result.new_snapshot.git_path in self._dirty_paths
+                or WARNING_OLD_SNAPSHOT_MISSING in result.warnings
             )
         ]
 
@@ -757,6 +757,11 @@ class DiffPresenter:
             self._view.set_stage_all_button_visible(False)
             return
 
+        # Determine if we're in working tree view (used for staging button logic)
+        is_working_tree = (
+            self._view._current_selection is not None and self._view._current_selection.item_kind == "WORKING_TREE"
+        )
+
         presentations = []
         for diff_result in diff_results:
             nodes = [self._format_node(node) for node in diff_result.hierarchy.roots]
@@ -769,8 +774,11 @@ class DiffPresenter:
             # Check if this document's git path has git-tracked changes
             is_git_dirty = git_path in dirty_paths
 
-            # Stage button is enabled if there are diff changes OR git-tracked changes
-            stage_button_enabled = has_changes or is_git_dirty
+            # Check if this is a working tree diff (old snapshot missing)
+            has_old_snapshot_missing_warning = WARNING_OLD_SNAPSHOT_MISSING in warnings
+
+            # Stage button enabled if: diff changes OR git-dirty OR old snapshot missing (working tree only)
+            stage_button_enabled = has_changes or is_git_dirty or (has_old_snapshot_missing_warning and is_working_tree)
 
             presentations.append(
                 DiffTreePresentation(
@@ -798,9 +806,6 @@ class DiffPresenter:
         self._view.show_diff_trees(presentations)
 
         # Stage All button: only visible during Working Tree selection
-        is_working_tree = (
-            self._view._current_selection is not None and self._view._current_selection.item_kind == "WORKING_TREE"
-        )
         if is_working_tree:
             # Enable if any presentation has stage_button_enabled
             any_staggable = any(p.stage_button_enabled for p in presentations)

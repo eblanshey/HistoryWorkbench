@@ -735,7 +735,7 @@ class DiffPresenter:
             for result in self._diff_results_by_path.values()
             if result.new_snapshot is not None
             and (
-                any(node.has_changes for node in result.hierarchy.roots)
+                any(node.has_deep_changes for node in result.hierarchy.roots)
                 or result.new_snapshot.git_path in self._dirty_paths
                 or WARNING_OLD_SNAPSHOT_MISSING in result.warnings
             )
@@ -861,7 +861,7 @@ class DiffPresenter:
             type_id=node_diff.type_id,
             label=node_diff.label,
             state=node_diff.state,
-            has_changes=node_diff.has_changes,
+            has_changes=node_diff.has_deep_changes,
             children=[self._format_node(child) for child in node_diff.children],
         )
 

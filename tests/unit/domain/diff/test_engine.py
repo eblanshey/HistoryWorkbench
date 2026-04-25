@@ -131,23 +131,26 @@ class TestNodeDiff:
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
         # State should be MODIFIED because there's a changed property
         assert diff.state == DiffState.MODIFIED
-        assert diff.has_changes is True
+        assert diff.has_own_changes is True
+        assert diff.has_deep_changes is True
 
     def test_state_auto_calculated_unchanged(self) -> None:
         """Test that state is UNCHANGED when no property diffs."""
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[])
         assert diff.state == DiffState.UNCHANGED
-        assert diff.has_changes is False
+        assert diff.has_own_changes is False
+        assert diff.has_deep_changes is False
 
-    def test_has_changes_with_property_diffs(self) -> None:
-        """Test has_changes when there are property diffs."""
+    def test_has_own_and_deep_changes_with_property_diffs(self) -> None:
+        """Test own/deep change flags when there are property diffs."""
         prop_diff = PropertyDiff(
             property_name="Length",
             old_value=Property.from_freecad(5.0, {}, "Base"),
             new_value=Property.from_freecad(10.0, {}, "Base"),
         )
         diff = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad", property_diffs=[prop_diff])
-        assert diff.has_changes is True
+        assert diff.has_own_changes is True
+        assert diff.has_deep_changes is True
 
     def test_changed_properties(self) -> None:
         """Test getting only changed properties."""
@@ -165,6 +168,24 @@ class TestNodeDiff:
         changed_props = diff.changed_properties
         assert len(changed_props) == 1
         assert changed_props[0].property_name == "Length"
+
+    def test_parent_has_deep_changes_after_hierarchy_rollup(self) -> None:
+        """Parent can be own-unchanged but deep-changed via child."""
+        child_prop = PropertyDiff(
+            property_name="Width",
+            old_value=Property.from_freecad(5.0, {}, "Base"),
+            new_value=Property.from_freecad(15.0, {}, "Base"),
+        )
+        child = NodeDiff(path="Body/Pad/Sub", type_id="Part::Feature", property_diffs=[child_prop])
+        parent = NodeDiff(path="Body/Pad", type_id="PartDesign::Pad")
+
+        hierarchy = DiffHierarchy()
+        hierarchy.add_node(parent)
+        hierarchy.add_node(child)
+        hierarchy.compute_deep_change_flags()
+
+        assert parent.has_own_changes is False
+        assert parent.has_deep_changes is True
 
 
 class TestDiffResult:

@@ -273,10 +273,8 @@ def _split_path_for_sort(path: str) -> list[tuple[int, str | int]]:
     return out
 
 
-def _are_properties_modified(property_diffs: list[PropertyDiff], children: list[NodeDiff]) -> bool:
-    """Check if any properties or children have modifications."""
-    if any(child.state != DiffState.UNCHANGED for child in children):
-        return True
+def _are_properties_modified(property_diffs: list[PropertyDiff]) -> bool:
+    """Check if any own property diffs are modified."""
     return any(prop_diff.state != DiffState.UNCHANGED for prop_diff in property_diffs)
 
 
@@ -346,9 +344,9 @@ class NodeDiff:
     Represents the diff result for a single node in the document tree,
     including its properties and children.
 
-    The state is automatically calculated based on property diffs and children:
+    The state is automatically calculated based on own property diffs:
     - If `_force_state` is set (by factory functions), that state is used
-    - Otherwise, state is MODIFIED if any property/child has changes, UNCHANGED otherwise
+    - Otherwise, state is MODIFIED if any own property has changes, UNCHANGED otherwise
 
     This separates node-level changes (entire node added/deleted) from
     property-level changes (properties modified/added/deleted).
@@ -387,22 +385,26 @@ class NodeDiff:
     new_after: str | None = field(default=None)
     precision: int = DEFAULT_FLOAT_PRECISION
     _force_state: DiffState | None = field(default=None, repr=False, compare=False)
+    _has_deep_changes: bool = field(default=False, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        """Calculate state based on _force_state or property diffs.
+        """Calculate own state from _force_state or own property diffs.
 
         State calculation logic:
         1. If _force_state is set (node-level change), use that state
-        2. Otherwise, check if any properties/children are modified
+        2. Otherwise, check if any own properties are modified
         3. Return MODIFIED if changes exist, UNCHANGED otherwise
         """
         # Use object.__setattr__ since the dataclass is frozen
         if self._force_state is not None:
             object.__setattr__(self, "state", self._force_state)
-        elif _are_properties_modified(self.property_diffs, self.children):
+        elif _are_properties_modified(self.property_diffs):
             object.__setattr__(self, "state", DiffState.MODIFIED)
         else:
             object.__setattr__(self, "state", DiffState.UNCHANGED)
+
+        # Initialize deep-change cache with own state; hierarchy recomputes once after build.
+        object.__setattr__(self, "_has_deep_changes", self.state != DiffState.UNCHANGED)
 
     def __str__(self) -> str:
         state_str = self.state.name
@@ -411,14 +413,14 @@ class NodeDiff:
         return f"NodeDiff({self.path}, {state_str}, {prop_count} props, {child_count} children)"
 
     @property
-    def has_changes(self) -> bool:
-        """Check if this node or any children have changes."""
-        if self.state != DiffState.UNCHANGED:
-            return True
-        # Check if any property diff has changes (not just if property_diffs exists)
-        if any(p.state != DiffState.UNCHANGED for p in self.property_diffs):
-            return True
-        return any(child.has_changes for child in self.children)
+    def has_own_changes(self) -> bool:
+        """Check whether this node itself has changes (excluding descendants)."""
+        return self.state != DiffState.UNCHANGED
+
+    @property
+    def has_deep_changes(self) -> bool:
+        """Check whether this node or any descendants have changes."""
+        return self._has_deep_changes
 
     @property
     def changed_properties(self) -> list[PropertyDiff]:
@@ -451,6 +453,10 @@ class DiffResult:
     modified_count: int = 0
     hierarchy: DiffHierarchy = field(default_factory=lambda: DiffHierarchy())
 
+    def __post_init__(self) -> None:
+        """Compute deep-change flags once after hierarchy is fully built."""
+        self.hierarchy.compute_deep_change_flags()
+
     def __str__(self) -> str:
         return (
             f"DiffResult({self.old_snapshot.document_name} vs {self.new_snapshot.document_name}): "
@@ -461,7 +467,7 @@ class DiffResult:
     def has_changes(self) -> bool:
         """Check if there are any changes in this diff."""
         return (self.added_count > 0 or self.deleted_count > 0 or self.modified_count > 0) or any(
-            node.has_changes for node in self.hierarchy.roots
+            node.has_deep_changes for node in self.hierarchy.roots
         )
 
     def get_all_changed_paths(self) -> list[str]:
@@ -473,7 +479,7 @@ class DiffResult:
 
     def _collect_changed_paths(self, node: NodeDiff, result: list[str]) -> None:
         """Recursively collect paths with changes."""
-        if node.has_changes:
+        if node.has_deep_changes:
             result.append(node.path)
         for child in node.children:
             self._collect_changed_paths(child, result)
@@ -499,6 +505,18 @@ class DiffHierarchy:
     def roots(self) -> list[NodeDiff]:
         """Get list of top-level NodeDiff objects."""
         return self._roots
+
+    def compute_deep_change_flags(self) -> None:
+        """Compute and cache descendant-aware change flags for all nodes once."""
+
+        def _compute(node: NodeDiff) -> bool:
+            has_child_change = any(_compute(child) for child in node.children)
+            has_deep = node.has_own_changes or has_child_change
+            object.__setattr__(node, "_has_deep_changes", has_deep)
+            return has_deep
+
+        for root in self._roots:
+            _compute(root)
 
     def find_by_path(self, path: str) -> NodeDiff | None:
         """Find a NodeDiff by its path.

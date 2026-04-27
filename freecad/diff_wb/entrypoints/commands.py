@@ -222,13 +222,35 @@ class _CommitCommand:
         if result.is_success:
             container.log("Commit successful")
             # Reload commits by triggering refresh
-            ui_registry.git_repository_presenter.on_refresh_clicked()
+            ui_registry.git_repository_presenter.refresh_repository_and_commits()
         else:
             QMessageBox.critical(
                 None,  # type: ignore[arg-type]
                 container.translate("Commit", COMMIT_FAILED_TITLE),
                 result.message or "Git commit failed",
             )
+
+
+class _RefreshRepositoryCommand:
+    """Command to refresh repository detection and reload commits."""
+
+    def GetResources(self) -> dict[str, str]:
+        """Return FreeCAD command metadata for UI integration."""
+        return {
+            "MenuText": "Refresh Repository and Load Commits",
+            "ToolTip": "Refresh repository detection and reload commits",
+            "Pixmap": os.path.join(ICONPATH, "RefreshRepository.svg"),
+        }
+
+    def IsActive(self) -> bool:
+        """Return whether the command should be enabled."""
+        return True
+
+    def Activated(self) -> None:
+        """FreeCAD calls this when user clicks toolbar button."""
+        from ..ui.registry import ui_registry
+
+        ui_registry.git_repository_presenter.refresh_repository_and_commits()
 
 
 class _OpenAllDocumentsInRepositoryCommand:
@@ -238,7 +260,8 @@ class _OpenAllDocumentsInRepositoryCommand:
         """Return FreeCAD command metadata for UI integration."""
         return {
             "MenuText": "Open All Documents in Repository",
-            "ToolTip": "Open every .FCStd file found in repository",
+            "ToolTip": "Open every .FCStd file found in repository. Useful for generating snapshots for all project "
+            "documents.",
             "Pixmap": os.path.join(ICONPATH, "OpenAllDocuments.svg"),
         }
 
@@ -279,4 +302,5 @@ def register_commands() -> None:
     Gui.addCommand("DiffCompare", _CompareCommand())
     Gui.addCommand("DiffSwapColumns", _SwapColumnsCommand())
     Gui.addCommand("DiffCommit", _CommitCommand())
+    Gui.addCommand("DiffRefreshRepository", _RefreshRepositoryCommand())
     Gui.addCommand("DiffOpenAllDocumentsInRepository", _OpenAllDocumentsInRepositoryCommand())

@@ -51,11 +51,12 @@ class TestWorkbenchLoading:
                 assert DiffWorkbench.MenuText == "Diff"
                 assert DiffWorkbench.ToolTip == "Compare document snapshots"
                 assert DiffWorkbench.toolbox == [
+                    "DiffRefreshRepository",
+                    "DiffOpenAllDocumentsInRepository",
+                    "DiffCommit",
                     "DiffTakeSnapshot",
                     "DiffCompare",
                     "DiffSwapColumns",
-                    "DiffCommit",
-                    "DiffOpenAllDocumentsInRepository",
                 ]
         finally:
             freecad_app.Console.PrintError = original_print_error
@@ -91,11 +92,12 @@ class TestWorkbenchLoading:
             assert wb.MenuText == "Diff"
             assert wb.ToolTip == "Compare document snapshots"
             assert wb.toolbox == [
+                "DiffRefreshRepository",
+                "DiffOpenAllDocumentsInRepository",
+                "DiffCommit",
                 "DiffTakeSnapshot",
                 "DiffCompare",
                 "DiffSwapColumns",
-                "DiffCommit",
-                "DiffOpenAllDocumentsInRepository",
             ]
         else:
             # Class not available (headless/Xvfb mode) - check source code instead

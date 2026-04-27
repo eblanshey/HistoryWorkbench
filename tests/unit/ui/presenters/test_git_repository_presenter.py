@@ -5,7 +5,7 @@
 """Unit tests for GitRepositoryPresenter."""
 
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -230,6 +230,26 @@ class TestGitRepositoryPresenter:
 
         # Assert
         mock_view.set_refresh_callback.assert_called_once_with(presenter.on_refresh_clicked)
+
+    def test_on_workbench_activated_delegates_to_refresh_repository_and_commits(
+        self,
+        presenter: GitRepositoryPresenter,
+    ) -> None:
+        """on_workbench_activated() delegates to refresh_repository_and_commits()."""
+        with patch.object(presenter, "refresh_repository_and_commits") as mock_refresh:
+            presenter.on_workbench_activated()
+
+        mock_refresh.assert_called_once_with()
+
+    def test_on_refresh_clicked_delegates_to_refresh_repository_and_commits(
+        self,
+        presenter: GitRepositoryPresenter,
+    ) -> None:
+        """on_refresh_clicked() delegates to refresh_repository_and_commits()."""
+        with patch.object(presenter, "refresh_repository_and_commits") as mock_refresh:
+            presenter.on_refresh_clicked()
+
+        mock_refresh.assert_called_once_with()
 
 
 class TestCommitLoading:

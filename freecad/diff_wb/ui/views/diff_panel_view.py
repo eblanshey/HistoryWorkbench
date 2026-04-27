@@ -25,26 +25,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...domain.config import FLOAT_PRECISION as DEFAULT_FLOAT_PRECISION
-from ...domain.settings import SettingsRepository
-from ...utils import format_float
-
-
-# Module-level icon loading for refresh button and warning icon
-# This is done once at import time rather than per-instance to avoid repeated imports
-try:
-    import FreeCADGui as Gui
-
-    _REFRESH_ICON: QIcon | None = Gui.getIcon("view-refresh.svg")
-    _WARNING_ICON: QIcon | None = Gui.getIcon("Warning.svg")
-except (ImportError, AttributeError):
-    # FreeCADGui not available (e.g., during unit tests or non-GUI environments)
-    _REFRESH_ICON = None
-    _WARNING_ICON = None
-
 from ...application.actions.result_models import SnapshotSummary
+from ...domain.config import FLOAT_PRECISION as DEFAULT_FLOAT_PRECISION
 from ...domain.diff.models import DiffState
 from ...domain.git.models import GitCommit, GitRepository
+from ...domain.settings import SettingsRepository
+from ...resources import get_icon_path
+from ...utils import format_float
 from ..presenters.presentation_models import (
     DiffTreePresentation,
     NodePresentation,
@@ -60,6 +47,20 @@ from ..translation_strings import (
     STAGE_ALL_LABEL,
 )
 from .models import HistorySelection
+
+
+# Module-level icon loading for refresh button and warning icon.
+# Refresh icon is workbench-owned and loaded from package resources.
+# Warning icon comes from FreeCAD theme when available.
+_REFRESH_ICON: QIcon = QIcon(str(get_icon_path("RefreshRepository.svg")))
+
+try:
+    import FreeCADGui as Gui
+
+    _WARNING_ICON: QIcon | None = Gui.getIcon("Warning.svg")
+except (ImportError, AttributeError):
+    # FreeCADGui not available (e.g., during unit tests or non-GUI environments)
+    _WARNING_ICON = None
 
 
 __all__ = ["DiffPanelView", "HistorySelection"]
@@ -315,9 +316,8 @@ class DiffPanelView(QWidget):
         self._repository_label.setStyleSheet("font-size: 11px; color: gray; font-style: italic;")
         # Refresh button with module-level cached icon
         self._refresh_button = QPushButton()
-        if _REFRESH_ICON is not None:
-            self._refresh_button.setIcon(_REFRESH_ICON)
-            self._refresh_button.setIconSize(QSize(16, 24))
+        self._refresh_button.setIcon(_REFRESH_ICON)
+        self._refresh_button.setIconSize(QSize(24, 24))
         self._refresh_button.setToolTip("Refresh git repository detection")
         # Create header layout with repository label on left and refresh button on right
         repository_header_layout = QHBoxLayout()

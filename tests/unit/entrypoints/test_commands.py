@@ -11,6 +11,7 @@ import pytest
 from freecad.diff_wb.application.actions.result_models import CompareResult, SnapshotResult
 from freecad.diff_wb.entrypoints.commands import (
     _CompareCommand,
+    _RefreshRepositoryCommand,
     _SwapColumnsCommand,
     _TakeSnapshotCommand,
 )
@@ -472,3 +473,33 @@ class TestSwapColumnsCommand:
         # TODO: Implement when UI view exists
         # For now, just verify it doesn't crash
         command.Activated()  # Should pass (currently does nothing)
+
+
+class TestRefreshRepositoryCommand:
+    """Tests for _RefreshRepositoryCommand."""
+
+    @patch("freecad.diff_wb.ui.registry.ui_registry")
+    def test_refresh_repository_command_calls_git_repository_presenter(
+        self,
+        mock_ui_registry: Mock,
+    ) -> None:
+        """Activated delegates to GitRepositoryPresenter refresh API."""
+        mock_presenter = MagicMock()
+        mock_ui_registry.git_repository_presenter = mock_presenter
+
+        command = _RefreshRepositoryCommand()
+
+        command.Activated()
+
+        mock_presenter.refresh_repository_and_commits.assert_called_once_with()
+
+    def test_refresh_repository_command_resources_correct(self) -> None:
+        """Menu text, tooltip, and icon path are correct."""
+        command = _RefreshRepositoryCommand()
+
+        resources = command.GetResources()
+
+        assert resources["MenuText"] == "Refresh Repository and Load Commits"
+        assert "refresh" in resources["ToolTip"].lower()
+        assert resources["Pixmap"].endswith("RefreshRepository.svg")
+        assert command.IsActive() is True

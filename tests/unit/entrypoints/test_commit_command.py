@@ -54,7 +54,7 @@ class TestCommitCommand:
         # Verify
         mock_action.execute.assert_called_once_with(mock_repo, "Add new feature")
         mock_container.log.assert_called_once_with("Commit successful")
-        mock_presenter.on_refresh_clicked.assert_called_once()
+        mock_presenter.refresh_repository_and_commits.assert_called_once()
         mock_message_box.critical.assert_not_called()
 
     @patch("PySide6.QtWidgets.QMessageBox")

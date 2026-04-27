@@ -55,11 +55,20 @@ class GitRepositoryPresenter:
         This method is called when the workbench is activated to detect
         the current git repository and display it in the UI.
         """
+        self.refresh_repository_and_commits()
+
+    def refresh_repository_and_commits(self) -> None:
+        """Refresh repository detection and reload commit list.
+
+        This method provides a UI-agnostic entry point for any caller
+        that needs to re-detect the current repository, update UI state,
+        and repopulate commits in the view.
+        """
         self._detect_git_repository()
 
     def on_refresh_clicked(self) -> None:
         """Re-detect and display git repository when refresh is clicked."""
-        self._detect_git_repository()
+        self.refresh_repository_and_commits()
 
     def _detect_git_repository(self) -> None:
         """Detect git repository and update UI and application state.

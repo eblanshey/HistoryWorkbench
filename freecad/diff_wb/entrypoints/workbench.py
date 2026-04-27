@@ -41,11 +41,12 @@ if Gui is not None:
 
         Icon = os.path.join(ICONPATH, "Logo.svg")
         toolbox = [
+            "DiffRefreshRepository",
+            "DiffOpenAllDocumentsInRepository",
+            "DiffCommit",
             "DiffTakeSnapshot",
             "DiffCompare",
             "DiffSwapColumns",
-            "DiffCommit",
-            "DiffOpenAllDocumentsInRepository",
         ]
 
         def __init__(self):

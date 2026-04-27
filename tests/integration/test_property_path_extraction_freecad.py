@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # File responsibility: Integration tests for FreeCAD property path extraction.
 # Tests verify placement nested expressions, constraint item expressions,
-# and quantity type dispatch with real FreeCAD runtime.
+# and quantity primitive dispatch with real FreeCAD runtime.
 """Integration tests for FreeCAD property path extraction.
 
 Phase 5: Focused FreeCAD Integration Validation.
@@ -9,7 +9,7 @@ Phase 5: Focused FreeCAD Integration Validation.
 Tests:
 - Placement nested expressions captured with normalized keys
 - Constraint item expressions captured at root/item level only
-- Quantity extraction maps to QuantityData
+- Quantity extraction maps to PrimitiveData with a QUANTITY path
 - Root expressions on primitives
 - Vector sub-path expressions within Placement
 
@@ -121,14 +121,14 @@ class TestConstraintItemExpression:
 
 
 class TestQuantityExtraction:
-    """Test quantity extraction maps to QuantityData with QUANTITY path."""
+    """Test quantity extraction maps to PrimitiveData with QUANTITY path."""
 
     def test_quantity_property_type(self, temp_document):
         """Quantity property should extract with QUANTITY type and unit field."""
         from freecad.diff_wb.domain.snapshots.gui_extractor import (
             _extract_property_value,
         )
-        from freecad.diff_wb.domain.tree.data_path import PropertyPathType, QuantityData
+        from freecad.diff_wb.domain.tree.data_path import PrimitiveData, PropertyPathType
 
         doc = temp_document
         pad = doc.addObject("PartDesign::Pad", "TestPad")
@@ -137,7 +137,7 @@ class TestQuantityExtraction:
 
         prop = _extract_property_value(pad, "Length")
         assert prop is not None
-        assert isinstance(prop.value, QuantityData)
+        assert isinstance(prop.value, PrimitiveData)
         assert set(prop.value.paths.keys()) == {"."}
         assert prop.value.paths["."].type_ == PropertyPathType.QUANTITY
         assert prop.value.paths["."].value == pytest.approx(10.0)
@@ -149,7 +149,7 @@ class TestQuantityExtraction:
             _build_expression_map_for_property,
             _extract_property_value,
         )
-        from freecad.diff_wb.domain.tree.data_path import PropertyPathType, QuantityData
+        from freecad.diff_wb.domain.tree.data_path import PrimitiveData, PropertyPathType
 
         doc = temp_document
         pad = doc.addObject("PartDesign::Pad", "TestPad")
@@ -161,7 +161,7 @@ class TestQuantityExtraction:
 
         prop = _extract_property_value(pad, "Length")
         assert prop is not None
-        assert isinstance(prop.value, QuantityData)
+        assert isinstance(prop.value, PrimitiveData)
         # Quantity stores expression on the same root path "."
         assert prop.value.paths["."].expression == "5 mm"
         assert prop.value.paths["."].type_ == PropertyPathType.QUANTITY

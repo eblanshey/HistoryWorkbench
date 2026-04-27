@@ -48,7 +48,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "Primitive"
+        assert prop.value.DATA_PATH_KIND.value == "Primitive"
 
     def test_float_value_wrapped_in_primitive_data(self) -> None:
         """Float property value is wrapped in PrimitiveData."""
@@ -57,7 +57,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "Primitive"
+        assert prop.value.DATA_PATH_KIND.value == "Primitive"
 
     def test_string_value_wrapped_in_primitive_data(self) -> None:
         """String property value is wrapped in PrimitiveData."""
@@ -66,7 +66,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "Primitive"
+        assert prop.value.DATA_PATH_KIND.value == "Primitive"
 
     def test_boolean_value_wrapped_in_primitive_data(self) -> None:
         """Boolean property value is wrapped in PrimitiveData."""
@@ -75,7 +75,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "Primitive"
+        assert prop.value.DATA_PATH_KIND.value == "Primitive"
 
     def test_none_value_wrapped_in_primitive_data(self) -> None:
         """None property value is wrapped in PrimitiveData."""
@@ -84,7 +84,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "Primitive"
+        assert prop.value.DATA_PATH_KIND.value == "Primitive"
 
     def test_expression_map_passed_through(self) -> None:
         """Expression map from ExpressionEngine is properly passed through to Property."""
@@ -167,7 +167,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "List"
+        assert prop.value.DATA_PATH_KIND.value == "List"
         assert len(prop.value.items) == 3
 
     def test_list_with_expression_map(self) -> None:
@@ -185,7 +185,7 @@ class TestExtractPropertyValue:
 
         assert prop is not None
         assert isinstance(prop, Property)
-        assert prop.value.INTERNAL_TYPE.value == "List"
+        assert prop.value.DATA_PATH_KIND.value == "List"
         assert len(prop.value.items) == 2
         # Each item is a DataPath with paths dict; first item should have the expression
         assert prop.value.items[0].paths["."].expression == "5 mm"

@@ -79,18 +79,36 @@ objects:
   name: Sketch
   after: 
   properties:
-      - Contraints:
-            - FirstValue
-            - SecondValue
-      - Label: MySketch
+    Label:
+      kind: Primitive
+      paths:
+        .:
+          type: STRING
+          value: MySketch
+      group: Base
   path: Pad/Sketch
 - id: 47
   type_id: PartDesign::Pad
   name: Pad
   after: Sketch002
   properties:
-      - Length: 43mm
-      - Label: MyPad
+    Length:
+      kind: Primitive
+      paths:
+        .:
+          type: QUANTITY
+          value: "43.0 mm"
+      group: Base
+    Placement:
+      kind: Placement
+      paths:
+        Base.x:
+          type: QUANTITY
+          value: "0.0 mm"
+        Rotation.Angle:
+          type: QUANTITY
+          value: "0.0 deg"
+      group: Base
   path: Pad
 - id: 48
   type_id: Sketcher::SketchObject

@@ -4,15 +4,16 @@
 """Unit tests for DataPath round-trip serialization."""
 
 from freecad.diff_wb.domain.tree.data_path import (
+    DATA_PATH_KIND_MAP,
     ConstraintData,
-    InternalType,
+    DataPathKind,
     ListData,
     PlacementData,
     PrimitiveData,
     PropertyPathType,
     PropertyPathValue,
-    QuantityData,
     RotationData,
+    SnapshotFormatError,
     UnknownData,
     VectorData,
     data_path_from_freecad_value,
@@ -89,12 +90,12 @@ class TestUnknownDataRoundTrip:
         assert "CustomType" in restored.paths["."].freecad_type
 
 
-class TestQuantityDataRoundTrip:
-    """Round-trip tests for QuantityData with single QUANTITY path."""
+class TestQuantityPrimitiveRoundTrip:
+    """Round-trip tests for PrimitiveData with single QUANTITY path."""
 
     def test_roundtrip_value_and_unit(self) -> None:
-        """Test QuantityData round-trip stores value/unit in single QUANTITY path."""
-        original = QuantityData(
+        """Test quantity primitive round-trip stores canonical quantity path string."""
+        original = PrimitiveData(
             paths={
                 ".": PropertyPathValue(
                     PropertyPathType.QUANTITY,
@@ -104,16 +105,19 @@ class TestQuantityDataRoundTrip:
             }
         )
         serialized = original.serialize()
+        assert serialized["kind"] == "Primitive"
+        assert serialized["paths"]["."]["value"] == "10.0 mm"
+        assert "unit" not in serialized["paths"]["."]
         restored = data_path_from_serialized(serialized)
-        assert isinstance(restored, QuantityData)
+        assert isinstance(restored, PrimitiveData)
         assert set(restored.paths.keys()) == {"."}
         assert restored.paths["."].type_ == PropertyPathType.QUANTITY
         assert restored.paths["."].value == 10.0
         assert restored.paths["."].unit == "mm"
 
     def test_roundtrip_expression_preserved(self) -> None:
-        """Test QuantityData round-trip preserves expression on root path."""
-        original = QuantityData(
+        """Test quantity primitive round-trip preserves expression on root path."""
+        original = PrimitiveData(
             paths={
                 ".": PropertyPathValue(
                     PropertyPathType.QUANTITY,
@@ -125,7 +129,7 @@ class TestQuantityDataRoundTrip:
         )
         serialized = original.serialize()
         restored = data_path_from_serialized(serialized)
-        assert isinstance(restored, QuantityData)
+        assert isinstance(restored, PrimitiveData)
         assert set(restored.paths.keys()) == {"."}
         assert restored.paths["."].value == 5.0
         assert restored.paths["."].unit == "mm"
@@ -444,18 +448,20 @@ class TestListDataRoundTrip:
         assert restored.items[1].items[1].paths["."].value == 4
 
 
-class TestInternalTypeMap:
-    """Tests for INTERNAL_TYPE_MAP dispatch."""
+class TestDataPathKindMap:
+    """Tests for DATA_PATH_KIND_MAP dispatch."""
 
-    def test_all_internal_types_mapped(self) -> None:
-        """Test that all InternalType values are in INTERNAL_TYPE_MAP."""
-        from freecad.diff_wb.domain.tree.data_path import INTERNAL_TYPE_MAP
+    def test_all_data_path_kinds_mapped(self) -> None:
+        """Test that all DataPathKind values are in DATA_PATH_KIND_MAP."""
+        for kind in DataPathKind:
+            assert kind.value in DATA_PATH_KIND_MAP
 
-        for it in InternalType:
-            assert it.value in INTERNAL_TYPE_MAP
-
-    def test_deserialize_unknown_type_fallback(self) -> None:
-        """Test that unknown type values fall back to UnknownData."""
-        data = {"type_": "NonExistent", "paths": {".": {"type_": "STRING", "value": "test"}}}
-        result = data_path_from_serialized(data)
-        assert isinstance(result, UnknownData)
+    def test_deserialize_unknown_kind_fails_clearly(self) -> None:
+        """Unknown data path kinds fail with a snapshot format error."""
+        data = {"kind": "NonExistent", "paths": {".": {"type": "STRING", "value": "test"}}}
+        try:
+            data_path_from_serialized(data)
+        except SnapshotFormatError as exc:
+            assert "Unknown data path kind" in str(exc)
+        else:
+            raise AssertionError("Expected SnapshotFormatError")

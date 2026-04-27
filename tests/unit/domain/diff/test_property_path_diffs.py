@@ -22,7 +22,6 @@ from freecad.diff_wb.domain.tree.data_path import (
     PrimitiveData,
     PropertyPathType,
     PropertyPathValue,
-    QuantityData,
     RotationData,
     UnknownData,
     VectorData,
@@ -225,9 +224,9 @@ class TestFlattenDataPath:
         assert "." in result
         assert "" not in result
 
-    def test_quantity_data_root_only(self) -> None:
-        """QuantityData flattens to single QUANTITY path entry."""
-        qd = QuantityData(
+    def test_quantity_primitive_root_only(self) -> None:
+        """Quantity primitive flattens to single QUANTITY path entry."""
+        qd = PrimitiveData(
             paths={
                 ".": PropertyPathValue(PropertyPathType.QUANTITY, 10.0, unit="mm"),
             }
@@ -238,9 +237,9 @@ class TestFlattenDataPath:
         assert result["."].type_ == PropertyPathType.QUANTITY
         assert result["."].unit == "mm"
 
-    def test_quantity_data_with_root_expression(self) -> None:
-        """QuantityData with expression keeps expression on root path."""
-        qd = QuantityData(
+    def test_quantity_primitive_with_root_expression(self) -> None:
+        """Quantity primitive with expression keeps expression on root path."""
+        qd = PrimitiveData(
             paths={
                 ".": PropertyPathValue(
                     PropertyPathType.QUANTITY,

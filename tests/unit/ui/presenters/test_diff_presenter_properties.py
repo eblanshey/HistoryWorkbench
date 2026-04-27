@@ -21,9 +21,9 @@ from freecad.diff_wb.domain.diff.models import DiffHierarchy, DiffResult, DiffSt
 from freecad.diff_wb.domain.snapshots import Snapshot
 from freecad.diff_wb.domain.tree import Property
 from freecad.diff_wb.domain.tree.data_path import (
+    PrimitiveData,
     PropertyPathType,
     PropertyPathValue,
-    QuantityData,
 )
 from freecad.diff_wb.ui.presenters.diff_presenter import DiffPresenter
 from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
@@ -986,14 +986,14 @@ class TestPhase2OldValueAndExpression:
 
 
 class TestQuantityPropertyPresentation:
-    """Tests for QuantityData property presentation with single QUANTITY path."""
+    """Tests for quantity primitive property presentation."""
 
     def test_quantity_property_renders_as_leaf(self) -> None:
         """Quantity property renders as single leaf row with value/unit summary."""
         fake_view, presenter = _create_test_presenter()
 
         old_prop = Property(
-            value=QuantityData(
+            value=PrimitiveData(
                 paths={
                     ".": PropertyPathValue(PropertyPathType.QUANTITY, 10.0, unit="mm"),
                 }
@@ -1001,7 +1001,7 @@ class TestQuantityPropertyPresentation:
             group="Base",
         )
         new_prop = Property(
-            value=QuantityData(
+            value=PrimitiveData(
                 paths={
                     ".": PropertyPathValue(PropertyPathType.QUANTITY, 12.0, unit="mm"),
                 }
@@ -1041,7 +1041,7 @@ class TestQuantityPropertyPresentation:
         fake_view, presenter = _create_test_presenter()
 
         old_prop = Property(
-            value=QuantityData(
+            value=PrimitiveData(
                 paths={
                     ".": PropertyPathValue(
                         PropertyPathType.QUANTITY,
@@ -1054,7 +1054,7 @@ class TestQuantityPropertyPresentation:
             group="Base",
         )
         new_prop = Property(
-            value=QuantityData(
+            value=PrimitiveData(
                 paths={
                     ".": PropertyPathValue(PropertyPathType.QUANTITY, 10.0, unit="mm"),
                 }

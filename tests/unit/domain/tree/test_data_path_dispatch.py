@@ -8,7 +8,10 @@ import pytest
 from freecad.diff_wb.domain.tree.data_path import (
     DataPath,
     ListData,
+    PlacementData,
     PrimitiveData,
+    PropertyPathType,
+    RotationData,
     UnknownData,
     data_path_from_freecad_value,
 )
@@ -19,6 +22,51 @@ class MockUnknownType:
 
     def __str__(self) -> str:
         return "<MockUnknownType display>"
+
+
+def _init_vector(self: object, x: float, y: float, z: float) -> None:
+    """Initialize a Base.Vector-shaped test double."""
+    self.x = x
+    self.y = y
+    self.z = z
+
+
+def _init_rotation(self: object, angle: float, axis: object) -> None:
+    """Initialize a Base.Rotation-shaped test double."""
+    self.Angle = angle
+    self.Axis = axis
+
+
+def _init_placement(self: object, base: object, rotation: object) -> None:
+    """Initialize a Base.Placement-shaped test double."""
+    self.Base = base
+    self.Rotation = rotation
+
+
+BaseVector = type("Vector", (), {"__module__": "Base", "__init__": _init_vector})
+BaseRotation = type("Rotation", (), {"__module__": "Base", "__init__": _init_rotation})
+BasePlacement = type("Placement", (), {"__module__": "Base", "__init__": _init_placement})
+
+
+def _base_vector(x: float, y: float, z: float) -> object:
+    """Create a Base.Vector-shaped test object."""
+    return BaseVector(x=x, y=y, z=z)
+
+
+def _base_rotation(angle: float) -> object:
+    """Create a Base.Rotation-shaped test object."""
+    axis = _base_vector(0.0, 0.0, 1.0)
+    assert isinstance(axis, BaseVector)
+    return BaseRotation(angle=angle, axis=axis)
+
+
+def _base_placement() -> object:
+    """Create a Base.Placement-shaped test object."""
+    base = _base_vector(1.0, 2.0, 3.0)
+    rotation = _base_rotation(1.0)
+    assert isinstance(base, BaseVector)
+    assert isinstance(rotation, BaseRotation)
+    return BasePlacement(base=base, rotation=rotation)
 
 
 class TestPythonTypeDispatch:
@@ -82,6 +130,30 @@ class TestPythonTypeDispatch:
         result = data_path_from_freecad_value([1, 2, 3], {})
         assert isinstance(result, ListData)
         assert len(result.items) == 3
+
+
+class TestFreeCadQuantityPathDispatch:
+    """Tests for quantity-valued paths in FreeCAD-shaped values."""
+
+    def test_placement_length_and_angle_paths_are_quantities(self) -> None:
+        """Placement Base coordinates and Rotation.Angle dispatch to QUANTITY paths."""
+        result = data_path_from_freecad_value(_base_placement(), {})
+
+        assert isinstance(result, PlacementData)
+        assert result.paths["Base.x"].type_ == PropertyPathType.QUANTITY
+        assert result.paths["Base.x"].unit == "mm"
+        assert result.paths["Rotation.Angle"].type_ == PropertyPathType.QUANTITY
+        assert result.paths["Rotation.Angle"].unit == "deg"
+        assert result.paths["Rotation.Axis.x"].type_ == PropertyPathType.FLOAT
+
+    def test_rotation_angle_path_is_quantity(self) -> None:
+        """Rotation Angle dispatches to a QUANTITY path while Axis remains floats."""
+        result = data_path_from_freecad_value(_base_rotation(1.0), {})
+
+        assert isinstance(result, RotationData)
+        assert result.paths["Angle"].type_ == PropertyPathType.QUANTITY
+        assert result.paths["Angle"].unit == "deg"
+        assert result.paths["Axis.x"].type_ == PropertyPathType.FLOAT
 
     def test_tuple_dispatch(self) -> None:
         """Test that tuple values dispatch to ListData."""

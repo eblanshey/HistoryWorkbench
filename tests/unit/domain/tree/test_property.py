@@ -4,7 +4,7 @@
 """Unit tests for the Property class."""
 
 from freecad.diff_wb.domain.tree.data_path import (
-    InternalType,
+    DataPathKind,
     ListData,
     PrimitiveData,
     PropertyPathType,
@@ -205,7 +205,7 @@ class TestPropertySerialization:
         """Test serialization of a primitive property."""
         pv = Property.from_freecad(42, {".": "Sketch.X"}, "Base")
         serialized = pv.to_serialized()
-        assert serialized["type_"] == InternalType.Primitive.value
+        assert serialized["kind"] == DataPathKind.Primitive.value
         assert serialized["group"] == "Base"
         assert serialized["paths"]["."]["value"] == 42
         assert serialized["paths"]["."]["expression"] == "Sketch.X"
@@ -214,15 +214,15 @@ class TestPropertySerialization:
         """Test serialization of a string property."""
         pv = Property.from_freecad("hello", {}, "Base")
         serialized = pv.to_serialized()
-        assert serialized["type_"] == InternalType.Primitive.value
+        assert serialized["kind"] == DataPathKind.Primitive.value
         assert serialized["paths"]["."]["value"] == "hello"
 
     def test_deserialize_primitive(self) -> None:
         """Test deserialization of a primitive property."""
         data = {
-            "type_": InternalType.Primitive.value,
+            "kind": DataPathKind.Primitive.value,
             "paths": {
-                ".": {"type_": "INT", "value": 42, "expression": "Sketch.X"},
+                ".": {"type": "INT", "value": 42, "expression": "Sketch.X"},
             },
             "group": "Data",
         }

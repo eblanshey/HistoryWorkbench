@@ -5,21 +5,22 @@
 expression preservation, and YAML round-trip behavior.
 
 This module defines a set of data path value classes that wrap FreeCAD and
-Python values into structured path entries. Each value type (primitive,
-quantity, vector, rotation, placement, constraint, list, unknown) is
+Python values into structured path entries. Each value shape (primitive,
+vector, rotation, placement, constraint, list, unknown) is
 represented by a dedicated class with a deterministic set of path keys.
 
 The module provides:
 
 * ``PropertyPathValue`` - A single path entry with type, value, expression,
   and optional FreeCAD type info. Float values use tolerance-based equality.
-  QUANTITY types store an associated unit string.
+  QUANTITY types store an associated unit string and serialize as canonical
+  text like ``"10.0 mm"``.
 * ``DataPath`` - A Protocol that all path-based data classes implement,
   providing factory methods for creation from FreeCAD values or serialized
   dicts, and a ``serialize`` method for YAML output.
-* Concrete ``DataPath`` subclasses: ``PrimitiveData``, ``QuantityData``,
-  ``VectorData``, ``RotationData``, ``PlacementData``, ``ConstraintData``,
-  ``UnknownData``, and ``ListData``.
+* Concrete ``DataPath`` subclasses: ``PrimitiveData``, ``VectorData``,
+  ``RotationData``, ``PlacementData``, ``ConstraintData``, ``UnknownData``,
+  and ``ListData``.
 * O(1) dispatch maps and constructor functions for converting FreeCAD/
   Python values to the correct ``DataPath`` subclass, and vice versa.
 """
@@ -38,14 +39,17 @@ from ...utils import float_values_equal
 from ..config import FLOAT_PRECISION as DEFAULT_FLOAT_PRECISION
 
 
-class InternalType(StrEnum):
-    """Internal type identifiers for path-based data values.
+class SnapshotFormatError(ValueError):
+    """Raised when serialized snapshot data does not match the current format."""
 
-    Used as keys in the INTERNAL_TYPE_MAP for serialization round-trips.
+
+class DataPathKind(StrEnum):
+    """Top-level data path shape identifiers for serialized values.
+
+    Used as keys in DATA_PATH_KIND_MAP for serialization round-trips.
     """
 
     Primitive = "Primitive"
-    Quantity = "Quantity"
     Vector = "Vector"
     Rotation = "Rotation"
     Placement = "Placement"
@@ -143,7 +147,7 @@ class DataPath(Protocol):
     serialize method for YAML output.
     """
 
-    INTERNAL_TYPE: ClassVar[InternalType]
+    DATA_PATH_KIND: ClassVar[DataPathKind]
 
     @staticmethod
     def from_freecad_value(value: Any, expr_map: dict[str, str]) -> DataPath: ...
@@ -161,22 +165,37 @@ def _serialize_path_entries(paths: dict[str, PropertyPathValue]) -> dict[str, An
         paths: Mapping of path strings to PropertyPathValue instances.
 
     Returns:
-        A dict where each value is a dict with keys "type_", "value",
+        A dict where each value is a dict with keys "type", "value",
         "expression", and "freecad_type" (only if non-None).
     """
     result: dict[str, Any] = {}
     for path, pv in paths.items():
-        entry: dict[str, Any] = {"type_": pv.type_.value}
-        if pv.value is not None:
-            entry["value"] = pv.value
-        if pv.expression is not None:
-            entry["expression"] = pv.expression
-        if pv.freecad_type is not None:
-            entry["freecad_type"] = pv.freecad_type
-        if pv.unit is not None:
-            entry["unit"] = pv.unit
-        result[path] = entry
+        result[path] = _serialize_path_entry(pv)
     return result
+
+
+def _serialize_path_entry(pv: PropertyPathValue) -> dict[str, Any]:
+    """Serialize one path value to a YAML-compatible dict."""
+    entry: dict[str, Any] = {"type": pv.type_.value}
+    _add_serialized_path_value(entry, pv)
+    _add_optional_path_metadata(entry, pv)
+    return entry
+
+
+def _add_serialized_path_value(entry: dict[str, Any], pv: PropertyPathValue) -> None:
+    """Add serialized value field when the path value has persisted data."""
+    if pv.type_ == PropertyPathType.QUANTITY:
+        entry["value"] = _serialize_quantity_value(pv)
+    elif pv.value is not None:
+        entry["value"] = pv.value
+
+
+def _add_optional_path_metadata(entry: dict[str, Any], pv: PropertyPathValue) -> None:
+    """Add optional path metadata fields to serialized output."""
+    if pv.expression is not None:
+        entry["expression"] = pv.expression
+    if pv.freecad_type is not None:
+        entry["freecad_type"] = pv.freecad_type
 
 
 def _deserialize_path_entries(raw: dict[str, Any]) -> dict[str, PropertyPathValue]:
@@ -190,19 +209,52 @@ def _deserialize_path_entries(raw: dict[str, Any]) -> dict[str, PropertyPathValu
     """
     paths: dict[str, PropertyPathValue] = {}
     for path, entry in raw.items():
-        type_name = entry.get("type_", "NULL")
+        type_name = entry.get("type")
+        if type_name is None:
+            raise SnapshotFormatError(f"Path entry '{path}' missing required 'type' field")
         try:
             pt = PropertyPathType(type_name)
         except ValueError:
-            pt = PropertyPathType.NULL
+            raise SnapshotFormatError(f"Unknown property path type for '{path}': {type_name}") from None
+        value = entry.get("value")
+        unit = entry.get("unit")
+        if pt == PropertyPathType.QUANTITY:
+            value, unit = _deserialize_quantity_value(value, unit)
         paths[path] = PropertyPathValue(
             type_=pt,
-            value=entry.get("value"),
+            value=value,
             expression=entry.get("expression"),
             freecad_type=entry.get("freecad_type"),
-            unit=entry.get("unit"),
+            unit=unit,
         )
     return paths
+
+
+def _serialize_quantity_value(pv: PropertyPathValue) -> str:
+    """Serialize a quantity path value as a canonical text scalar."""
+    value_text = repr(float(pv.value))
+    if pv.unit:
+        return f"{value_text} {pv.unit}"
+    return value_text
+
+
+def _deserialize_quantity_value(value: Any, legacy_unit: Any = None) -> tuple[float, str | None]:
+    """Parse a serialized quantity scalar into numeric value and unit."""
+    if isinstance(value, str):
+        number_text, sep, unit_text = value.partition(" ")
+        return float(number_text), unit_text if sep else None
+    return float(value), str(legacy_unit) if legacy_unit is not None else None
+
+
+def _quantity_path_value(value: Any, expression: str | None = None, unit: str | None = None) -> PropertyPathValue:
+    """Create a QUANTITY path value from a FreeCAD quantity or value/unit pair."""
+    quantity_value = float(getattr(value, "Value", value))
+    quantity_unit = unit
+    if quantity_unit is None:
+        quantity_text = str(value)
+        _, sep, parsed_unit = quantity_text.partition(" ")
+        quantity_unit = parsed_unit if sep else None
+    return PropertyPathValue(PropertyPathType.QUANTITY, quantity_value, expression=expression, unit=quantity_unit)
 
 
 def _root_expression(expr_map: dict[str, str]) -> str | None:
@@ -280,7 +332,7 @@ def _list_item_expression(expr_map: dict[str, str], index: int, item: Any) -> st
 class PrimitiveData:
     """Wraps primitive Python values with a single '.' path entry."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Primitive
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Primitive
     paths: dict[str, PropertyPathValue]
 
     @staticmethod
@@ -294,9 +346,10 @@ class PrimitiveData:
         Returns:
             A new PrimitiveData with the value at the '.' path.
         """
-        return PrimitiveData(
-            paths={".": PropertyPathValue.from_python(value, _root_expression(expr_map))},
-        )
+        root_expr = _root_expression(expr_map)
+        if _runtime_type_key(value) == "Base.Quantity":
+            return PrimitiveData(paths={".": _quantity_path_value(value, root_expr)})
+        return PrimitiveData(paths={".": PropertyPathValue.from_python(value, root_expr)})
 
     @staticmethod
     def from_serialized_value(data: Any) -> PrimitiveData:
@@ -315,87 +368,16 @@ class PrimitiveData:
         """Serialize this PrimitiveData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
-
-
-@dataclass(frozen=True)
-class QuantityData:
-    """Wraps a Base.Quantity with a single QUANTITY path entry.
-
-    Stores numeric magnitude and unit string in one PropertyPathValue:
-    - ``.`` path: QUANTITY (e.g. value=10.0, unit="mm")
-
-    Root expression, when present, is preserved on the same path entry.
-    """
-
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Quantity
-    paths: dict[str, PropertyPathValue]
-
-    @staticmethod
-    def from_freecad_value(value: Any, expr_map: dict[str, str]) -> QuantityData:
-        """Create QuantityData from a FreeCAD Base.Quantity value.
-
-        Stores the quantity as a single QUANTITY path entry with numeric
-        value and unit string. Both are taken from the quantity's internal
-        representation (matching ``str(quantity)``), not user-preferred
-        display units.
-
-        If the root expression map contains a ``'.'`` key, it is preserved
-        on the same path entry as the expression field.
-
-        Args:
-            value: A FreeCAD Base.Quantity or compatible object.
-            expr_map: Expression mapping that may contain a '.' key.
-
-        Returns:
-            A new QuantityData instance.
-        """
-        root_expr = _root_expression(expr_map)
-        quantity_value = float(getattr(value, "Value", float(value)))
-        quantity_text = str(value)
-        _, _, unit_text = quantity_text.partition(" ")
-        if not unit_text:
-            unit_text = str(getattr(value, "Unit", ""))
-
-        return QuantityData(
-            paths={
-                ".": PropertyPathValue(
-                    PropertyPathType.QUANTITY,
-                    quantity_value,
-                    expression=root_expr,
-                    unit=unit_text,
-                )
-            }
-        )
-
-    @staticmethod
-    def from_serialized_value(data: Any) -> QuantityData:
-        """Create QuantityData from a serialized dict.
-
-        Args:
-            data: A dict with a 'paths' key containing serialized path entries.
-
-        Returns:
-            A new QuantityData instance.
-        """
-        return QuantityData(paths=_deserialize_path_entries(data.get("paths", {})))
-
-    def serialize(self) -> dict[str, Any]:
-        """Serialize this QuantityData to a dict for YAML output.
-
-        Returns:
-            A dict with 'type_' and 'paths' keys.
-        """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class VectorData:
     """Wraps a Base.Vector with x/y/z path entries."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Vector
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Vector
     paths: dict[str, PropertyPathValue]
 
     @staticmethod
@@ -439,16 +421,16 @@ class VectorData:
         """Serialize this VectorData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class RotationData:
     """Wraps a Base.Rotation with Angle/Axis.x/Axis.y/Axis.z path entries."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Rotation
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Rotation
     paths: dict[str, PropertyPathValue]
 
     @staticmethod
@@ -468,7 +450,7 @@ class RotationData:
         """
         axis = value.Axis
         paths: dict[str, PropertyPathValue] = {
-            "Angle": PropertyPathValue(PropertyPathType.FLOAT, float(value.Angle), expr_map.get("Angle")),
+            "Angle": _quantity_path_value(math.degrees(value.Angle), expr_map.get("Angle"), "deg"),
             "Axis.x": PropertyPathValue(PropertyPathType.FLOAT, float(axis.x), expr_map.get("Axis.x")),
             "Axis.y": PropertyPathValue(PropertyPathType.FLOAT, float(axis.y), expr_map.get("Axis.y")),
             "Axis.z": PropertyPathValue(PropertyPathType.FLOAT, float(axis.z), expr_map.get("Axis.z")),
@@ -496,16 +478,16 @@ class RotationData:
         """Serialize this RotationData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class PlacementData:
     """Wraps a Base.Placement with Base.x/y/z and Rotation.* path entries."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Placement
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Placement
     paths: dict[str, PropertyPathValue]
 
     @staticmethod
@@ -529,12 +511,10 @@ class PlacementData:
         rot = value.Rotation
         axis = rot.Axis
         paths: dict[str, PropertyPathValue] = {
-            "Base.x": PropertyPathValue(PropertyPathType.FLOAT, float(base.x), expr_map.get("Base.x")),
-            "Base.y": PropertyPathValue(PropertyPathType.FLOAT, float(base.y), expr_map.get("Base.y")),
-            "Base.z": PropertyPathValue(PropertyPathType.FLOAT, float(base.z), expr_map.get("Base.z")),
-            "Rotation.Angle": PropertyPathValue(
-                PropertyPathType.FLOAT, math.degrees(rot.Angle), expr_map.get("Rotation.Angle")
-            ),
+            "Base.x": _quantity_path_value(base.x, expr_map.get("Base.x"), "mm"),
+            "Base.y": _quantity_path_value(base.y, expr_map.get("Base.y"), "mm"),
+            "Base.z": _quantity_path_value(base.z, expr_map.get("Base.z"), "mm"),
+            "Rotation.Angle": _quantity_path_value(math.degrees(rot.Angle), expr_map.get("Rotation.Angle"), "deg"),
             "Rotation.Axis.x": PropertyPathValue(
                 PropertyPathType.FLOAT, float(axis.x), expr_map.get("Rotation.Axis.x")
             ),
@@ -570,16 +550,16 @@ class PlacementData:
         """Serialize this PlacementData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class ConstraintData:
     """Wraps a Sketcher.Constraint with VISIBLE_FIELDS path entries."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Constraint
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Constraint
     paths: dict[str, PropertyPathValue]
 
     VISIBLE_FIELDS = (
@@ -647,16 +627,16 @@ class ConstraintData:
         """Serialize this ConstraintData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class UnknownData:
     """Wraps unknown FreeCAD types with display value and type info."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.Unknown
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.Unknown
     paths: dict[str, PropertyPathValue]
 
     @staticmethod
@@ -703,16 +683,16 @@ class UnknownData:
         """Serialize this UnknownData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_' and 'paths' keys.
+            A dict with 'kind' and 'paths' keys.
         """
-        return {"type_": self.INTERNAL_TYPE.value, "paths": _serialize_path_entries(self.paths)}
+        return {"kind": self.DATA_PATH_KIND.value, "paths": _serialize_path_entries(self.paths)}
 
 
 @dataclass(frozen=True)
 class ListData:
     """Wraps a list of items, each as a DataPath, with optional root path entry."""
 
-    INTERNAL_TYPE: ClassVar[InternalType] = InternalType.List
+    DATA_PATH_KIND: ClassVar[DataPathKind] = DataPathKind.List
     paths: dict[str, PropertyPathValue]
     items: list[DataPath]
 
@@ -764,10 +744,10 @@ class ListData:
         """Serialize this ListData to a dict for YAML output.
 
         Returns:
-            A dict with 'type_', 'paths', and 'items' keys.
+            A dict with 'kind', 'paths', and 'items' keys.
         """
         return {
-            "type_": self.INTERNAL_TYPE.value,
+            "kind": self.DATA_PATH_KIND.value,
             "paths": _serialize_path_entries(self.paths),
             "items": [item.serialize() for item in self.items],
         }
@@ -778,7 +758,7 @@ class ListData:
 # ---------------------------------------------------------------------------
 
 FREECAD_TYPE_MAP: dict[str, type[DataPath]] = {
-    "Base.Quantity": QuantityData,
+    "Base.Quantity": PrimitiveData,
     "Base.Vector": VectorData,
     "Base.Rotation": RotationData,
     "Base.Placement": PlacementData,
@@ -795,15 +775,14 @@ PYTHON_TYPE_MAP: dict[type[Any], type[DataPath]] = {
     tuple: ListData,
 }
 
-INTERNAL_TYPE_MAP: dict[str, type[DataPath]] = {
-    InternalType.Primitive.value: PrimitiveData,
-    InternalType.Quantity.value: QuantityData,
-    InternalType.Vector.value: VectorData,
-    InternalType.Rotation.value: RotationData,
-    InternalType.Placement.value: PlacementData,
-    InternalType.Constraint.value: ConstraintData,
-    InternalType.List.value: ListData,
-    InternalType.Unknown.value: UnknownData,
+DATA_PATH_KIND_MAP: dict[str, type[DataPath]] = {
+    DataPathKind.Primitive.value: PrimitiveData,
+    DataPathKind.Vector.value: VectorData,
+    DataPathKind.Rotation.value: RotationData,
+    DataPathKind.Placement.value: PlacementData,
+    DataPathKind.Constraint.value: ConstraintData,
+    DataPathKind.List.value: ListData,
+    DataPathKind.Unknown.value: UnknownData,
 }
 
 
@@ -836,27 +815,31 @@ def data_path_from_freecad_value(value: Any, expr_map: dict[str, str]) -> DataPa
 def data_path_from_serialized(data: dict[str, Any]) -> DataPath:
     """Deserialize a dict back into the correct DataPath subclass.
 
-    Uses the 'type_' key in the data dict to look up the appropriate
-    DataPath class in INTERNAL_TYPE_MAP. Falls back to UnknownData if
-    the type is unrecognized.
+    Uses the 'kind' key in the data dict to look up the appropriate
+    DataPath class in DATA_PATH_KIND_MAP.
 
     Args:
-        data: A serialized dict with 'type_' and 'paths' keys.
+        data: A serialized dict with 'kind' and 'paths' keys.
 
     Returns:
         The appropriate DataPath subclass instance.
     """
-    cls = INTERNAL_TYPE_MAP.get(data.get("type_", ""), UnknownData)
+    kind = data.get("kind")
+    if kind is None:
+        raise SnapshotFormatError("Property payload missing required 'kind' field")
+    cls = DATA_PATH_KIND_MAP.get(kind)
+    if cls is None:
+        raise SnapshotFormatError(f"Unknown data path kind: {kind}")
     return cls.from_serialized_value(data)
 
 
 __all__ = [
-    "InternalType",
+    "DataPathKind",
+    "SnapshotFormatError",
     "PropertyPathType",
     "PropertyPathValue",
     "DataPath",
     "PrimitiveData",
-    "QuantityData",
     "VectorData",
     "RotationData",
     "PlacementData",
@@ -867,5 +850,5 @@ __all__ = [
     "data_path_from_serialized",
     "FREECAD_TYPE_MAP",
     "PYTHON_TYPE_MAP",
-    "INTERNAL_TYPE_MAP",
+    "DATA_PATH_KIND_MAP",
 ]

@@ -141,7 +141,7 @@ class SnapshotYamlSerializer:
         """Serialize property dict to YAML-compatible format.
 
         Delegates to Property.to_serialized() which returns the DataPath-based
-        envelope with type_, paths/items, and group keys.
+        envelope with kind, paths/items, and group keys.
 
         Args:
             properties: Dictionary of property name to Property

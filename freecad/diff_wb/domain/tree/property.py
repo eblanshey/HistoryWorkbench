@@ -53,7 +53,7 @@ class Property:
         """Serialize this property to a dict for YAML persistence.
 
         Returns:
-            Dict with type_, paths/items, and group keys
+            Dict with kind, paths/items, and group keys
         """
         payload = self.value.serialize()
         payload["group"] = self.group
@@ -64,7 +64,7 @@ class Property:
         """Deserialize a property from a serialized dict.
 
         Args:
-            data: Dict with type_, paths/items, and group keys
+            data: Dict with kind, paths/items, and group keys
 
         Returns:
             A Property with the restored DataPath value

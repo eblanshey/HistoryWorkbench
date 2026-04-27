@@ -7,7 +7,7 @@
 Phase 4: YAML Persistence Wiring.
 
 Verifies that:
-- Property serialization uses Property.to_serialized() envelope (type_, paths, group)
+- Property serialization uses Property.to_serialized() envelope (kind, paths, group)
 - List payload uses items with per-item paths envelopes
 - Unknown payload preserves path-level freecad_type + display root
 - Complete snapshot round-trip equality for mixed property types
@@ -37,14 +37,14 @@ class TestSerializePropertiesEnvelope:
     """Tests for _serialize_properties using Property.to_serialized() envelope."""
 
     def test_primitive_property_envelope(self):
-        """A primitive property should serialize with type_, paths, and group keys."""
+        """A primitive property should serialize with kind, paths, and group keys."""
         prop = Property.from_freecad(10.0, {}, group="Base")
         result = SnapshotYamlSerializer._serialize_properties({"Length": prop})
 
         assert "Length" in result
         length_data = result["Length"]
-        assert "type_" in length_data
-        assert length_data["type_"] == "Primitive"
+        assert "kind" in length_data
+        assert length_data["kind"] == "Primitive"
         assert "paths" in length_data
         assert "." in length_data["paths"]
         assert "group" in length_data
@@ -52,7 +52,7 @@ class TestSerializePropertiesEnvelope:
 
     @pytest.mark.skip(reason="Requires FreeCAD runtime; move to integration tests")
     def test_placement_property_envelope(self):
-        """A placement property should serialize with type_, paths, and group keys."""
+        """A placement property should serialize with kind, paths, and group keys."""
         from FreeCAD import Base
 
         placement = Base.Placement()
@@ -60,7 +60,7 @@ class TestSerializePropertiesEnvelope:
         result = SnapshotYamlSerializer._serialize_properties({"Placement": prop})
 
         placement_data = result["Placement"]
-        assert placement_data["type_"] == "Placement"
+        assert placement_data["kind"] == "Placement"
         assert "paths" in placement_data
         assert "group" in placement_data
         assert placement_data["group"] == "Base"
@@ -71,7 +71,7 @@ class TestSerializePropertiesEnvelope:
 
     @pytest.mark.skip(reason="Requires FreeCAD runtime; move to integration tests")
     def test_vector_property_envelope(self):
-        """A vector property should serialize with type_, paths, and group keys."""
+        """A vector property should serialize with kind, paths, and group keys."""
         from FreeCAD import Base
 
         vec = Base.Vector(1.0, 2.0, 3.0)
@@ -79,7 +79,7 @@ class TestSerializePropertiesEnvelope:
         result = SnapshotYamlSerializer._serialize_properties({"Position": prop})
 
         vec_data = result["Position"]
-        assert vec_data["type_"] == "Vector"
+        assert vec_data["kind"] == "Vector"
         assert "paths" in vec_data
         assert "x" in vec_data["paths"]
         assert "y" in vec_data["paths"]
@@ -88,7 +88,7 @@ class TestSerializePropertiesEnvelope:
 
     @pytest.mark.skip(reason="Requires FreeCAD runtime; move to integration tests")
     def test_quantity_property_envelope(self):
-        """A quantity property should serialize with single QUANTITY path and unit."""
+        """A quantity property should serialize as primitive with single QUANTITY path."""
         from FreeCAD import Base
 
         qty = Base.Quantity("10 mm")
@@ -96,21 +96,21 @@ class TestSerializePropertiesEnvelope:
         result = SnapshotYamlSerializer._serialize_properties({"Length": prop})
 
         qty_data = result["Length"]
-        assert qty_data["type_"] == "Quantity"
+        assert qty_data["kind"] == "Primitive"
         assert "paths" in qty_data
         assert set(qty_data["paths"].keys()) == {"."}
-        assert qty_data["paths"]["."]["type_"] == "QUANTITY"
-        assert qty_data["paths"]["."]["value"] == pytest.approx(10.0)
-        assert qty_data["paths"]["."]["unit"] == "mm"
+        assert qty_data["paths"]["."]["type"] == "QUANTITY"
+        assert qty_data["paths"]["."]["value"] == "10.0 mm"
+        assert "unit" not in qty_data["paths"]["."]
 
     def test_string_property_envelope(self):
-        """A string property should serialize with type_, paths, and group keys."""
+        """A string property should serialize with kind, paths, and group keys."""
         prop = Property.from_freecad("TestString", {}, group="View")
         result = SnapshotYamlSerializer._serialize_properties({"Label": prop})
 
         str_data = result["Label"]
-        assert str_data["type_"] == "Primitive"
-        assert str_data["paths"]["."]["type_"] == "STRING"
+        assert str_data["kind"] == "Primitive"
+        assert str_data["paths"]["."]["type"] == "STRING"
         assert str_data["paths"]["."]["value"] == "TestString"
         assert str_data["group"] == "View"
 
@@ -119,7 +119,7 @@ class TestListPayloadWithItems:
     """Tests for list property serialization using items with per-item paths envelopes."""
 
     def test_list_property_serializes_items(self):
-        """A list property should serialize with type_, paths, and items keys."""
+        """A list property should serialize with kind, paths, and items keys."""
         # Build a ListData manually with primitive items
         items = [
             PrimitiveData(paths={".": PropertyPathValue(PropertyPathType.INT, 1)}),
@@ -132,13 +132,13 @@ class TestListPayloadWithItems:
         result = SnapshotYamlSerializer._serialize_properties({"Constraints": prop})
         list_payload = result["Constraints"]
 
-        assert list_payload["type_"] == "List"
+        assert list_payload["kind"] == "List"
         assert "items" in list_payload
         assert len(list_payload["items"]) == 3
         assert list_payload["group"] == "Sketch"
 
     def test_list_items_have_paths_envelopes(self):
-        """Each list item should have its own type_ and paths envelope."""
+        """Each list item should have its own kind and paths envelope."""
         items = [
             PrimitiveData(paths={".": PropertyPathValue(PropertyPathType.STRING, "A")}),
             PrimitiveData(paths={".": PropertyPathValue(PropertyPathType.STRING, "B")}),
@@ -149,11 +149,11 @@ class TestListPayloadWithItems:
         result = SnapshotYamlSerializer._serialize_properties({"Items": prop})
         items_data = result["Items"]["items"]
 
-        assert items_data[0]["type_"] == "Primitive"
+        assert items_data[0]["kind"] == "Primitive"
         assert "paths" in items_data[0]
         assert items_data[0]["paths"]["."]["value"] == "A"
 
-        assert items_data[1]["type_"] == "Primitive"
+        assert items_data[1]["kind"] == "Primitive"
         assert items_data[1]["paths"]["."]["value"] == "B"
 
     def test_list_with_constraint_items(self):
@@ -168,7 +168,7 @@ class TestListPayloadWithItems:
         result = SnapshotYamlSerializer._serialize_properties({"Constraints": prop})
         list_payload = result["Constraints"]
 
-        assert list_payload["type_"] == "List"
+        assert list_payload["kind"] == "List"
         assert len(list_payload["items"]) == 2
         assert list_payload["items"][0]["paths"]["."]["value"] == "DistanceX"
         assert list_payload["items"][1]["paths"]["."]["value"] == "Coincident"
@@ -185,7 +185,7 @@ class TestListPayloadWithItems:
         prop = Property(value=list_data, group="Base")
 
         result = SnapshotYamlSerializer._serialize_properties({"Constraints": prop})
-        assert result["Constraints"]["paths"]["."]["type_"] == "NULL"
+        assert result["Constraints"]["paths"]["."]["type"] == "NULL"
         assert result["Constraints"]["paths"]["."]["expression"] == "SomeExpr"
 
 
@@ -198,7 +198,7 @@ class TestUnknownPayloadPreservation:
         result = SnapshotYamlSerializer._serialize_properties({"UnknownProp": prop})
 
         unknown_data = result["UnknownProp"]
-        assert unknown_data["type_"] == "Unknown"
+        assert unknown_data["kind"] == "Unknown"
         assert "paths" in unknown_data
         assert "." in unknown_data["paths"]
         assert "freecad_type" in unknown_data["paths"]["."]
@@ -209,7 +209,7 @@ class TestUnknownPayloadPreservation:
         result = SnapshotYamlSerializer._serialize_properties({"UnknownProp": prop})
 
         unknown_data = result["UnknownProp"]
-        assert unknown_data["paths"]["."]["type_"] == "STRING"
+        assert unknown_data["paths"]["."]["type"] == "STRING"
         assert "value" in unknown_data["paths"]["."]
 
     def test_unknown_roundtrip_preserves_freecad_type(self):
@@ -391,7 +391,7 @@ class TestSnapshotRoundTrip:
         """Quantity property values should survive round-trip with QUANTITY path."""
         from FreeCAD import Base
 
-        from freecad.diff_wb.domain.tree.data_path import PropertyPathType, QuantityData
+        from freecad.diff_wb.domain.tree.data_path import PrimitiveData, PropertyPathType
 
         qty = Base.Quantity("10 mm")
         props = {"Amount": Property.from_freecad(qty, {}, group="Base")}
@@ -406,7 +406,7 @@ class TestSnapshotRoundTrip:
             restored = SnapshotYamlSerializer.from_yaml_file(yaml_path)
 
         restored_prop = restored.nodes[0].properties["Amount"]
-        assert isinstance(restored_prop.value, QuantityData)
+        assert isinstance(restored_prop.value, PrimitiveData)
         assert set(restored_prop.value.paths.keys()) == {"."}
         assert restored_prop.value.paths["."].type_ == PropertyPathType.QUANTITY
         assert restored_prop.value.paths["."].value == pytest.approx(10.0)
@@ -480,8 +480,8 @@ class TestSnapshotRoundTrip:
 
         # Check the property envelope structure
         prop_data = data["objects"][0]["properties"]["Length"]
-        assert "type_" in prop_data
-        assert prop_data["type_"] == "Primitive"
+        assert "kind" in prop_data
+        assert prop_data["kind"] == "Primitive"
         assert "paths" in prop_data
         assert "group" in prop_data
         assert prop_data["group"] == "Base"

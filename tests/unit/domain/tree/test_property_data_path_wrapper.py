@@ -10,7 +10,7 @@ restores the group from the serialized dict.
 from __future__ import annotations
 
 from freecad.diff_wb.domain.tree.data_path import (
-    InternalType,
+    DataPathKind,
     PrimitiveData,
     PropertyPathType,
 )
@@ -24,7 +24,7 @@ class TestPropertyFromFreecad:
         """Passing a float should produce a Property with PrimitiveData value."""
         prop = Property.from_freecad(3.14, {}, group="Base")
         assert isinstance(prop.value, PrimitiveData)
-        assert prop.value.INTERNAL_TYPE is InternalType.Primitive
+        assert prop.value.DATA_PATH_KIND is DataPathKind.Primitive
 
     def test_int_wraps_primitive_data(self):
         """Passing an int should produce a Property with PrimitiveData value."""
@@ -84,12 +84,12 @@ class TestPropertyToSerialized:
         assert "group" in result
         assert result["group"] == "Data"
 
-    def test_serialized_includes_type_key(self):
-        """Serialized output should include the 'type_' key from the DataPath."""
+    def test_serialized_includes_kind_key(self):
+        """Serialized output should include the 'kind' key from the DataPath."""
         prop = Property.from_freecad(3.14, {}, group="Base")
         result = prop.to_serialized()
-        assert "type_" in result
-        assert result["type_"] == "Primitive"
+        assert "kind" in result
+        assert result["kind"] == "Primitive"
 
     def test_serialized_includes_paths_key(self):
         """Serialized output should include the 'paths' key from the DataPath."""
@@ -111,10 +111,10 @@ class TestPropertyFromSerialized:
     def test_from_serialized_restores_group(self):
         """Deserialized Property should restore the group from the dict."""
         data = {
-            "type_": "Primitive",
+            "kind": "Primitive",
             "paths": {
                 ".": {
-                    "type_": "FLOAT",
+                    "type": "FLOAT",
                     "value": 3.14,
                 }
             },
@@ -126,10 +126,10 @@ class TestPropertyFromSerialized:
     def test_from_serialized_defaults_to_base_group(self):
         """If no group key is present, default should be 'Base'."""
         data = {
-            "type_": "Primitive",
+            "kind": "Primitive",
             "paths": {
                 ".": {
-                    "type_": "INT",
+                    "type": "INT",
                     "value": 42,
                 }
             },
@@ -140,10 +140,10 @@ class TestPropertyFromSerialized:
     def test_from_serialized_restores_value(self):
         """Deserialized Property should have the correct DataPath value."""
         data = {
-            "type_": "Primitive",
+            "kind": "Primitive",
             "paths": {
                 ".": {
-                    "type_": "FLOAT",
+                    "type": "FLOAT",
                     "value": 3.14,
                 }
             },

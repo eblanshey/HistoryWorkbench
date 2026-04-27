@@ -1,25 +1,25 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Module responsibility: Exports all tree-related domain models including
 # TreeNode, the DataPath-based Property wrapper, and the DataPath hierarchy
-# (PrimitiveData, QuantityData, VectorData, RotationData, PlacementData,
+# (PrimitiveData, VectorData, RotationData, PlacementData,
 # ConstraintData, UnknownData, ListData) with their dispatch maps and
 # constructor functions for FreeCAD value conversion and YAML serialization.
 """Tree domain models - shared foundation for snapshots and diff."""
 
 from .data_path import (
+    DATA_PATH_KIND_MAP,
     FREECAD_TYPE_MAP,
-    INTERNAL_TYPE_MAP,
     PYTHON_TYPE_MAP,
     ConstraintData,
     DataPath,
-    InternalType,
+    DataPathKind,
     ListData,
     PlacementData,
     PrimitiveData,
     PropertyPathType,
     PropertyPathValue,
-    QuantityData,
     RotationData,
+    SnapshotFormatError,
     UnknownData,
     VectorData,
     data_path_from_freecad_value,
@@ -34,12 +34,12 @@ __all__ = [
     "TreeNode",
     "Property",
     # DataPath hierarchy
-    "InternalType",
+    "DataPathKind",
+    "SnapshotFormatError",
     "PropertyPathType",
     "PropertyPathValue",
     "DataPath",
     "PrimitiveData",
-    "QuantityData",
     "VectorData",
     "RotationData",
     "PlacementData",
@@ -50,5 +50,5 @@ __all__ = [
     "data_path_from_serialized",
     "FREECAD_TYPE_MAP",
     "PYTHON_TYPE_MAP",
-    "INTERNAL_TYPE_MAP",
+    "DATA_PATH_KIND_MAP",
 ]

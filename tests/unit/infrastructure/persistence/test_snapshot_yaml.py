@@ -130,9 +130,11 @@ objects:
   after: Sketch
   properties:
     Length:
-      type_: FLOAT
-      value: 10.0
-      expression: null
+      kind: Primitive
+      paths:
+        .:
+          type: FLOAT
+          value: 10.0
       group: Base
 """
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -445,7 +447,7 @@ objects:
   after: null
   properties:
     OldProp:
-      type_: STRING
+      type: STRING
       value: old_value
       expression: old_expr
       group: OldGroup
@@ -545,9 +547,11 @@ objects:
   after: null
   properties:
     Length:
-      type_: FLOAT
-      value: 42.5
-      expression: null
+      kind: Primitive
+      paths:
+        .:
+          type: FLOAT
+          value: 42.5
       group: Base
 """
         with tempfile.TemporaryDirectory() as tmpdir:

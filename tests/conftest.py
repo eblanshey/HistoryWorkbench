@@ -13,7 +13,7 @@ from tests.fakes import FakeLogger, FakeSettingsRepository
 
 
 if TYPE_CHECKING:
-    from freecad.diff_wb.domain.freecad_ports import AppLike, FreeCadContext
+    from freecad.diff_wb.domain.freecad_ports import AppLike, DocumentObjectLike, FreeCadContext
 
 
 @pytest.fixture
@@ -35,9 +35,9 @@ def mock_freecad_app() -> AppLike:
             pass
 
     class MockDocument:
-        Objects: list[object] = []
+        Objects: list[DocumentObjectLike] = []
 
-        def getObject(self, name: str) -> None:
+        def getObject(self, name: str) -> DocumentObjectLike | None:
             return None
 
         def recompute(self) -> None:

@@ -11,7 +11,7 @@ enabling easy testing and validation. It also defines port interfaces
 """
 
 from .diff import DiffEngine, DiffResult, DiffState, NodeDiff, PropertyComparator, TreeComparator
-from .freecad_ports import AppPort, FreeCadContext, FreeCadPort
+from .freecad_ports import AppPort, DocumentObjectLike, FreeCadContext, FreeCadPort
 from .snapshots import InMemorySnapshotRepository, Snapshot, SnapshotMetadata, SnapshotRepository
 from .snapshots.gui_extractor import SnapshotExtractor
 from .tree import Property, TreeNode
@@ -22,6 +22,7 @@ __all__ = [
     "FreeCadPort",
     "AppPort",
     "FreeCadContext",
+    "DocumentObjectLike",
     # Tree models
     "TreeNode",
     "Property",

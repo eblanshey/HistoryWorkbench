@@ -2,7 +2,7 @@
 
 from typing import cast
 
-from freecad.diff_wb.domain.freecad_ports import DocumentLike, FreeCadPort
+from freecad.diff_wb.domain.freecad_ports import DocumentLike, DocumentObjectLike, FreeCadPort
 
 
 class FakeFreeCadPort(FreeCadPort):
@@ -57,7 +57,7 @@ class FakeFreeCadPort(FreeCadPort):
         self._open_documents.append(opened_doc)
         return opened_doc
 
-    def get_object(self, doc: object, name: str) -> object | None:
+    def get_object(self, doc: DocumentLike, name: str) -> DocumentObjectLike | None:
         """Return None (not implemented in fake)."""
         self._call_log.append(f"get_object:{name}")
         return None

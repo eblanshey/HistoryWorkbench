@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from ...utils import Log
-from ..freecad_ports import DocumentLike, FreeCadPort
+from ..freecad_ports import DocumentLike, DocumentObjectLike, FreeCadPort
 from ..tree import Property, TreeNode
 
 
@@ -547,6 +547,8 @@ def _build_parent_to_child_map(doc: DocumentLike, gui_doc: Any) -> dict[str, lis
         for obj in doc.Objects:
             if not hasattr(obj, "Name"):
                 continue
+            if _should_skip_claim_children_parent(obj):
+                continue
             vp = _get_view_provider(obj, gui_doc)
             if vp is not None:
                 children = _get_claimed_children(vp)
@@ -560,7 +562,7 @@ def _build_flat_node_list(
     doc: DocumentLike,
     child_to_parent_map: dict[str, str],
     parent_to_child_map: dict[str, list[str]],
-    name_to_obj_map: dict[str, object],
+    name_to_obj_map: dict[str, DocumentObjectLike],
 ) -> list[TreeNode]:
     """Build the flat node list using BFS.
 
@@ -574,7 +576,7 @@ def _build_flat_node_list(
         List of TreeNode objects in BFS order
     """
     nodes: list[TreeNode] = []
-    queue: list[tuple[object, str, str | None]] = []
+    queue: list[tuple[DocumentObjectLike, str, str | None]] = []
     visited: set[str] = set()
 
     # Find roots (objects not in parent_map) and add to queue
@@ -624,6 +626,48 @@ def _build_flat_node_list(
     return nodes
 
 
+def _bool_attr(obj: DocumentObjectLike, attr_name: str) -> bool:
+    """Get a boolean-like attribute or callable result safely."""
+    try:
+        attr = getattr(obj, attr_name, None)
+        if callable(attr):
+            return bool(attr())
+        return bool(attr)
+    except (AttributeError, TypeError, RuntimeError):
+        return False
+
+
+def _is_derived_from(obj: DocumentObjectLike, type_id: str) -> bool:
+    """Return True when object reports FreeCAD type derivation."""
+    try:
+        is_derived = getattr(obj, "isDerivedFrom", None)
+        if callable(is_derived):
+            return bool(is_derived(type_id))
+    except (AttributeError, TypeError, RuntimeError):
+        return False
+    return False
+
+
+def _should_skip_claim_children_parent(obj: DocumentObjectLike) -> bool:
+    """Return whether claimChildren() should be skipped for this parent.
+
+    Policy:
+    - Keep Assembly::AssemblyLink expansion (its children are synchronized local structure).
+    - Skip generic link wrappers (App::Link, App::LinkElement, link-capable wrappers).
+    """
+    if _is_derived_from(obj, "Assembly::AssemblyLink"):
+        return False
+
+    type_id = getattr(obj, "TypeId", "")
+    if type_id in {"App::Link", "App::LinkElement", "App::LinkGroup"}:
+        return True
+
+    if _is_derived_from(obj, "App::LinkElement") or _is_derived_from(obj, "App::Link"):
+        return True
+
+    return _bool_attr(obj, "isLink")
+
+
 def _extract_tree_single_pass(
     doc: DocumentLike,
     gui_doc: Any,
@@ -658,12 +702,12 @@ def _extract_tree_single_pass(
                 child_to_parent_map[child_name] = parent_name
             else:
                 Log.warning(
-                    f"[DEBUG] Overwriting child '{child_name}' parent: "
-                    f"{child_to_parent_map[child_name]} -> {parent_name}"
+                    f"[DEBUG] Duplicate child parent claim ignored for '{child_name}': "
+                    f"keeping '{child_to_parent_map[child_name]}', ignoring '{parent_name}'"
                 )
 
     # Step 3: Build name to object map for quick lookup
-    name_to_obj: dict[str, object] = {}
+    name_to_obj: dict[str, DocumentObjectLike] = {}
     for obj in doc.Objects:
         name = getattr(obj, "Name", None)
         if name:

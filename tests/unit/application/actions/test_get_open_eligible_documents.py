@@ -7,6 +7,7 @@
 from freecad.diff_wb.application.actions.get_open_eligible_documents import (
     GetOpenEligibleDocumentsAction,
 )
+from freecad.diff_wb.domain.freecad_ports import DocumentObjectLike
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.domain.git.models import GitRepository
 from tests.fakes.fake_freecad_port import FakeFreeCadPort
@@ -17,13 +18,13 @@ class MockDocument:
     """Mock document object for testing."""
 
     FileName: str
-    Objects: list[object]
+    Objects: list[DocumentObjectLike]
 
     def __init__(self, file_name: str) -> None:
         self.FileName = file_name
         self.Objects = []
 
-    def getObject(self, name: str) -> object | None:
+    def getObject(self, name: str) -> DocumentObjectLike | None:
         return None
 
     def recompute(self) -> None:

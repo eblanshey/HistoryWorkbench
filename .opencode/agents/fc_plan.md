@@ -76,7 +76,6 @@ Example of explicit approval to create the file:
 Follow these steps in order. Track your current step explicitly in your responses (e.g., "**Step 1/3:** Analyzing requirements...").
 
 ### Step 1: Think, Read, Search, and Delegate
-- Read `docs/PLAN.md` to understand the current project state
 - Read `docs/Architecture.md` to understand architecture
 - Review existing task plans in `.opencode/tasks/*.md` for patterns and conventions
 - Check module structure in `freecad/diff_wb/` to identify code locations
@@ -95,6 +94,7 @@ Follow these steps in order. Track your current step explicitly in your response
 ### Step 3: Write Plan File (Use the editing tools)
 - After receiving explicit user confirmation, write the plan to `.opencode/tasks/plan-name.md` (e.g., `.opencode/tasks/new-feature-plan.md`)
 - Follow the template below
+- Use multiple implementation phases only when complexity warrants having multiple agents do the work. Straight-forward tasks may be done in a single phase.
 - Inform the user the plan is saved and they can switch to an implementation mode
 
 ---

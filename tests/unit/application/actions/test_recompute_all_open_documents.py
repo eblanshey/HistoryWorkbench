@@ -9,7 +9,7 @@ from typing import cast
 from freecad.diff_wb.application.actions.recompute_all_open_documents import (
     RecomputeAllOpenDocumentsAction,
 )
-from freecad.diff_wb.domain.freecad_ports import DocumentLike
+from freecad.diff_wb.domain.freecad_ports import DocumentLike, DocumentObjectLike
 from tests.fakes.fake_freecad_port import FakeFreeCadPort
 
 
@@ -18,13 +18,13 @@ class _RecomputableDocument:
 
     def __init__(self, file_name: str) -> None:
         self.FileName = file_name
-        self.Objects: list[object] = []
+        self.Objects: list[DocumentObjectLike] = []
         self.recompute_call_count = 0
 
     def recompute(self) -> None:
         self.recompute_call_count += 1
 
-    def getObject(self, name: str) -> object | None:  # noqa: N802
+    def getObject(self, name: str) -> DocumentObjectLike | None:  # noqa: N802
         return None
 
     def save(self) -> None:

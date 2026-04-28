@@ -16,6 +16,20 @@ if TYPE_CHECKING:
     import FreeCADGui  # noqa: F401
 
 
+class DocumentObjectLike(Protocol):
+    """Minimal Protocol for FreeCAD document objects used by extraction.
+
+    This protocol intentionally includes only members needed by the snapshot
+    extractor and related link-handling logic.
+    """
+
+    Name: str
+    TypeId: str
+
+    def isDerivedFrom(self, type_id: str) -> bool: ...
+    def isLink(self) -> bool: ...
+
+
 class ConsoleLike(Protocol):
     """Minimal Protocol for FreeCAD's console output API."""
 
@@ -28,9 +42,9 @@ class DocumentLike(Protocol):
     """Minimal Protocol for FreeCAD document operations."""
 
     FileName: str  # Path to the document file (empty string if unsaved)
-    Objects: list[object]
+    Objects: list[DocumentObjectLike]
 
-    def getObject(self, name: str) -> object | None: ...
+    def getObject(self, name: str) -> DocumentObjectLike | None: ...
     def recompute(self) -> None: ...
     def save(self) -> None: ...
 
@@ -95,7 +109,7 @@ class FreeCadPort(Protocol):
         """Open a document from disk in FreeCAD."""
         ...
 
-    def get_object(self, doc: DocumentLike, name: str) -> object | None:
+    def get_object(self, doc: DocumentLike, name: str) -> DocumentObjectLike | None:
         """Get a document object by name."""
         ...
 
@@ -141,6 +155,7 @@ __all__ = [
     "FreeCadPort",
     "AppPort",
     "DocumentLike",
+    "DocumentObjectLike",
     "ConsoleLike",
     "QtModule",
     "AppLike",

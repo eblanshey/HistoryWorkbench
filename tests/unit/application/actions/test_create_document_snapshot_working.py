@@ -7,6 +7,7 @@
 from freecad.diff_wb.application.actions.create_document_snapshot_working import (
     CreateDocumentSnapshotForWorkingTreeAction,
 )
+from freecad.diff_wb.domain.freecad_ports import DocumentObjectLike
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.domain.git.models import GitRepository
 from freecad.diff_wb.domain.snapshots.gui_extractor import SnapshotExtractor
@@ -19,14 +20,14 @@ class MockDocument:
 
     FileName: str
     Name: str
-    Objects: list[object]
+    Objects: list[DocumentObjectLike]
 
     def __init__(self, file_name: str, name: str = "TestDoc") -> None:
         self.FileName = file_name
         self.Name = name
         self.Objects = []
 
-    def getObject(self, name: str) -> object | None:
+    def getObject(self, name: str) -> DocumentObjectLike | None:
         return None
 
     def recompute(self) -> None:

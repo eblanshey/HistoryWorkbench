@@ -6,6 +6,7 @@
 
 from unittest.mock import MagicMock, patch
 
+from freecad.diff_wb.domain.freecad_ports import DocumentObjectLike
 from freecad.diff_wb.domain.snapshots.gui_extractor import (
     GuiNotAvailableError,
     SnapshotExtractor,
@@ -35,7 +36,7 @@ class MockViewProvider:
         return object.__getattribute__(self, "_claimed_children")
 
 
-class MockFreeCADObject:
+class MockFreeCADObject(DocumentObjectLike):
     """Mock FreeCAD object for testing.
 
     Uses Group + OriginFeatures + InList for hierarchy (matching the simplified
@@ -217,6 +218,23 @@ class MockFreeCADObject:
             return
         props = object.__getattribute__(self, "_properties_values")
         props[name] = value
+
+    def isDerivedFrom(self, type_id):
+        """Mimic FreeCAD's isDerivedFrom() for common tested link types."""
+        own_type = object.__getattribute__(self, "_type_id")
+        if own_type == type_id:
+            return True
+        if type_id == "App::Link":
+            return own_type in {"App::Link", "App::LinkElement", "App::LinkGroup"}
+        return False
+
+    def isLink(self):
+        """Mimic FreeCAD's isLink() for tested link-like types."""
+        return object.__getattribute__(self, "_type_id") in {
+            "App::Link",
+            "App::LinkElement",
+            "App::LinkGroup",
+        }
 
 
 class TestSnapshotExtractor:
@@ -1055,6 +1073,81 @@ class TestSnapshotExtractor:
         # The important thing is it doesn't cause infinite recursion
         assert result.document_name == "TestDoc"
         # The test passes if we get here without RecursionError
+
+    def test_extract_tree_skips_claimed_children_for_app_link(self) -> None:
+        """Test App::Link keeps node but skips child-claim expansion."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        origin_obj = MockFreeCADObject(
+            name="Origin",
+            type_id="App::Origin",
+            label="Origin",
+            properties=["Label"],
+        )
+        origin_obj.Label = "Origin"
+
+        link_obj = MockFreeCADObject(
+            name="LinkToPart",
+            type_id="App::Link",
+            label="Link To Part",
+            properties=["Label"],
+        )
+        link_obj.Label = "Link To Part"
+        link_obj.ViewObject = MockViewProvider(claimed_children=[origin_obj])
+
+        mock_doc.Objects = [link_obj, origin_obj]
+
+        mock_gui_doc = MagicMock()
+        mock_gui_doc.getViewProvider = lambda obj: obj.ViewObject
+
+        extractor = SnapshotExtractor()
+        with patch("freecad.diff_wb.domain.snapshots.gui_extractor._init_gui_and_get_doc") as mock_init_gui:
+            mock_init_gui.return_value = mock_gui_doc
+            result = extractor.extract_tree(mock_doc)
+
+        assert len(result.nodes) == 2
+        link_node = next(node for node in result.nodes if node.name == "LinkToPart")
+        origin_node = next(node for node in result.nodes if node.name == "Origin")
+        assert link_node.path == "LinkToPart"
+        # Origin is root because Link claimChildren expansion was skipped.
+        assert origin_node.path == "Origin"
+
+    def test_extract_tree_keeps_claimed_children_for_assembly_link(self) -> None:
+        """Test Assembly::AssemblyLink still expands claimed children."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        child_obj = MockFreeCADObject(
+            name="LocalComp",
+            type_id="App::Link",
+            label="Local Component",
+            properties=["Label"],
+        )
+        child_obj.Label = "Local Component"
+
+        assembly_link_obj = MockFreeCADObject(
+            name="SubAsm",
+            type_id="Assembly::AssemblyLink",
+            label="Sub Assembly",
+            properties=["Label"],
+        )
+        assembly_link_obj.Label = "Sub Assembly"
+        assembly_link_obj.ViewObject = MockViewProvider(claimed_children=[child_obj])
+
+        mock_doc.Objects = [assembly_link_obj, child_obj]
+
+        mock_gui_doc = MagicMock()
+        mock_gui_doc.getViewProvider = lambda obj: obj.ViewObject
+
+        extractor = SnapshotExtractor()
+        with patch("freecad.diff_wb.domain.snapshots.gui_extractor._init_gui_and_get_doc") as mock_init_gui:
+            mock_init_gui.return_value = mock_gui_doc
+            result = extractor.extract_tree(mock_doc)
+
+        assert len(result.nodes) == 2
+        child_node = next(node for node in result.nodes if node.name == "LocalComp")
+        assert child_node.path == "SubAsm/LocalComp"
 
     def test_extract_tree_filters_objects_without_name(self) -> None:
         """Test that objects without Name attribute are filtered out.

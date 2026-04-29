@@ -529,5 +529,5 @@ class TestRecomputeAllOpenDocumentsCommand:
 
         assert resources["MenuText"] == "Recompute All"
         assert "recompute" in resources["ToolTip"].lower()
-        assert resources["Pixmap"].endswith("RefreshRepository.svg")
+        assert resources["Pixmap"].endswith("RecomputeAll.svg")
         assert command.IsActive() is True

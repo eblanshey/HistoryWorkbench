@@ -46,9 +46,9 @@ if Gui is not None:
             "DiffRecomputeAllOpenDocuments",
             "DiffOpenAllDocumentsInRepository",
             "DiffCommit",
-            "DiffTakeSnapshot",
-            "DiffCompare",
-            "DiffSwapColumns",
+            # "DiffTakeSnapshot",
+            # "DiffCompare",
+            # "DiffSwapColumns",
         ]
 
         def __init__(self):

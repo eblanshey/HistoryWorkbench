@@ -372,7 +372,7 @@ class DiffPanelView(QWidget):
         # Column 3: Properties tree widget (replaces QTableWidget)
         self.properties_tree = QTreeWidget()
         self.properties_tree.setColumnCount(3)
-        self.properties_tree.setHeaderLabels(["Property", "Value Left", "Value Right"])
+        self.properties_tree.setHeaderLabels(["Property", "Old Value", "New Value"])
         self.properties_tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.properties_tree.header().setStretchLastSection(True)
         # Set the custom delegate for value columns to allow double-click editing (for copying)
@@ -1084,6 +1084,12 @@ class DiffPanelView(QWidget):
         # Enable editing on double-click to allow text selection for copying
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
 
+        # Set tooltip for the whole row using already-calculated values
+        tooltip = self._create_property_tooltip(left_value, right_value)
+        item.setToolTip(0, tooltip)
+        item.setToolTip(1, tooltip)
+        item.setToolTip(2, tooltip)
+
         # Store expansion intent (will be applied after tree is built)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, self._presentation_has_changes(prop))
 
@@ -1165,6 +1171,12 @@ class DiffPanelView(QWidget):
             # Enable editing on double-click to allow text selection for copying
             child_item.setFlags(child_item.flags() | Qt.ItemFlag.ItemIsEditable)
 
+            # Set tooltip for the whole row using already-calculated values
+            tooltip = self._create_property_tooltip(left_value, right_value)
+            child_item.setToolTip(0, tooltip)
+            child_item.setToolTip(1, tooltip)
+            child_item.setToolTip(2, tooltip)
+
             # Store expansion intent (will be applied after tree is built)
             child_item.setData(0, Qt.ItemDataRole.UserRole + 1, self._presentation_has_changes(child))
 
@@ -1224,6 +1236,23 @@ class DiffPanelView(QWidget):
         item.setBackground(0, QBrush(color))
         item.setBackground(1, QBrush(color))
         item.setBackground(2, QBrush(color))
+
+    def _create_property_tooltip(self, old_value_str: str, new_value_str: str) -> str:
+        """Create tooltip text for a property row.
+
+        Format:
+            [old value]
+            -----
+            [new value]
+
+        Args:
+            old_value_str: Already-formatted old value string.
+            new_value_str: Already-formatted new value string.
+
+        Returns:
+            Tooltip text string.
+        """
+        return f"{old_value_str}\n-----\n{new_value_str}"
 
     def _apply_expansion_state(self, tree: QTreeWidget) -> None:
         """Apply stored expansion state to all items in the tree.

@@ -91,10 +91,10 @@ class TestDiffPanelViewShowPropertiesTree:
         # Check property name (column 0) - CamelCase converted to spaced
         assert prop_item.text(0) == "Length"
 
-        # Check Value Left column (column 1) is empty for ADDED
+        # Check Old Value column (column 1) is empty for ADDED
         assert prop_item.text(1) == ""
 
-        # Check Value Right column (column 2) has new value
+        # Check New Value column (column 2) has new value
         assert prop_item.text(2) == "25.0"
 
         # Check green background color on all 3 columns
@@ -132,10 +132,10 @@ class TestDiffPanelViewShowPropertiesTree:
         # Check property name
         assert prop_item.text(0) == "Width"
 
-        # Check Value Left column (column 1) has old value for DELETED
+        # Check Old Value column (column 1) has old value for DELETED
         assert prop_item.text(1) == "15.0"
 
-        # Check Value Right column (column 2) is empty for DELETED
+        # Check New Value column (column 2) is empty for DELETED
         assert prop_item.text(2) == ""
 
         # Check red background color on all 3 columns
@@ -166,10 +166,10 @@ class TestDiffPanelViewShowPropertiesTree:
         group_item = panel.properties_tree.topLevelItem(0)
         prop_item = group_item.child(0)
 
-        # Check Value Left column (column 1) has old value for MODIFIED
+        # Check Old Value column (column 1) has old value for MODIFIED
         assert prop_item.text(1) == "10.0"
 
-        # Check Value Right column (column 2) has new value for MODIFIED
+        # Check New Value column (column 2) has new value for MODIFIED
         assert prop_item.text(2) == "20.0"
 
         # Check blue background color on all 3 columns
@@ -865,7 +865,7 @@ class TestDiffPanelViewThreeColumnLayout:
         assert panel.properties_tree.columnCount() == 3
 
     def test_header_labels_are_correct(self, panel) -> None:  # type: ignore[no-untyped-def]
-        """Header labels are ['Property', 'Value Left', 'Value Right']."""
+        """Header labels are ['Property', 'Old Value', 'New Value']."""
 
         # When: Creating a fresh panel and adding a property
         from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
@@ -885,7 +885,7 @@ class TestDiffPanelViewThreeColumnLayout:
         assert group_item.text(0) == "Properties"
         assert group_item.text(1) == ""
         assert group_item.text(2) == ""
-        # The header labels are set in _setup_ui with setHeaderLabels(["Property", "Value Left", "Value Right"])
+        # The header labels are set in _setup_ui with setHeaderLabels(["Property", "Old Value", "New Value"])
 
     def test_group_header_has_empty_columns_1_and_2(self, panel) -> None:  # type: ignore[no-untyped-def]
         """Group headers have empty text in columns 1 and 2."""

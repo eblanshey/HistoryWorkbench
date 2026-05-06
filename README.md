@@ -18,6 +18,11 @@
 
 DiffCAD is a FreeCAD workbench for comparing parametric document snapshots. It gives CAD projects a review loop that feels closer to software development: inspect object changes, drill into property updates, stage model work, and commit snapshot data alongside `.FCStd` files.
 
+<p align="center">
+  <a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/LightScreenshot.png"><img src="docs/LightScreenshot.png" alt="DiffCAD light theme screenshot" width="48%" /></a>
+  <a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/DarkScreenshot.png"><img src="docs/DarkScreenshot.png" alt="DiffCAD dark theme screenshot" width="48%" /></a>
+</p>
+
 ## Why DiffCAD?
 
 FreeCAD documents are binary archives, so normal text diffs are not useful for model review. DiffCAD records a structured snapshot of each document's feature tree and compares those snapshots across your working tree, staging area, and git history.

@@ -19,7 +19,7 @@ from ...infrastructure.freecad.ports import get_app_port, get_port
 from ...infrastructure.freecad.settings_repo import FreeCADSettingsRepository
 from ...infrastructure.git.git_port_adapter import GitPortAdapter
 from ...infrastructure.persistence.snapshot_yaml_deserializer import SnapshotYamlDeserializer
-from ..actions.commands.commit_staging import CommitStagingAction
+from ..actions.commit_staging import CommitStagingAction
 from ..actions.create_diff import CreateDiffAction
 from ..actions.create_document_diffs import CreateDocumentDiffsAction
 from ..actions.create_document_snapshot_commit import CreateDocumentSnapshotForCommitAction

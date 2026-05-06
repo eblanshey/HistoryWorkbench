@@ -1,8 +1,9 @@
 """File responsibility: Commit staging action orchestration."""
 
-from ....domain.git.git_service import GitService
-from ....domain.git.models import GitRepository
-from ..result_models import Result
+from freecad.diff_wb.domain.git.git_service import GitService
+from freecad.diff_wb.domain.git.models import GitRepository
+
+from .result_models import Result
 
 
 class CommitStagingAction:

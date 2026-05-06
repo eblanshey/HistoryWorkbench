@@ -1,6 +1,6 @@
 """Module responsibility: Action use cases."""
 
-from .commands import CommitStagingAction
+from .commit_staging import CommitStagingAction
 from .create_diff import CreateDiffAction
 from .create_document_diffs import CreateDocumentDiffsAction
 from .create_document_snapshot_commit import CreateDocumentSnapshotForCommitAction

@@ -1,6 +1,6 @@
 """File responsibility: Unit tests for CommitStagingAction."""
 
-from freecad.diff_wb.application.actions.commands import CommitStagingAction
+from freecad.diff_wb.application.actions.commit_staging import CommitStagingAction
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.domain.git.models import GitRepository
 from tests.fakes import FakeGitPort

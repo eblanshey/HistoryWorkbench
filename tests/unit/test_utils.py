@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Unit tests for utility functions including float formatting
-# and float comparison helpers.
+# File responsibility: Unit tests for float comparison helper functions.
 """Unit tests for utility functions in the Diff Workbench."""
 
 import pytest
 
 from freecad.diff_wb.domain.config import FLOAT_PRECISION
-from freecad.diff_wb.utils import float_values_equal, format_float
+from freecad.diff_wb.utils import float_values_equal
 
 
 class TestFloatValuesEqual:
@@ -38,45 +37,3 @@ class TestFloatValuesEqual:
         """Test that float_values_equal uses the configured precision."""
         assert float_values_equal(1.0, 1.0 + 1e-8, FLOAT_PRECISION) is True
         assert float_values_equal(1.0, 1.1, FLOAT_PRECISION) is False
-
-
-class TestFormatFloat:
-    """Tests for format_float utility function.
-
-    These tests require Qt runtime and are skipped in unit test environments.
-    They are intended for integration tests where Qt is available.
-    """
-
-    @pytest.mark.skip(reason="Requires Qt runtime (PyQt5)")
-    @pytest.mark.parametrize(
-        ("value", "precision", "expected"),
-        [
-            (1.0, 2, "1.00"),
-            (3.14, 2, "3.14"),
-            (0.0, 2, "0.00"),
-            (-1.5, 2, "-1.50"),
-            (1.567, 2, "1.57"),
-            (1.564, 2, "1.56"),
-            (0.005, 2, "0.00"),
-            (123.456, 2, "123.46"),
-            (1e6, 2, "1000000.00"),
-            (-0.01, 2, "-0.01"),
-            (0.0056789, 2, "0.01"),
-        ],
-    )
-    def test_format_float_various_inputs(self, value: float, precision: int, expected: str) -> None:
-        """Test format_float with various float values and precisions."""
-        result = format_float(value, precision)
-        assert result == expected
-
-    @pytest.mark.skip(reason="Requires Qt runtime (PyQt5)")
-    def test_format_float_precision_zero(self) -> None:
-        """Test format_float with zero precision."""
-        result = format_float(3.14159, 0)
-        assert result == "3"
-
-    @pytest.mark.skip(reason="Requires Qt runtime (PyQt5)")
-    def test_format_float_precision_three(self) -> None:
-        """Test format_float with three decimal places."""
-        result = format_float(3.14159, 3)
-        assert result == "3.142"

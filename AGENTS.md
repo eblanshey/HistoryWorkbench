@@ -40,14 +40,22 @@ Write only meaningful, long-term tests. Avoid "dumb tests" that serve no purpose
 - Phase-specific test files (e.g., `test_*_phase2.py`) - clean up TDD artifacts after implementation
 - Tests that duplicate existing coverage without adding value
 - Tests for implementation details that may change during refactoring
+- Tests of fake internals, protocol compliance, or method existence - fakes support tests, they are not product behavior
+- Private attribute assertions (`_git_port`, `_git_service`, `hasattr` checks) - these freeze wiring details
+- Dataclass default/repr/mutability trivia unless it documents a public contract
+- Permanently skipped or debug-only tests
 
 **DO write:**
-- Positive tests verifying components ARE wired correctly
+- Positive tests verifying components ARE wired correctly through observable outcomes
 - Tests for behavioral contracts and public APIs
-- Integration tests validating component interactions
+- Integration tests validating component interactions that require real FreeCAD/Qt runtime
 - Tests that would catch regressions if removed
 
-**Test cleanup principle:** If a test doesn't provide ongoing value (catch bugs, document behavior, validate architecture), don't write it or remove it.
+**Layer ownership:** Each behavior has one owning test layer. Domain owns algorithms. Application owns orchestration and result contracts. Infrastructure owns adapter parsing and error mapping. UI owns observable presenter/view behavior. Integration owns real FreeCAD/Qt/runtime behavior. Do not duplicate tests across layers.
+
+**Skipped tests:** Never leave skipped tests in the suite long-term. Move useful runtime-dependent coverage to integration tests; delete the rest.
+
+**Parametrized consolidation:** Use `@pytest.mark.parametrize` when multiple tests differ only in input/output values. Keeps edge coverage concise and reduces repetitive failures.
 
 ## Type Information
 

@@ -7,6 +7,7 @@ including tree rendering, staging controls, and callback wiring.
 from __future__ import annotations
 
 import pytest
+from PySide6.QtGui import QColor
 
 from freecad.diff_wb.domain.diff.models import DiffState
 from freecad.diff_wb.ui.views.document_diff_tree_widget import DocumentDiffTreeWidget
@@ -58,86 +59,36 @@ class TestShowDocDiffEmptyList:
 class TestShowDocDiffNodeColorsAndUserRole:
     """Tests for node colors and Qt.UserRole path storage."""
 
-    def test_added_nodes_shown_with_green_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """ADDED nodes display with light green background."""
-        from PySide6.QtGui import QColor
+    @pytest.mark.parametrize(
+        ("state", "expected_bg"),
+        [
+            (DiffState.ADDED, QColor(200, 255, 200)),
+            (DiffState.DELETED, QColor(255, 200, 200)),
+            (DiffState.MODIFIED, QColor(200, 200, 255)),
+        ],
+    )
+    def test_node_state_colors(self, widget, state, expected_bg) -> None:  # type: ignore[no-untyped-def]
+        """Nodes display with correct background color per diff state."""
 
         from freecad.diff_wb.ui.presenters.presentation_models import NodePresentation
 
-        # Given: ADDED node
-        added_node = NodePresentation(
-            path="Body/NewPad",
+        node = NodePresentation(
+            path="Body/TestPad",
             type_id="PartDesign::Pad",
-            label="NewPad",
-            state=DiffState.ADDED,
+            label="TestPad",
+            state=state,
             has_changes=True,
             children=[],
         )
 
-        # When: Show tree with ADDED node
-        widget.show_doc_diff([added_node])
+        widget.show_doc_diff([node])
 
-        # Then: Root item exists and child has green background
         root_item = widget.tree_widget.topLevelItem(0)
         assert root_item is not None
         child_item = root_item.child(0)
         assert child_item is not None
         bg_color = child_item.background(0).color()
-        assert bg_color == QColor(200, 255, 200)
-
-    def test_deleted_nodes_shown_with_red_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """DELETED nodes display with light red background."""
-        from PySide6.QtGui import QColor
-
-        from freecad.diff_wb.ui.presenters.presentation_models import NodePresentation
-
-        # Given: DELETED node
-        deleted_node = NodePresentation(
-            path="Body/OldPad",
-            type_id="PartDesign::Pad",
-            label="OldPad",
-            state=DiffState.DELETED,
-            has_changes=True,
-            children=[],
-        )
-
-        # When: Show tree with DELETED node
-        widget.show_doc_diff([deleted_node])
-
-        # Then: Root item exists and child has red background
-        root_item = widget.tree_widget.topLevelItem(0)
-        assert root_item is not None
-        child_item = root_item.child(0)
-        assert child_item is not None
-        bg_color = child_item.background(0).color()
-        assert bg_color == QColor(255, 200, 200)
-
-    def test_modified_nodes_shown_with_blue_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """MODIFIED nodes display with light blue background."""
-        from PySide6.QtGui import QColor
-
-        from freecad.diff_wb.ui.presenters.presentation_models import NodePresentation
-
-        # Given: MODIFIED node
-        modified_node = NodePresentation(
-            path="Body/ModifiedPad",
-            type_id="PartDesign::Pad",
-            label="ModifiedPad",
-            state=DiffState.MODIFIED,
-            has_changes=True,
-            children=[],
-        )
-
-        # When: Show tree with MODIFIED node
-        widget.show_doc_diff([modified_node])
-
-        # Then: Root item exists and child has blue background
-        root_item = widget.tree_widget.topLevelItem(0)
-        assert root_item is not None
-        child_item = root_item.child(0)
-        assert child_item is not None
-        bg_color = child_item.background(0).color()
-        assert bg_color == QColor(200, 200, 255)
+        assert bg_color == expected_bg
 
     def test_unchanged_nodes_shown_without_color(self, widget) -> None:  # type: ignore[no-untyped-def]
         """UNCHANGED nodes display without custom color (default background)."""
@@ -145,7 +96,6 @@ class TestShowDocDiffNodeColorsAndUserRole:
 
         from freecad.diff_wb.ui.presenters.presentation_models import NodePresentation
 
-        # Given: UNCHANGED node
         unchanged_node = NodePresentation(
             path="Body/BasePart",
             type_id="PartDesign::Body",
@@ -155,19 +105,16 @@ class TestShowDocDiffNodeColorsAndUserRole:
             children=[],
         )
 
-        # When: Show tree with UNCHANGED node
         widget.show_doc_diff([unchanged_node])
 
-        # Then: Root item exists and child has default background (not colored)
         root_item = widget.tree_widget.topLevelItem(0)
         assert root_item is not None
         child_item = root_item.child(0)
         assert child_item is not None
         bg_color = child_item.background(0).color()
-        # Should NOT be any of the special colors
-        assert bg_color != QColor(200, 255, 200)  # Not green
-        assert bg_color != QColor(255, 200, 200)  # Not red
-        assert bg_color != QColor(200, 200, 255)  # Not blue
+        assert bg_color != QColor(200, 255, 200)
+        assert bg_color != QColor(255, 200, 200)
+        assert bg_color != QColor(200, 200, 255)
 
     def test_path_stored_in_user_role_for_retrieval(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Node paths are stored in Qt.UserRole for later property lookup."""

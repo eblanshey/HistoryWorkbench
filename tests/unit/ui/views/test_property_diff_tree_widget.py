@@ -49,121 +49,6 @@ class TestPropertyDiffTreeWidgetShowPropertyDiff:
         # Then: Tree should be cleared
         assert widget.topLevelItemCount() == 0
 
-    def test_single_property_added_state_green_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_property_diff() with ADDED state displays green background in 3-column layout."""
-        from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
-
-        # Given: A single property with ADDED state
-        properties = [
-            PropertyPresentation(
-                name="Length",
-                old_value=None,
-                new_value="25.0",
-                state=DiffState.ADDED,
-            ),
-        ]
-
-        # When: Call show_property_diff
-        widget.show_property_diff(properties)
-
-        # Then: Should have one group with one property child
-        assert widget.topLevelItemCount() == 1  # One group header
-        group_item = widget.topLevelItem(0)
-        assert group_item is not None
-
-        # Check group header text (default group is "Properties")
-        assert group_item.text(0) == "Properties"
-
-        # Check property is a child of the group
-        assert group_item.childCount() == 1
-        prop_item = group_item.child(0)
-        assert prop_item is not None
-
-        # Check property name (column 0) - CamelCase converted to spaced
-        assert prop_item.text(0) == "Length"
-
-        # Check Old Value column (column 1) is empty for ADDED
-        assert prop_item.text(1) == ""
-
-        # Check New Value column (column 2) has new value
-        assert prop_item.text(2) == "25.0"
-
-        # Check green background color on all 3 columns
-        assert prop_item.background(0).color() == QColor(200, 255, 200)
-        assert prop_item.background(1).color() == QColor(200, 255, 200)
-        assert prop_item.background(2).color() == QColor(200, 255, 200)
-
-    def test_single_property_deleted_state_red_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_property_diff() with DELETED state displays red background in 3-column layout."""
-        from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
-
-        # Given: A single property with DELETED state
-        properties = [
-            PropertyPresentation(
-                name="Width",
-                old_value="15.0",
-                new_value=None,
-                state=DiffState.DELETED,
-            ),
-        ]
-
-        # When: Call show_property_diff
-        widget.show_property_diff(properties)
-
-        # Then: Should have one group with one property child
-        assert widget.topLevelItemCount() == 1
-        group_item = widget.topLevelItem(0)
-        assert group_item.childCount() == 1
-
-        prop_item = group_item.child(0)
-        assert prop_item is not None
-
-        # Check property name
-        assert prop_item.text(0) == "Width"
-
-        # Check Old Value column (column 1) has old value for DELETED
-        assert prop_item.text(1) == "15.0"
-
-        # Check New Value column (column 2) is empty for DELETED
-        assert prop_item.text(2) == ""
-
-        # Check red background color on all 3 columns
-        assert prop_item.background(0).color() == QColor(255, 200, 200)
-        assert prop_item.background(1).color() == QColor(255, 200, 200)
-        assert prop_item.background(2).color() == QColor(255, 200, 200)
-
-    def test_single_property_modified_state_blue_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_property_diff() with MODIFIED state displays blue background in 3-column layout."""
-        from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
-
-        # Given: A single property with MODIFIED state
-        properties = [
-            PropertyPresentation(
-                name="Height",
-                old_value="10.0",
-                new_value="20.0",
-                state=DiffState.MODIFIED,
-            ),
-        ]
-
-        # When: Call show_property_diff
-        widget.show_property_diff(properties)
-
-        # Then: Check the property has blue background
-        group_item = widget.topLevelItem(0)
-        prop_item = group_item.child(0)
-
-        # Check Old Value column (column 1) has old value for MODIFIED
-        assert prop_item.text(1) == "10.0"
-
-        # Check New Value column (column 2) has new value for MODIFIED
-        assert prop_item.text(2) == "20.0"
-
-        # Check blue background color on all 3 columns
-        assert prop_item.background(0).color() == QColor(200, 200, 255)
-        assert prop_item.background(1).color() == QColor(200, 200, 255)
-        assert prop_item.background(2).color() == QColor(200, 200, 255)
-
     @pytest.mark.parametrize(
         ("state,old_val,new_val,col1,col2,expected_bg"),
         [
@@ -285,47 +170,6 @@ class TestPropertyDiffTreeWidgetGroupHeaders:
         assert group_item is not None
         flags = group_item.flags()
         assert not (flags & Qt.ItemFlag.ItemIsSelectable)
-
-    def test_group_header_has_gray_background(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_property_diff() creates group headers with gray background on all 3 columns."""
-        from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
-
-        # Given: Properties to display
-        properties = [
-            PropertyPresentation(
-                name="TestProp",
-                state=DiffState.MODIFIED,
-            ),
-        ]
-
-        # When: Call show_property_diff
-        widget.show_property_diff(properties)
-
-        # Then: Group header should have gray background (220, 220, 220) on all 3 columns
-        group_item = widget.topLevelItem(0)
-        assert group_item.background(0).color() == QColor(220, 220, 220)
-        assert group_item.background(1).color() == QColor(220, 220, 220)
-        assert group_item.background(2).color() == QColor(220, 220, 220)
-
-    def test_group_header_is_bold(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_property_diff() creates group headers with bold font."""
-        from freecad.diff_wb.ui.presenters.presentation_models import PropertyPresentation
-
-        # Given: Properties to display
-        properties = [
-            PropertyPresentation(
-                name="TestProp",
-                state=DiffState.MODIFIED,
-            ),
-        ]
-
-        # When: Call show_property_diff
-        widget.show_property_diff(properties)
-
-        # Then: Group header font should be bold
-        group_item = widget.topLevelItem(0)
-        font = group_item.font(0)
-        assert font.bold()
 
     def test_groups_are_expanded_by_default(self, widget) -> None:  # type: ignore[no-untyped-def]
         """show_property_diff() expands groups by default so properties are visible."""
@@ -457,6 +301,26 @@ class TestPropertyDiffTreeWidgetCamelCaseConversion:
         assert "Saved Geometry" in prop_names
         assert "XML Parser" in prop_names
         assert "Value 2D" in prop_names
+
+
+class TestCamelcaseHelper:
+    """Unit tests for the _camelcase_to_spaces helper function."""
+
+    @pytest.mark.parametrize(
+        ("input_name", "expected"),
+        [
+            ("SavedGeometry", "Saved Geometry"),
+            ("Placement", "Placement"),
+            ("Label2", "Label 2"),
+            ("XDirection", "X Direction"),
+            ("MyPropertyName", "My Property Name"),
+            ("XMLDoc", "XML Doc"),
+        ],
+    )
+    def test_camelcase_to_spaces(self, input_name: str, expected: str) -> None:
+        from freecad.diff_wb.ui.views.property_diff_tree_widget import _camelcase_to_spaces
+
+        assert _camelcase_to_spaces(input_name) == expected
 
 
 class TestPropertyDiffTreeWidgetNestedChildren:

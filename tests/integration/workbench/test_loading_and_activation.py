@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""File responsibility: Integration tests for workbench loading and module structure."""
+"""File responsibility: Integration tests for workbench loading and toolbox behavior."""
 
 from __future__ import annotations
-
-import inspect
-
-import pytest
 
 
 class TestWorkbenchLoading:
@@ -63,51 +59,37 @@ class TestWorkbenchLoading:
             freecad_app.Console.PrintError = original_print_error
 
         if errors:
+            import pytest
+
             pytest.fail(f"Console errors detected during module load: {len(errors)}\n" + "\n".join(errors))
 
-    def test_workbench_has_required_methods_and_attributes(self, freecad_app) -> None:  # type: ignore[no-untyped-def]
-        """Test workbench module defines required methods and attributes.
-
-        Tests the workbench class definition without requiring Gui.Workbench to exist.
-        Verifies:
-        - Module has Gui and getMainWindow imports
-        - If DiffWorkbench class is available (GUI available), check its attributes
-        - If not available (headless), check that source code contains expected definitions
-        """
+    def test_workbench_instance_methods_and_attributes(self, freecad_app) -> None:  # type: ignore[no-untyped-def]
+        """Test DiffWorkbench instance has required methods and attributes."""
         import freecad.diff_wb.entrypoints.workbench as wb_module
 
-        # Gui and getMainWindow may be None in headless mode - that's OK
         assert hasattr(wb_module, "Gui")
         assert hasattr(wb_module, "getMainWindow")
 
-        # Check if DiffWorkbench class is available
-        if wb_module.Gui is not None and hasattr(wb_module.Gui, "Workbench"):
-            from freecad.diff_wb.entrypoints.workbench import DiffWorkbench
+        if wb_module.Gui is None or not hasattr(wb_module.Gui, "Workbench"):
+            import pytest
 
-            # Class is available - check instance attributes
-            wb = DiffWorkbench()
-            assert hasattr(wb, "Initialize")
-            assert hasattr(wb, "Activated")
-            assert hasattr(wb, "Deactivated")
-            assert hasattr(wb, "GetClassName")
-            assert wb.MenuText == "Diff"
-            assert wb.ToolTip == "Compare document snapshots"
-            assert wb.toolbox == [
-                "DiffRefreshRepository",
-                "DiffRecomputeAllOpenDocuments",
-                "DiffOpenAllDocumentsInRepository",
-                "DiffCommit",
-                "DiffTakeSnapshot",
-                "DiffCompare",
-                "DiffSwapColumns",
-            ]
-        else:
-            # Class not available (headless/Xvfb mode) - check source code instead
-            source = inspect.getsource(wb_module)
-            assert "MenuText" in source
-            assert "ToolTip" in source
-            assert "toolbox" in source
-            assert "Initialize" in source
-            assert "Activated" in source
-            assert "Deactivated" in source
-            assert "DiffWorkbench" in source
+            pytest.skip("GUI not available (headless mode)")
+
+        from freecad.diff_wb.entrypoints.workbench import DiffWorkbench
+
+        wb = DiffWorkbench()
+        assert hasattr(wb, "Initialize")
+        assert hasattr(wb, "Activated")
+        assert hasattr(wb, "Deactivated")
+        assert hasattr(wb, "GetClassName")
+        assert wb.MenuText == "Diff"
+        assert wb.ToolTip == "Compare document snapshots"
+        assert wb.toolbox == [
+            "DiffRefreshRepository",
+            "DiffRecomputeAllOpenDocuments",
+            "DiffOpenAllDocumentsInRepository",
+            "DiffCommit",
+            "DiffTakeSnapshot",
+            "DiffCompare",
+            "DiffSwapColumns",
+        ]

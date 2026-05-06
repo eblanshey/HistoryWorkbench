@@ -469,7 +469,7 @@ class DiffPresenter:
         if all_diff_results or document_statuses:
             self.present_diffs(all_diff_results, dirty_paths, self._document_status_by_path)
         else:
-            Log.warning("No diff results to display")
+            Log.info("No diff results to display")
             self.clear_doc_diff()
 
     def _get_eligible_documents(self, repo: GitRepository) -> list[DocumentLike] | None:
@@ -539,7 +539,7 @@ class DiffPresenter:
         if all_diff_results or document_statuses:
             self.present_diffs(all_diff_results, set(), self._document_status_by_path)
         else:
-            Log.warning("No diff results to display for staging")
+            Log.info("No diff results to display for staging")
             self.clear_doc_diff()
 
     def _compute_staging_diffs(self, repo: GitRepository) -> tuple[list[DiffResult], dict[str, DocumentDiffStatus]]:

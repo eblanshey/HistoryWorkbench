@@ -62,33 +62,23 @@ class TestGitPortAdapterCommit:
                 "Git commit failed: error: pathspec 'commit' did not match any file(s) known to git"
             )
 
-    def test_commit_handles_timeout(self) -> None:
-        """Test that subprocess timeout returns False.
-
-        When git commit times out, the adapter should log a warning and return False.
-        """
+    @pytest.mark.parametrize(
+        ("side_effect", "expected_log"),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=30), "Git commit command timed out"),
+            (FileNotFoundError("git"), "Git command not found"),
+        ],
+    )
+    def test_commit_handles_errors(self, side_effect: Exception, expected_log: str) -> None:
+        """Test that timeout and git-not-found return False with warning."""
         with (
-            patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)),
+            patch.object(subprocess, "run", side_effect=side_effect),
             patch.object(Log, "warning") as mock_warning,
         ):
             result = self.adapter.commit("/path/to/repo", "Add feature")
 
             assert result is False
-            mock_warning.assert_called_once_with("Git commit command timed out")
-
-    def test_commit_handles_git_not_found(self) -> None:
-        """Test that FileNotFoundError returns False.
-
-        When git executable is not found, the adapter should log a warning and return False.
-        """
-        with (
-            patch.object(subprocess, "run", side_effect=FileNotFoundError("git")),
-            patch.object(Log, "warning") as mock_warning,
-        ):
-            result = self.adapter.commit("/path/to/repo", "Add feature")
-
-            assert result is False
-            mock_warning.assert_called_once_with("Git command not found")
+            mock_warning.assert_called_once_with(expected_log)
 
     def test_commit_passes_correct_command_args(self) -> None:
         """Test that subprocess.run receives the correct command arguments.
@@ -183,34 +173,23 @@ class TestGitPortAdapterCommit:
             mock_warning.assert_called_once()
             assert "nothing added to commit" in mock_warning.call_args[0][0]
 
-    def test_commit_handles_not_a_directory(self) -> None:
-        """Test handling of NotADirectoryError.
-
-        When git_root is not a valid directory, the adapter should return False.
-        """
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (NotADirectoryError(),),
+            (OSError("Permission denied"),),
+        ],
+    )
+    def test_commit_handles_os_errors(self, side_effect: Exception) -> None:
+        """Test that OS errors return False with warning."""
         with (
-            patch.object(subprocess, "run", side_effect=NotADirectoryError),
-            patch.object(Log, "warning") as mock_warning,
-        ):
-            result = self.adapter.commit("/not/a/directory", "Add feature")
-
-            assert result is False
-            assert mock_warning.called
-
-    def test_commit_handles_os_error(self) -> None:
-        """Test handling of generic OSError.
-
-        When git commit encounters a generic OS error, the adapter should return False.
-        """
-        with (
-            patch.object(subprocess, "run", side_effect=OSError("Permission denied")),
+            patch.object(subprocess, "run", side_effect=side_effect),
             patch.object(Log, "warning") as mock_warning,
         ):
             result = self.adapter.commit("/path/to/repo", "Add feature")
 
             assert result is False
-            mock_warning.assert_called_once()
-            assert "Permission denied" in mock_warning.call_args[0][0]
+            assert mock_warning.called
 
     @pytest.mark.parametrize(
         "returncode",

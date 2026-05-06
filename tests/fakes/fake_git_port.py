@@ -282,6 +282,32 @@ class FakeGitPort:
         self._last_commit_call = (git_root, message)
         return not self._fail_commit
 
+    def set_staged_paths(self, paths: list[str]) -> None:
+        """Set the staged paths returned by get_staged_paths.
+
+        Args:
+            paths: List of relative file paths to return as staged.
+        """
+        self._staged_paths = paths
+
+    def set_file_contents(self, commit: str | None, git_path: str, content: str) -> None:
+        """Set file contents for a specific commit and path.
+
+        Args:
+            commit: Commit reference or None for index.
+            git_path: Relative path within repository.
+            content: File content string to return.
+        """
+        self._file_contents[(commit, git_path)] = content
+
+    def get_last_commit_call(self) -> tuple[str, str] | None:
+        """Get the arguments from the last commit() call.
+
+        Returns:
+            Tuple of (git_root, message) from the last commit() call, or None if not called.
+        """
+        return self._last_commit_call
+
     def set_committed_files(self, root_path: str, commit: str, paths: list[str]) -> None:
         """Set committed file paths for a specific commit in a repo.
 

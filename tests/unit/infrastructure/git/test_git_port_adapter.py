@@ -137,22 +137,16 @@ class TestGitPortAdapter:
 
             assert result is None
 
-    def test_find_top_level_path_timeout(self) -> None:
-        """Test handling of subprocess timeout.
-
-        When git command times out, the adapter should return None.
-        """
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=5)):
-            result = self.adapter.find_top_level_git_path("/some/path")
-
-            assert result is None
-
-    def test_find_top_level_path_git_not_found(self) -> None:
-        """Test handling of git command not found.
-
-        When git executable is not found, the adapter should return None.
-        """
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=5),),
+            (FileNotFoundError("git"),),
+        ],
+    )
+    def test_find_top_level_path_handles_errors(self, side_effect: Exception) -> None:
+        """Test timeout and git-not-found return None."""
+        with patch.object(subprocess, "run", side_effect=side_effect):
             result = self.adapter.find_top_level_git_path("/some/path")
 
             assert result is None
@@ -195,21 +189,6 @@ class TestGitPortAdapter:
             result = self.adapter.find_top_level_git_path("/some/path")
 
             assert result is None
-
-
-class TestGitPortAdapterProtocol:
-    """Tests to verify GitPortAdapter implements GitPort protocol."""
-
-    def test_adapter_implements_gitport_protocol(self) -> None:
-        """Test that GitPortAdapter has the required find_top_level_git_path method.
-
-        This verifies the adapter correctly implements the GitPort protocol.
-        """
-        adapter = GitPortAdapter()
-
-        # Verify the method exists and is callable
-        assert hasattr(adapter, "find_top_level_git_path")
-        assert callable(adapter.find_top_level_git_path)
 
 
 class TestGitPortAdapterGetCommits:
@@ -371,16 +350,16 @@ class TestGitPortAdapterGetCommits:
 
             assert commits == []
 
-    def test_get_commits_timeout(self) -> None:
-        """Test handling of subprocess timeout."""
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=10)):
-            commits = self.adapter.get_commits("/path/to/repo")
-
-            assert commits == []
-
-    def test_get_commits_git_not_found(self) -> None:
-        """Test handling of git command not found."""
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=10),),
+            (FileNotFoundError("git"),),
+        ],
+    )
+    def test_get_commits_handles_errors(self, side_effect: Exception) -> None:
+        """Test timeout and git-not-found return empty list."""
+        with patch.object(subprocess, "run", side_effect=side_effect):
             commits = self.adapter.get_commits("/path/to/repo")
 
             assert commits == []
@@ -801,16 +780,16 @@ class TestGitPortAdapterGetStagedPaths:
 
             assert result == ["path/with\nnewline.FCStd"]
 
-    def test_get_staged_paths_timeout(self) -> None:
-        """Test handling of subprocess timeout."""
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
-            result = self.adapter.get_staged_paths("/path/to/repo")
-
-            assert result == []
-
-    def test_get_staged_paths_git_not_found(self) -> None:
-        """Test handling of git command not found."""
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=30),),
+            (FileNotFoundError("git"),),
+        ],
+    )
+    def test_get_staged_paths_handles_errors(self, side_effect: Exception) -> None:
+        """Test timeout and git-not-found return empty list."""
+        with patch.object(subprocess, "run", side_effect=side_effect):
             result = self.adapter.get_staged_paths("/path/to/repo")
 
             assert result == []
@@ -930,16 +909,16 @@ class TestGitPortAdapterGetFileContents:
 
             assert result is None
 
-    def test_get_file_contents_timeout(self) -> None:
-        """Test handling of subprocess timeout."""
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
-            result = self.adapter.get_file_contents("/path/to/repo", None, "path/to/file.FCStd")
-
-            assert result is None
-
-    def test_get_file_contents_git_not_found(self) -> None:
-        """Test handling of git command not found."""
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=30),),
+            (FileNotFoundError("git"),),
+        ],
+    )
+    def test_get_file_contents_handles_errors(self, side_effect: Exception) -> None:
+        """Test timeout and git-not-found return None."""
+        with patch.object(subprocess, "run", side_effect=side_effect):
             result = self.adapter.get_file_contents("/path/to/repo", None, "path/to/file.FCStd")
 
             assert result is None

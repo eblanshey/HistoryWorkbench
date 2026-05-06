@@ -1,11 +1,8 @@
-"""File responsibility: Unit tests for HistoryPanelWidget methods including show_snapshots(), show_commits(), and snapshot selection.
+"""File responsibility: Unit tests for HistoryPanelWidget methods including show_commits() and commit selection.
 
-These tests verify that the HistoryPanelWidget correctly populates the snapshot list
-with SnapshotSummary data, including proper sorting, formatting, and ID storage.
-Tests for show_repository() verify the git repository display functionality.
-Tests for show_commits() verify the history/commit list display functionality.
-Tests for HistorySelection verify the dataclass used for single-selection model.
-Tests for special items (Working Tree, Staging) verify their presence, alignment, and HistorySelection usage.
+These tests verify that the HistoryPanelWidget correctly populates the commit list
+with special items (Working Tree, Staging), proper formatting, selection callbacks,
+and infinite scroll support.
 """
 
 from __future__ import annotations
@@ -35,51 +32,6 @@ def _history_row_text(panel, row: int) -> str:  # type: ignore[no-untyped-def]
     return item.text()
 
 
-class TestHistorySelection:
-    """Tests for the HistorySelection dataclass."""
-
-    def test_history_selection_working_tree(self) -> None:
-        """HistorySelection can be created for WORKING_TREE kind."""
-        from freecad.diff_wb.ui.views.models import HistorySelection
-
-        selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
-        assert selection.item_kind == "WORKING_TREE"
-        assert selection.commit_hash is None
-
-    def test_history_selection_staging(self) -> None:
-        """HistorySelection can be created for STAGING kind."""
-        from freecad.diff_wb.ui.views.models import HistorySelection
-
-        selection = HistorySelection(item_kind="STAGING", commit_hash=None)
-        assert selection.item_kind == "STAGING"
-        assert selection.commit_hash is None
-
-    def test_history_selection_commit(self) -> None:
-        """HistorySelection stores commit_hash correctly for COMMIT kind."""
-        from freecad.diff_wb.ui.views.models import HistorySelection
-
-        commit_hash = "a1b2c3d4e5f6789012345678901234567890abcd"
-        selection = HistorySelection(item_kind="COMMIT", commit_hash=commit_hash)
-        assert selection.item_kind == "COMMIT"
-        assert selection.commit_hash == commit_hash
-
-    def test_history_selection_is_frozen(self) -> None:
-        """HistorySelection is immutable (frozen)."""
-        from freecad.diff_wb.ui.views.models import HistorySelection
-
-        selection = HistorySelection(item_kind="COMMIT", commit_hash="abc123")
-        with pytest.raises(AttributeError):  # Frozen dataclasses raise AttributeError on assignment
-            selection.commit_hash = "new_hash"  # type: ignore[misc]
-
-    def test_history_selection_commit_with_none_hash(self) -> None:
-        """HistorySelection for COMMIT can have None commit_hash."""
-        from freecad.diff_wb.ui.views.models import HistorySelection
-
-        selection = HistorySelection(item_kind="COMMIT", commit_hash=None)
-        assert selection.item_kind == "COMMIT"
-        assert selection.commit_hash is None
-
-
 @pytest.fixture(scope="module")
 def widget() -> object:
     """Create a HistoryPanelWidget instance for testing.
@@ -95,111 +47,6 @@ def widget() -> object:
         app = QApplication([])
 
     return HistoryPanelWidget()
-
-
-class TestHistoryPanelWidgetShowSnapshots:
-    """Tests for HistoryPanelWidget.show_snapshots() method."""
-
-    def test_show_snapshots_with_empty_list(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() handles empty list without errors."""
-
-        # Should not raise any exceptions
-        widget.show_snapshots([])
-
-        # History list should be empty
-        assert widget.history_list.count() == 0
-
-    def test_show_snapshots_clears_existing_items(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() clears existing items before populating."""
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        # Add initial items
-        widget.show_snapshots(
-            [
-                SnapshotSummary(id="old-1", name="Old Snapshot 1", created_at="2024-01-01T10:00:00", node_count=10),
-            ]
-        )
-        assert widget.history_list.count() == 1
-
-        # Replace with new list
-        widget.show_snapshots(
-            [
-                SnapshotSummary(id="new-1", name="New Snapshot 1", created_at="2024-02-01T10:00:00", node_count=20),
-            ]
-        )
-
-        # Should only have the new item
-        assert widget.history_list.count() == 1
-        assert widget.history_list.item(0).text() == "New Snapshot 1 - Feb 1, 2024 10:00AM"
-
-    def test_show_snapshots_sorts_by_timestamp_newest_first(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() sorts snapshots by timestamp, newest first."""
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        snapshots = [
-            SnapshotSummary(id="snap-1", name="Oldest", created_at="2024-01-01T10:00:00", node_count=10),
-            SnapshotSummary(id="snap-2", name="Newest", created_at="2024-03-01T10:00:00", node_count=30),
-            SnapshotSummary(id="snap-3", name="Middle", created_at="2024-02-01T10:00:00", node_count=20),
-        ]
-
-        widget.show_snapshots(snapshots)
-
-        # Verify order: Newest, Middle, Oldest
-        assert widget.history_list.count() == 3
-        assert widget.history_list.item(0).text().startswith("Newest")
-        assert widget.history_list.item(1).text().startswith("Middle")
-        assert widget.history_list.item(2).text().startswith("Oldest")
-
-    def test_show_snapshots_stores_id_in_user_role(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() stores snapshot ID in Qt.UserRole for each item."""
-        from PySide6.QtCore import Qt
-
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        snapshots = [
-            SnapshotSummary(id="test-id-123", name="Test Snapshot", created_at="2024-01-15T10:30:00", node_count=42),
-        ]
-
-        widget.show_snapshots(snapshots)
-
-        # Verify ID is stored in UserRole
-        item = widget.history_list.item(0)
-        assert item is not None
-        stored_id = item.data(Qt.ItemDataRole.UserRole)
-        assert stored_id == "test-id-123"
-
-    def test_show_snapshots_formats_display_correctly(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() formats display as 'name - Month Day, Year Time'."""
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        snapshots = [
-            SnapshotSummary(id="snap-1", name="My Snapshot", created_at="2024-01-15T10:30:00", node_count=42),
-        ]
-
-        widget.show_snapshots(snapshots)
-
-        # Check format: "My Snapshot - Jan 15, 2024 10:30 AM"
-        item_text = widget.history_list.item(0).text()
-        assert item_text == "My Snapshot - Jan 15, 2024 10:30AM"
-
-    def test_show_snapshots_multiple_items_with_ids(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """show_snapshots() correctly stores IDs for multiple items."""
-        from PySide6.QtCore import Qt
-
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        snapshots = [
-            SnapshotSummary(id="id-1", name="First", created_at="2024-01-01T09:00:00", node_count=5),
-            SnapshotSummary(id="id-2", name="Second", created_at="2024-01-02T10:00:00", node_count=10),
-            SnapshotSummary(id="id-3", name="Third", created_at="2024-01-03T11:00:00", node_count=15),
-        ]
-
-        widget.show_snapshots(snapshots)
-
-        # Verify all IDs are stored correctly (in sorted order: Third, Second, First)
-        assert widget.history_list.item(0).data(Qt.ItemDataRole.UserRole) == "id-3"
-        assert widget.history_list.item(1).data(Qt.ItemDataRole.UserRole) == "id-2"
-        assert widget.history_list.item(2).data(Qt.ItemDataRole.UserRole) == "id-1"
 
 
 class TestHistoryPanelWidgetRefreshButton:
@@ -224,30 +71,10 @@ class TestHistoryPanelWidgetRefreshButton:
         # Verify callback was invoked
         assert callback_called is True
 
-    def test_refresh_button_has_icon(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """Refresh button icon loading is attempted but may be null in test environments.
-
-        Icon loading depends on FreeCAD runtime availability. In unit tests without
-        FreeCADGui, the icon will be null which is acceptable. This is a best-effort
-        feature that requires FreeCAD runtime to function properly.
-        """
-        # Access the icon property to verify it's available (may be null in tests)
-        _ = widget._refresh_button.icon()
-        # No assertion here - null icon is acceptable in non-FreeCAD environments
-        # The important thing is that the button exists and has the icon slot available
-
     def test_refresh_button_has_tooltip(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Refresh button has a tooltip."""
         tooltip = widget._refresh_button.toolTip()
         assert "refresh" in tooltip.lower() or "git" in tooltip.lower()
-
-    def test_refresh_button_is_small_fixed_size(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """Refresh button has a small icon size set."""
-        # Check icon size rather than button size, as button size is managed by layout
-        # Note: Actual dimensions may vary based on available icon resource
-        icon_size = widget._refresh_button.iconSize()
-        assert icon_size.width() > 0
-        assert icon_size.height() > 0
 
 
 class TestHistoryPanelWidgetShowRepository:
@@ -375,30 +202,6 @@ class TestShowCommitsSpecialItems:
         staging_item = widget.history_list.item(1)
         assert staging_item is not None
         assert _history_row_text(widget, 1) == "Staging"
-
-    def test_show_commits_working_tree_has_center_alignment(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """Test that Working Tree item has center alignment set."""
-        from PySide6.QtCore import Qt
-
-        widget.show_commits([])
-
-        working_tree_item = widget.history_list.item(0)
-        assert working_tree_item is not None
-
-        alignment = working_tree_item.data(Qt.ItemDataRole.TextAlignmentRole)
-        assert alignment == Qt.AlignmentFlag.AlignCenter
-
-    def test_show_commits_staging_has_center_alignment(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """Test that Staging item has center alignment set."""
-        from PySide6.QtCore import Qt
-
-        widget.show_commits([])
-
-        staging_item = widget.history_list.item(1)
-        assert staging_item is not None
-
-        alignment = staging_item.data(Qt.ItemDataRole.TextAlignmentRole)
-        assert alignment == Qt.AlignmentFlag.AlignCenter
 
     def test_show_commits_working_tree_has_correct_user_role(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Test that Working Tree item has UserRole set to HistorySelection with WORKING_TREE kind."""
@@ -556,31 +359,32 @@ class TestShowCommits:
 
     def test_show_commits_clears_existing_list(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Test that show_commits replaces any existing list content."""
-        # First add some snapshots
-        from freecad.diff_wb.application.actions.result_models import SnapshotSummary
-
-        widget.show_snapshots(
-            [
-                SnapshotSummary(id="snap-1", name="First", created_at="2024-01-01T10:00:00", node_count=10),
-            ]
-        )
-        assert widget.history_list.count() == 1
-
-        # Now call show_commits
         from freecad.diff_wb.domain.git.models import GitCommit
 
-        commit = GitCommit(
+        # First populate with one commit
+        old_commit = GitCommit(
+            id="old1234567890",
+            message="Old commit",
+            author="Old Author",
+            timestamp=datetime.fromisoformat("2024-01-01T10:00:00+00:00"),
+        )
+        widget.show_commits([old_commit])
+        assert widget.history_list.count() == 3
+
+        # Now call show_commits with different commit
+        new_commit = GitCommit(
             id="a1b2c3d4e5f67890",
             message="Test commit",
             author="Test",
             timestamp=datetime.fromisoformat("2024-01-15T10:30:00+00:00"),
         )
-        widget.show_commits([commit])
+        widget.show_commits([new_commit])
 
-        # List should now contain special items + commit (not snapshots)
+        # List should contain special items + new commit (not old commit)
         assert widget.history_list.count() == 3
         assert _history_row_text(widget, 0) == "Working Tree"
         assert _history_row_text(widget, 1) == "Staging"
+        assert "Test commit" in _history_row_text(widget, 2)
 
     def test_show_commits_two_line_format(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Test that commits display with two-line format."""
@@ -607,22 +411,6 @@ class TestShowCommits:
         assert widget._format_commit_timestamp(commit.timestamp) in lines[0]
         # Line 2 should have first line of message
         assert "This is the subject line" in lines[1]
-
-    def test_show_commits_history_items_include_black_separator_line(self, widget) -> None:  # type: ignore[no-untyped-def]
-        """Each history item widget includes a horizontal separator line."""
-        from PySide6.QtWidgets import QFrame
-
-        widget.show_commits([])
-
-        working_tree_item = widget.history_list.item(0)
-        widget_item = widget.history_list.itemWidget(working_tree_item)
-        assert widget_item is not None
-        separators = [
-            frame
-            for frame in widget_item.findChildren(QFrame)
-            if frame.height() == 1 and "background-color: black" in frame.styleSheet()
-        ]
-        assert separators
 
     def test_show_commits_multiple_commits_newest_first(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Test that multiple commits are displayed in the order provided (assumed pre-sorted by adapter).

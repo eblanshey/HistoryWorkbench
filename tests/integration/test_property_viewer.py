@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""File responsibility: Integration tests for property viewer refactor Phase 6.
+"""File responsibility: Integration tests for property extraction and rendering with real FreeCAD runtime.
 
-These tests verify end-to-end functionality:
-- SavedGeometry is hidden (Phase 1)
-- Properties are grouped correctly (Phase 2)
-- Expandable properties work (Phase 4)
-- CamelCase names are spaced (Phase 3)
+Tests verify:
+- SavedGeometry is hidden via Prop_Hidden bit
+- Properties are grouped correctly
+- Placement and Vector properties expand to nested paths
+- Tree widget renders properties grouped correctly
+- Various FreeCAD object types extract properly
 
 Run with: ./run_integration_tests.sh
-Or: FREECAD_ROOT=/path/to/freecad python -m pytest tests/integration/ -v
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ if TYPE_CHECKING:
     from freecad.diff_wb.domain.freecad_ports import AppLike
 
 
-class TestPropertyViewerPhase6:
-    """Integration tests verifying Phases 1-5 work correctly together."""
+class TestPropertyViewerIntegration:
+    """Integration tests for property extraction and rendering with real FreeCAD runtime."""
 
     def test_savedgeometry_is_hidden(self, freecad_app: AppLike, project_root: object) -> None:
         """Verify SavedGeometry is hidden via Prop_Hidden bit (Phase 1).
@@ -199,24 +199,6 @@ class TestPropertyViewerPhase6:
 
         finally:
             freecad_app.closeDocument(doc.Name)
-
-    def test_camelcase_to_spaces_conversion(self) -> None:
-        """Verify CamelCase property names are converted to spaced names (Phase 3)."""
-        from freecad.diff_wb.ui.views.property_diff_tree_widget import _camelcase_to_spaces
-
-        # Test cases
-        test_cases = [
-            ("SavedGeometry", "Saved Geometry"),
-            ("Placement", "Placement"),  # Single word - no change
-            ("Label2", "Label 2"),
-            ("XDirection", "X Direction"),
-            ("MyPropertyName", "My Property Name"),
-            ("XMLDoc", "XML Doc"),  # Acronym handling
-        ]
-
-        for input_name, expected in test_cases:
-            result = _camelcase_to_spaces(input_name)
-            assert result == expected, f"Expected '{expected}', got '{result}'"
 
     def test_tree_widget_renders_properties_with_groups(self, freecad_app: AppLike, project_root: object) -> None:
         """Integration test: Verify tree widget renders properties grouped correctly."""

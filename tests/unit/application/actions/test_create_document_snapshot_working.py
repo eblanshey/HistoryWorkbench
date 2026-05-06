@@ -200,18 +200,3 @@ class TestCreateDocumentSnapshotForWorkingTreeActionGitPath:
         assert result.is_success is True
         assert result.data is not None
         assert result.data.git_path == "root.FCStd"
-
-
-class TestCreateDocumentSnapshotForWorkingTreeActionDependencies:
-    """Tests for action dependency injection and initialization."""
-
-    def test_action_accepts_and_stores_dependencies_correctly(self) -> None:
-        """Test that action can be initialized with and stores all dependencies."""
-        fake_git_port = FakeGitPort()
-        git_service = GitService(fake_git_port)
-        extractor = SnapshotExtractor()
-
-        action = CreateDocumentSnapshotForWorkingTreeAction(git_service, extractor)
-
-        assert action._git_service is git_service
-        assert action._extractor is extractor

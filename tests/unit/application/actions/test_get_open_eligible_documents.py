@@ -233,21 +233,6 @@ class TestGetOpenEligibleDocumentsActionFiltering:
         assert len(result.data) == 3
 
 
-class TestGetOpenEligibleDocumentsActionDependencies:
-    """Tests for action dependency injection and initialization."""
-
-    def test_action_accepts_and_stores_dependencies_correctly(self) -> None:
-        """Test that action can be initialized with and stores FreeCadPort and GitService."""
-        fake_freecad_port = FakeFreeCadPort()
-        fake_git_port = FakeGitPort()
-        git_service = GitService(fake_git_port)
-
-        action = GetOpenEligibleDocumentsAction(fake_freecad_port, git_service)
-
-        assert action._freecad_port is fake_freecad_port
-        assert action._git_service is git_service
-
-
 class TestGetOpenEligibleDocumentsActionFileNameHandling:
     """Tests for handling documents with empty or missing FileName attribute."""
 

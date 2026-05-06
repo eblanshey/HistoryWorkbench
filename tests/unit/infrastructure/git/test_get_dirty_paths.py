@@ -7,6 +7,8 @@
 import subprocess
 from unittest.mock import patch
 
+import pytest
+
 from freecad.diff_wb.infrastructure.git.git_port_adapter import GitPortAdapter
 
 
@@ -93,9 +95,16 @@ def test_get_dirty_paths_handles_git_error():
         assert result == []
 
 
-def test_get_dirty_paths_handles_timeout():
-    """Given git command timeout, returns empty list."""
-    with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
+@pytest.mark.parametrize(
+    ("side_effect",),
+    [
+        (subprocess.TimeoutExpired(cmd="git", timeout=30),),
+        (OSError("bad cwd"),),
+    ],
+)
+def test_get_dirty_paths_handles_errors(side_effect: Exception):
+    """Given timeout or OS error, returns empty list."""
+    with patch.object(subprocess, "run", side_effect=side_effect):
         adapter = GitPortAdapter()
         result = adapter.get_dirty_paths("/path/to/repo")
 
@@ -188,12 +197,3 @@ def test_get_dirty_paths_preserves_z_path_spaces():
         result = adapter.get_dirty_paths("/path/to/repo")
 
         assert result == [" leading and trailing .FCStd "]
-
-
-def test_get_dirty_paths_handles_bad_cwd_os_error():
-    """Given subprocess raises OSError, returns empty list."""
-    with patch.object(subprocess, "run", side_effect=OSError("bad cwd")):
-        adapter = GitPortAdapter()
-        result = adapter.get_dirty_paths("/path/to/repo")
-
-        assert result == []

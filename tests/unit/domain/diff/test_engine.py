@@ -20,6 +20,34 @@ from freecad.diff_wb.domain.snapshots import Snapshot
 from freecad.diff_wb.domain.snapshots.models import SnapshotObject, SnapshotOccurrence
 
 
+class _MockSettingsRepo:
+    """Configurable mock settings repository for DiffEngine tests."""
+
+    def __init__(
+        self,
+        excluded_types: list[str] | None = None,
+        excluded_properties: list[str] | None = None,
+        excluded_by_type: dict[str, list[str]] | None = None,
+        float_precision: int = 2,
+    ) -> None:
+        self._excluded_types = excluded_types or []
+        self._excluded_properties = excluded_properties or []
+        self._excluded_by_type = excluded_by_type or {}
+        self._float_precision = float_precision
+
+    def get_excluded_types(self) -> list[str]:
+        return self._excluded_types
+
+    def get_excluded_properties(self) -> list[str]:
+        return self._excluded_properties
+
+    def get_excluded_properties_by_type(self) -> dict[str, list[str]]:
+        return self._excluded_by_type
+
+    def get_float_precision(self) -> int:
+        return self._float_precision
+
+
 def snapshot_from_rows(
     *,
     snapshot_id: str,
@@ -56,17 +84,6 @@ def snapshot_from_rows(
     )
 
 
-class TestDiffState:
-    """Tests for the DiffState enum."""
-
-    def test_states_exist(self) -> None:
-        """Test that all states exist."""
-        assert DiffState.ADDED is not None
-        assert DiffState.DELETED is not None
-        assert DiffState.MODIFIED is not None
-        assert DiffState.UNCHANGED is not None
-
-
 class TestPropertyDiff:
     """Tests for the PropertyDiff class."""
 
@@ -75,14 +92,12 @@ class TestPropertyDiff:
         new_val = Property.from_freecad(10.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=None, new_value=new_val)
         assert diff.state == DiffState.ADDED
-        assert "Length: ADDED" in str(diff)
 
     def test_deleted_property(self) -> None:
         """Test deleted property diff - state auto-calculated."""
         old_val = Property.from_freecad(5.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=None)
         assert diff.state == DiffState.DELETED
-        assert "Length: DELETED" in str(diff)
 
     def test_modified_property(self) -> None:
         """Test modified property diff - state auto-calculated."""
@@ -90,7 +105,6 @@ class TestPropertyDiff:
         new_val = Property.from_freecad(10.0, {}, "Base")
         diff = PropertyDiff(property_name="Length", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
-        assert "Length: MODIFIED" in str(diff)
 
     def test_unchanged_property(self) -> None:
         """Test unchanged property diff - state auto-calculated."""
@@ -115,7 +129,6 @@ class TestPropertyDiff:
         new_val = Property.from_freecad(20, {".": "Sketch001.Count"}, "Base")
         diff = PropertyDiff(property_name="Count", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
-        assert "Count: MODIFIED" in str(diff)
 
     def test_both_expression_and_value_change(self) -> None:
         """Test that both expression and value change is detected."""
@@ -123,7 +136,6 @@ class TestPropertyDiff:
         new_val = Property.from_freecad(15.0, {".": "Sketch002.Y"}, "Base")
         diff = PropertyDiff(property_name="Dimension", old_value=old_val, new_value=new_val)
         assert diff.state == DiffState.MODIFIED
-        assert "Dimension: MODIFIED" in str(diff)
 
     def test_expression_changed_to_none(self) -> None:
         """Test that removing expression with same value shows MODIFIED."""
@@ -561,19 +573,7 @@ class TestDiffEngineComputeDiff:
 
     def test_compute_diff_filters_excluded_types(self) -> None:
         """Test compute_diff filters out excluded node types."""
-
-        class MockSettingsRepo:
-            def get_excluded_types(self):
-                return ["PartDesign::Body"]
-
-            def get_excluded_properties(self):
-                return []
-
-            def get_excluded_properties_by_type(self):
-                return {}
-
-            def get_float_precision(self):
-                return 2
+        settings_repo = _MockSettingsRepo(excluded_types=["PartDesign::Body"])
 
         old_node = {
             "id": 1,
@@ -598,7 +598,7 @@ class TestDiffEngineComputeDiff:
             occurrences=[],
         )
 
-        engine = DiffEngine(settings_repo=MockSettingsRepo())
+        engine = DiffEngine(settings_repo=settings_repo)
         result = engine.compute_diff(old_snapshot, new_snapshot)
 
         # With excluded type, should not report changes
@@ -654,20 +654,9 @@ class TestDiffEngineComputeDiffWithSettings:
         )
 
         # Use mock settings repo to exclude PartDesign::Body
-        class MockSettingsRepo:
-            def get_excluded_types(self):
-                return ["PartDesign::Body"]
+        settings_repo = _MockSettingsRepo(excluded_types=["PartDesign::Body"])
 
-            def get_excluded_properties(self):
-                return []
-
-            def get_excluded_properties_by_type(self):
-                return {}
-
-            def get_float_precision(self):
-                return 2
-
-        engine = DiffEngine(settings_repo=MockSettingsRepo())
+        engine = DiffEngine(settings_repo=settings_repo)
         result = engine.compute_diff(old_snapshot, new_snapshot)
 
         # With excluded type, should not report changes
@@ -716,20 +705,9 @@ class TestDiffEngineComputeDiffWithSettings:
         )
 
         # Use mock settings repo to exclude Length property
-        class MockSettingsRepo:
-            def get_excluded_types(self):
-                return []
+        settings_repo = _MockSettingsRepo(excluded_properties=["Length"])
 
-            def get_excluded_properties(self):
-                return ["Length"]
-
-            def get_excluded_properties_by_type(self):
-                return {}
-
-            def get_float_precision(self):
-                return 2
-
-        engine = DiffEngine(settings_repo=MockSettingsRepo())
+        engine = DiffEngine(settings_repo=settings_repo)
         result = engine.compute_diff(old_snapshot, new_snapshot)
 
         # Only Label property differs (but it's the same value)
@@ -781,20 +759,9 @@ class TestDiffEngineTypeSpecificExclusions:
             tree=[new_node],
         )
 
-        class MockSettingsRepo:
-            def get_excluded_types(self):
-                return []
+        settings_repo = _MockSettingsRepo(excluded_by_type={"TechDraw::DrawSVGTemplate": ["Template"]})
 
-            def get_excluded_properties(self):
-                return []
-
-            def get_excluded_properties_by_type(self):
-                return {"TechDraw::DrawSVGTemplate": ["Template"]}
-
-            def get_float_precision(self):
-                return 2
-
-        engine = DiffEngine(settings_repo=MockSettingsRepo())
+        engine = DiffEngine(settings_repo=settings_repo)
         result = engine.compute_diff(old_snapshot, new_snapshot)
 
         # Template property should be excluded for this type
@@ -842,20 +809,9 @@ class TestDiffEngineTypeSpecificExclusions:
             tree=[new_node],
         )
 
-        class MockSettingsRepo:
-            def get_excluded_types(self):
-                return []
+        settings_repo = _MockSettingsRepo(excluded_by_type={"TechDraw::DrawSVGTemplate": ["Template"]})
 
-            def get_excluded_properties(self):
-                return []
-
-            def get_excluded_properties_by_type(self):
-                return {"TechDraw::DrawSVGTemplate": ["Template"]}
-
-            def get_float_precision(self):
-                return 2
-
-        engine = DiffEngine(settings_repo=MockSettingsRepo())
+        engine = DiffEngine(settings_repo=settings_repo)
         result = engine.compute_diff(old_snapshot, new_snapshot)
 
         # Template property should NOT be excluded for Part::Feature

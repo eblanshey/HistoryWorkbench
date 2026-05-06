@@ -194,53 +194,63 @@ Write tests that protect real behavior and document useful contracts. Avoid test
 Good tests:
 
 - Verify public behavior and result contracts.
-- Verify components are wired correctly.
+- Verify components are wired correctly through observable outcomes.
 - Verify domain algorithms with meaningful examples.
 - Verify integration between application actions and services.
 - Verify FreeCAD runtime behavior when stubs or fakes are insufficient.
 
 Avoid tests that:
 
-- Check non-existence of fields or classes.
+- Check non-existence of fields or classes (negative tests).
 - Duplicate existing coverage without adding a new failure mode.
-- Assert private implementation details that should remain easy to refactor.
+- Assert private implementation details like `_git_port`, `_git_service`, or internal action wiring.
+- Test fake internals, protocol compliance, or method existence.
+- Verify dataclass defaults, `hasattr` checks, repr output, or construction trivia.
 - Preserve temporary development phases in filenames or test names.
+
+### Test Ownership Rules
+
+Each behavior should have one owning layer. Duplicate tests across layers create noise when failures occur.
+
+- **Domain tests** own pure business behavior and algorithms: models, services, diff logic, snapshot extraction rules, git workflow rules.
+- **Application tests** own orchestration, result contracts, and dependency forwarding only when forwarding is part of the action contract.
+- **Infrastructure tests** own adapter parsing, command construction, subprocess invocation shape, and external error mapping.
+- **UI tests** own observable presenter/view behavior, state updates, and callback wiring. Do not test private Qt styling details unless styling is an explicit product contract.
+- **Integration tests** own behavior that requires real FreeCAD, Qt runtime, real document structure, workbench activation, or real runtime wiring.
+
+### Skipped Tests
+
+Skipped tests should not remain in the suite long-term. If a unit test needs FreeCAD or Qt runtime, move useful coverage to integration tests and delete the skipped version. Debug-only or permanently skipped files provide no value and should be removed.
+
+### Parametrized Consolidation
+
+Use `@pytest.mark.parametrize` to keep edge-case coverage concise. When multiple tests differ only in input values or expected outputs, consolidate them into a single parametrized test. This reduces file size, prevents repetitive failures, and makes the test suite easier to scan.
 
 ### Unit Tests
 
 Location: `tests/unit/`
 
-Use unit tests for fast feedback and precise behavior checks. Unit tests should not require FreeCAD to be running.
+Use unit tests for fast feedback on pure behavior. Unit tests should not require FreeCAD to be running. Follow the ownership rules above: domain algorithms, application orchestration, infrastructure adapters (without real subprocess or git), and UI presenter logic with fakes.
 
-Use unit tests for:
+Run unit tests with:
 
-- Domain models and services.
-- Diff algorithms.
-- Settings codecs and persistence state.
-- Application action orchestration.
-- Presenter behavior with fake views.
-- Entry point command routing with fakes where possible.
-- Infrastructure code that can be tested without real FreeCAD.
+```bash
+task test
+```
 
 ### Integration Tests
 
 Location: `tests/integration/`
 
-Use integration tests when behavior depends on real FreeCAD APIs, FreeCAD document structure, GUI workbench activation, or runtime wiring.
-
-Use integration tests for:
-
-- Snapshot extraction from `.FCStd` documents.
-- Workbench loading and activation.
-- Qt widget behavior that needs FreeCAD runtime.
-- FreeCAD document opening/recompute behavior.
-- End-to-end workflows across adapters and application actions.
+Use integration tests when behavior depends on real FreeCAD APIs, document structure, Qt runtime, workbench activation, or end-to-end wiring. Integration tests carry runtime cost and should justify it by covering behavior that cannot be tested with fakes.
 
 Run integration tests with:
 
 ```bash
 task test:integration
 ```
+
+Integration tests use FreeCAD's Python 3.11 interpreter through `./run_integration_tests.sh`. Do not run `pytest tests/integration` directly unless debugging collection behavior outside the FreeCAD runtime.
 
 ## Common Contributor Tasks
 

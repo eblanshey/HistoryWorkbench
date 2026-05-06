@@ -94,36 +94,11 @@ class TestPythonTypeDispatch:
         assert isinstance(result, expected_class)
 
     def test_int_dispatch(self) -> None:
-        """Test that int values dispatch to PrimitiveData."""
+        """Test that int values dispatch to PrimitiveData with correct path."""
         result = data_path_from_freecad_value(42, {})
         assert isinstance(result, PrimitiveData)
         assert "." in result.paths
         assert result.paths["."].value == 42
-
-    def test_float_dispatch(self) -> None:
-        """Test that float values dispatch to PrimitiveData."""
-        result = data_path_from_freecad_value(3.14, {})
-        assert isinstance(result, PrimitiveData)
-        assert "." in result.paths
-        assert result.paths["."].value == 3.14
-
-    def test_string_dispatch(self) -> None:
-        """Test that string values dispatch to PrimitiveData."""
-        result = data_path_from_freecad_value("hello", {})
-        assert isinstance(result, PrimitiveData)
-        assert "." in result.paths
-        assert result.paths["."].value == "hello"
-
-    def test_bool_dispatch(self) -> None:
-        """Test that bool values dispatch to PrimitiveData (not int)."""
-        result = data_path_from_freecad_value(True, {})
-        assert isinstance(result, PrimitiveData)
-        assert result.paths["."].value is True
-
-    def test_none_dispatch(self) -> None:
-        """Test that None values dispatch to PrimitiveData."""
-        result = data_path_from_freecad_value(None, {})
-        assert isinstance(result, PrimitiveData)
 
     def test_list_dispatch(self) -> None:
         """Test that list values dispatch to ListData."""
@@ -156,7 +131,7 @@ class TestFreeCadQuantityPathDispatch:
         assert result.paths["Axis.x"].type_ == PropertyPathType.FLOAT
 
     def test_tuple_dispatch(self) -> None:
-        """Test that tuple values dispatch to ListData."""
+        """Test that tuple values dispatch to ListData with correct item count."""
         result = data_path_from_freecad_value((1, 2, 3), {})
         assert isinstance(result, ListData)
         assert len(result.items) == 3

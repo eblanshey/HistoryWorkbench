@@ -160,43 +160,31 @@ class TestGitPortAdapterGetCommittedFiles:
 
             assert result == []
 
-    def test_get_committed_files_timeout(self) -> None:
-        """Test subprocess timeout returns empty list.
-
-        Given a git command that times out, when get_committed_files is called,
-        then an empty list is returned.
-        """
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30)):
-            result = self.adapter.get_committed_files("/path/to/repo", "abc123")
-
-            assert result == []
-
-    def test_get_committed_files_git_not_found(self) -> None:
-        """Test git not found returns empty list.
-
-        Given git is not installed or not in PATH, when get_committed_files is called,
-        then an empty list is returned.
-        """
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("git")):
+    @pytest.mark.parametrize(
+        ("side_effect",),
+        [
+            (subprocess.TimeoutExpired(cmd="git", timeout=30),),
+            (FileNotFoundError("git"),),
+        ],
+    )
+    def test_get_committed_files_handles_errors(self, side_effect: Exception) -> None:
+        """Test timeout and git-not-found return empty list."""
+        with patch.object(subprocess, "run", side_effect=side_effect):
             result = self.adapter.get_committed_files("/path/to/repo", "abc123")
 
             assert result == []
 
     def test_get_committed_files_non_zero_exit_code(self) -> None:
-        """Test non-zero exit code returns empty list.
-
-        Given git returns a non-zero exit code (e.g., invalid commit), when
-        get_committed_files is called, then an empty list is returned.
-        """
+        """Test non-zero exit code returns empty list."""
         mock_result = subprocess.CompletedProcess(
-            args=["git", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "invalid_commit"],
+            args=["git", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "invalid"],
             returncode=128,
             stdout="",
-            stderr="fatal: Not a valid commit name invalid_commit",
+            stderr="fatal: Not a valid commit name",
         )
 
         with patch.object(subprocess, "run", return_value=mock_result):
-            result = self.adapter.get_committed_files("/path/to/repo", "invalid_commit")
+            result = self.adapter.get_committed_files("/path/to/repo", "invalid")
 
             assert result == []
 

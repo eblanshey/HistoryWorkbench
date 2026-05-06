@@ -608,3 +608,142 @@ occurrences:
             assert file_obj is not None
             assert string_obj is not None
             assert file_obj.id == string_obj.id
+
+
+class TestSnapshotYamlDataPathEnvelope:
+    """Tests for YAML serialization using DataPath-based property envelopes."""
+
+    def test_yaml_output_uses_paths_not_value(self) -> None:
+        """Serialized properties should use 'paths' key, not 'value' key."""
+        snapshot = Snapshot(
+            snapshot_id="test",
+            document_name="Test",
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            objects=[
+                SnapshotObject(
+                    name="Pad",
+                    id=1,
+                    type_id="PartDesign::Pad",
+                    properties={"Length": Property.from_freecad(10.0, {}, "Base")},
+                )
+            ],
+            occurrences=[SnapshotOccurrence(path="Pad", after=None)],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "s.yaml"
+            SnapshotYamlSerializer.to_yaml(snapshot, yaml_path)
+            data = yaml.safe_load(yaml_path.read_text())
+
+        prop_data = data["objects"][0]["properties"]["Length"]
+        assert "paths" in prop_data
+        assert "kind" in prop_data
+        assert "group" in prop_data
+        assert "value" not in prop_data
+        assert "expression" not in prop_data
+
+    def test_list_property_roundtrip(self) -> None:
+        """List property values should survive round-trip with correct items."""
+        snapshot = Snapshot(
+            snapshot_id="list-test",
+            document_name="Test",
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            objects=[
+                SnapshotObject(
+                    name="Sketch",
+                    id=1,
+                    type_id="Sketcher::SketchObject",
+                    properties={"Constraints": Property.from_freecad([1, 2, 3], {}, "Base")},
+                )
+            ],
+            occurrences=[SnapshotOccurrence(path="Sketch", after=None)],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "s.yaml"
+            SnapshotYamlSerializer.to_yaml(snapshot, yaml_path)
+            restored = SnapshotYamlSerializer.from_yaml_file(yaml_path)
+
+        from freecad.diff_wb.domain.tree.data_path import ListData
+
+        constraints_prop = restored.find_object("Sketch").properties["Constraints"]
+        assert isinstance(constraints_prop.value, ListData)
+        assert len(constraints_prop.value.items) == 3
+        assert constraints_prop.value.items[0].paths["."].value == 1
+        assert constraints_prop.value.items[1].paths["."].value == 2
+        assert constraints_prop.value.items[2].paths["."].value == 3
+
+    def test_unknown_property_roundtrip(self) -> None:
+        """Unknown property should survive round-trip with freecad_type preserved."""
+        snapshot = Snapshot(
+            snapshot_id="unknown-test",
+            document_name="Test",
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            objects=[
+                SnapshotObject(
+                    name="Obj",
+                    id=1,
+                    type_id="App::Feature",
+                    properties={"Unknown": Property.from_freecad(object(), {}, "Data")},
+                )
+            ],
+            occurrences=[SnapshotOccurrence(path="Obj", after=None)],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "s.yaml"
+            SnapshotYamlSerializer.to_yaml(snapshot, yaml_path)
+            restored = SnapshotYamlSerializer.from_yaml_file(yaml_path)
+
+        from freecad.diff_wb.domain.tree.data_path import UnknownData
+
+        unknown_prop = restored.find_object("Obj").properties["Unknown"]
+        assert isinstance(unknown_prop.value, UnknownData)
+        assert unknown_prop.value.paths["."].freecad_type is not None
+
+    def test_mixed_property_roundtrip(self) -> None:
+        """Snapshot with mixed property types should round-trip correctly."""
+        snapshot = Snapshot(
+            snapshot_id="mixed-test",
+            document_name="TestDoc",
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            objects=[
+                SnapshotObject(
+                    name="Pad",
+                    id=1,
+                    type_id="PartDesign::Pad",
+                    properties={
+                        "Length": Property.from_freecad(10.0, {}, "Base"),
+                        "Enabled": Property.from_freecad(True, {}, "View"),
+                        "Name": Property.from_freecad("MyPad", {}, "Data"),
+                    },
+                ),
+                SnapshotObject(
+                    name="Sketch",
+                    id=2,
+                    type_id="Sketcher::SketchObject",
+                    properties={
+                        "Labels": Property.from_freecad(["a", "b"], {}, "Base"),
+                    },
+                ),
+            ],
+            occurrences=[
+                SnapshotOccurrence(path="Pad", after=None),
+                SnapshotOccurrence(path="Sketch", after="Pad"),
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "s.yaml"
+            SnapshotYamlSerializer.to_yaml(snapshot, yaml_path)
+            restored = SnapshotYamlSerializer.from_yaml_file(yaml_path)
+
+        assert len(restored.occurrences) == 2
+        pad_obj = restored.find_object("Pad")
+        sketch_obj = restored.find_object("Sketch")
+        assert pad_obj is not None
+        assert sketch_obj is not None
+        assert "Length" in pad_obj.properties
+        assert "Enabled" in pad_obj.properties
+        assert "Name" in pad_obj.properties
+        assert "Labels" in sketch_obj.properties

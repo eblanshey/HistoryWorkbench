@@ -38,8 +38,6 @@ class DiffPanelView(QWidget):
         - DiffView (freecad.diff_wb.ui.protocols.diff_view): show_doc_diff,
           show_summary, show_property_diff, show_repository
 
-        Protocol compliance is validated at runtime by tests in:
-        tests/unit/ui/protocols/test_protocol_compliance.py
     """
 
     def __init__(self, parent: QWidget | None = None, settings_repo: SettingsRepository | None = None) -> None:

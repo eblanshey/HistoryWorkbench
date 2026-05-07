@@ -5,7 +5,7 @@
 <h1 align="center">DiffCAD</h1>
 
 <p align="center">
-  <strong>Review meaningful FreeCAD model changes before they land in git.</strong>
+  <strong>Review FreeCAD model changes like code</strong>
 </p>
 
 <p align="center">
@@ -18,10 +18,8 @@
 
 DiffCAD is a FreeCAD workbench for comparing parametric document snapshots. It gives CAD projects a review loop that feels closer to software development: inspect object changes, drill into property updates, stage model work, and commit snapshot data alongside `.FCStd` files.
 
-<p align="center">
-  <a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/LightScreenshot.png"><img src="docs/LightScreenshot.png" alt="DiffCAD light theme screenshot" width="48%" /></a>
-  <a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/DarkScreenshot.png"><img src="docs/DarkScreenshot.png" alt="DiffCAD dark theme screenshot" width="48%" /></a>
-</p>
+<p align="center"><a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/LightScreenshot.png"><img src="docs/LightScreenshot.png" alt="DiffCAD light theme screenshot" width="75%" /></a></p>
+<p align="center"><a href="https://raw.githubusercontent.com/eblanshey/DiffCAD/master/docs/DarkScreenshot.png"><img src="docs/DarkScreenshot.png" alt="DiffCAD dark theme screenshot" width="75%" /></a></p>
 
 ## Why DiffCAD?
 

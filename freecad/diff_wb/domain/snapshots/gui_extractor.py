@@ -12,12 +12,14 @@ entries, building expression maps with normalized keys for nested property paths
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ...utils import Log
 from ..freecad_ports import DocumentLike, DocumentObjectLike
 from ..tree import Property
+from ..tree.data_path import PropertyPathType, PropertyPathValue
 
 
 if TYPE_CHECKING:
@@ -488,7 +490,78 @@ def _extract_visible_properties(obj: object) -> dict[str, Property]:
         if prop_value is not None:
             properties[prop_name] = prop_value
 
+    _include_spreadsheet_cells_with_aliases(obj, properties)
+
     return properties
+
+
+def _include_spreadsheet_cells_with_aliases(obj: object, properties: dict[str, Property]) -> None:
+    """Add Spreadsheet::Sheet non-empty cells and alias sub-paths.
+
+    Hidden cell properties are intentionally included for spreadsheet nodes.
+    """
+    if not _is_spreadsheet_sheet(obj):
+        return
+
+    get_non_empty_cells = getattr(obj, "getNonEmptyCells", None)
+    if not callable(get_non_empty_cells):
+        return
+
+    try:
+        non_empty_cells = get_non_empty_cells()
+    except FREECAD_ACCESS_ERRORS as e:
+        Log.exception(f"Failed to list spreadsheet non-empty cells: {e}")
+        return
+
+    for cell_name in non_empty_cells:
+        if not isinstance(cell_name, str):
+            continue
+        prop_value = _extract_property_value(obj, cell_name)
+        if prop_value is None:
+            continue
+        alias = _get_spreadsheet_alias(obj, cell_name)
+        properties[cell_name] = _with_alias_sub_path(prop_value, alias)
+
+
+def _is_spreadsheet_sheet(obj: object) -> bool:
+    """Return True when object derives from Spreadsheet::Sheet."""
+    is_derived_from = getattr(obj, "isDerivedFrom", None)
+    if not callable(is_derived_from):
+        return False
+    try:
+        return bool(is_derived_from("Spreadsheet::Sheet"))
+    except FREECAD_ACCESS_ERRORS:
+        return False
+
+
+def _get_spreadsheet_alias(obj: object, cell_name: str) -> str | None:
+    """Return alias text for a spreadsheet cell when present."""
+    get_alias = getattr(obj, "getAlias", None)
+    if not callable(get_alias):
+        return None
+    try:
+        alias = get_alias(cell_name)
+    except FREECAD_ACCESS_ERRORS as e:
+        Log.exception(f"Failed to read alias for {cell_name}: {e}")
+        return None
+    if isinstance(alias, str) and alias:
+        return alias
+    return None
+
+
+def _with_alias_sub_path(prop: Property, alias: str | None) -> Property:
+    """Attach optional Alias sub-path to an extracted cell Property."""
+    if not alias:
+        return prop
+
+    value_paths = getattr(prop.value, "paths", None)
+    if not isinstance(value_paths, dict):
+        return prop
+
+    updated_paths = dict(value_paths)
+    updated_paths["Alias"] = PropertyPathValue(PropertyPathType.STRING, alias)
+    data_path_value = cast(Any, prop.value)
+    return Property(value=replace(data_path_value, paths=updated_paths), group=prop.group)
 
 
 def _build_parent_to_child_map(doc: DocumentLike, gui_doc: Any) -> dict[str, list[str]]:

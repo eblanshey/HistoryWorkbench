@@ -91,6 +91,8 @@ class MockFreeCADObject(DocumentObjectLike):
         property_groups=None,
         property_status=None,
         property_types=None,
+        non_empty_cells=None,
+        aliases=None,
     ):
         """Initialize a mock FreeCAD object.
 
@@ -129,6 +131,8 @@ class MockFreeCADObject(DocumentObjectLike):
         object.__setattr__(self, "_property_groups", property_groups or {})
         object.__setattr__(self, "_property_status", property_status or {})
         object.__setattr__(self, "_property_types", property_types or {})
+        object.__setattr__(self, "_non_empty_cells", non_empty_cells or [])
+        object.__setattr__(self, "_aliases", aliases or {})
         object.__setattr__(self, "_view_object", None)
 
     @property
@@ -269,6 +273,15 @@ class MockFreeCADObject(DocumentObjectLike):
             "App::LinkElement",
             "App::LinkGroup",
         }
+
+    def getNonEmptyCells(self):
+        """Mimic FreeCAD spreadsheet non-empty cell query."""
+        return object.__getattribute__(self, "_non_empty_cells")
+
+    def getAlias(self, cell_name):
+        """Mimic FreeCAD spreadsheet cell alias lookup."""
+        aliases = object.__getattribute__(self, "_aliases")
+        return aliases.get(cell_name, "")
 
 
 class TestSnapshotExtractor:
@@ -760,6 +773,39 @@ class TestSnapshotExtractor:
         assert "BaseFeature" not in node["properties"]
         assert "ExpressionEngine" not in node["properties"]
         assert "Visibility" not in node["properties"]
+
+    def test_extract_tree_spreadsheet_cell_includes_alias_sub_path(self) -> None:
+        """Spreadsheet non-empty cells include root value and Alias path."""
+        mock_doc = MagicMock()
+        mock_doc.Name = "TestDoc"
+
+        sheet = MockFreeCADObject(
+            name="Spreadsheet",
+            type_id="Spreadsheet::Sheet",
+            label="Spreadsheet",
+            properties=["Label", "B1", "ExpressionEngine"],
+            property_editor_modes={"ExpressionEngine": ["Hidden"]},
+            non_empty_cells=["B1"],
+            aliases={"B1": "MyLength"},
+        )
+        sheet.Label = "Spreadsheet"
+        sheet.B1 = "5 mm"
+
+        mock_doc.Objects = [sheet]
+
+        extractor = SnapshotExtractor()
+        with patch("freecad.diff_wb.domain.snapshots.gui_extractor._init_gui_and_get_doc") as mock_init_gui:
+            mock_init_gui.return_value = None
+            result = extractor.extract_tree(mock_doc)
+
+        node = _nodes(result)[0]
+        b1_prop = node["properties"]["B1"]
+        b1_paths = b1_prop.value.paths
+        assert "." in b1_paths
+        assert b1_paths["."].value == "5 mm"
+        assert "Alias" in b1_paths
+        assert b1_paths["Alias"].value == "MyLength"
+        assert "ExpressionEngine" not in node["properties"]
 
     def test_extract_tree_properties_with_empty_group_are_visible(self) -> None:
         """Test that properties with empty group ARE visible.

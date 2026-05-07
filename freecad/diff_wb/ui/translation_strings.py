@@ -217,6 +217,28 @@ OPEN_ALL_DOCUMENTS_NO_REPOSITORY_TITLE = "No Repository"
 OPEN_ALL_DOCUMENTS_NO_REPOSITORY_MESSAGE = "No repository detected. Open a FreeCAD document in a git repository first."
 
 # ============================================================================
+# INITIALIZE GIT REPOSITORY STRINGS
+# ============================================================================
+# Context: "InitializeGitRepository"
+
+INITIALIZE_REPOSITORY_MENU_TEXT = "Initialize Git Repository"
+INITIALIZE_REPOSITORY_TOOLTIP = "Initialize a new git repository from open saved document directories"
+INITIALIZE_REPOSITORY_DIALOG_TITLE = "Initialize Git Repository"
+INITIALIZE_REPOSITORY_DIALOG_PROMPT = "Choose a directory to initialize. It should be the root of your project:"
+INITIALIZE_REPOSITORY_BUTTON = "Initialize"
+INITIALIZE_REPOSITORY_DISABLED_REASON = "Already inside repository"
+INITIALIZE_REPOSITORY_NO_CANDIDATES_TITLE = "No Directories Available"
+INITIALIZE_REPOSITORY_NO_CANDIDATES_MESSAGE = (
+    "No open documents are available for git repository initialization. "
+    "Please open at least one saved document in the root location you'd "
+    "like to initialize a new git repository."
+)
+INITIALIZE_REPOSITORY_NO_AVAILABLE_MESSAGE = "All listed directories are already inside git repositories."
+INITIALIZE_REPOSITORY_SUCCESS_TITLE = "Repository Initialized"
+INITIALIZE_REPOSITORY_SUCCESS_TEMPLATE = "Initialized git repository: %1"
+INITIALIZE_REPOSITORY_FAILED_TITLE = "Initialization Failed"
+
+# ============================================================================
 # PREFERENCES VIEW STRINGS
 # ============================================================================
 # Context: "PreferencesView"
@@ -284,6 +306,19 @@ __all__ = [
     # Open All Documents
     "OPEN_ALL_DOCUMENTS_NO_REPOSITORY_TITLE",
     "OPEN_ALL_DOCUMENTS_NO_REPOSITORY_MESSAGE",
+    # Initialize Repository
+    "INITIALIZE_REPOSITORY_MENU_TEXT",
+    "INITIALIZE_REPOSITORY_TOOLTIP",
+    "INITIALIZE_REPOSITORY_DIALOG_TITLE",
+    "INITIALIZE_REPOSITORY_DIALOG_PROMPT",
+    "INITIALIZE_REPOSITORY_BUTTON",
+    "INITIALIZE_REPOSITORY_DISABLED_REASON",
+    "INITIALIZE_REPOSITORY_NO_CANDIDATES_TITLE",
+    "INITIALIZE_REPOSITORY_NO_CANDIDATES_MESSAGE",
+    "INITIALIZE_REPOSITORY_NO_AVAILABLE_MESSAGE",
+    "INITIALIZE_REPOSITORY_SUCCESS_TITLE",
+    "INITIALIZE_REPOSITORY_SUCCESS_TEMPLATE",
+    "INITIALIZE_REPOSITORY_FAILED_TITLE",
     # Preferences View
     "PREFERENCES_RUNTIME_ONLY_NOTICE",
     "PREFERENCES_GROUP_EXCLUDED_OBJECT_TYPES",

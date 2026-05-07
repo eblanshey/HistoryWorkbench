@@ -1,0 +1,23 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Create New Git Repository</title>
+  <desc id="desc">A Git repository icon with branch nodes and a plus sign, filling the full 64 by 64 canvas.</desc>
+
+  <!-- Repository container fills most of the canvas -->
+  <rect x="3" y="7" width="58" height="54" rx="7" fill="#F6F8FA" stroke="#24292F" stroke-width="3"/>
+
+  <!-- Top repository lip -->
+  <path d="M10 7h19l5 7h20" stroke="#24292F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Git branch -->
+  <path d="M23 25v22" stroke="#0969DA" stroke-width="4" stroke-linecap="round"/>
+  <path d="M23 36h12c6 0 9-3 9-9v-2" stroke="#0969DA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Git nodes -->
+  <circle cx="23" cy="25" r="5" fill="#0969DA"/>
+  <circle cx="23" cy="48" r="5" fill="#0969DA"/>
+  <circle cx="44" cy="25" r="5" fill="#0969DA"/>
+
+  <!-- Plus badge positioned to the edge -->
+  <circle cx="50" cy="50" r="12" fill="#2DA44E" stroke="#FFFFFF" stroke-width="3"/>
+  <path d="M50 44v12M44 50h12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+</svg>

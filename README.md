@@ -77,11 +77,7 @@ Don't be intimidated if you've never used Git before! If you have never used the
 1. Install Git from <https://git-scm.com/install>, then run installer with default options.
 2. Open terminal (`PowerShell` or `Command Prompt` on Windows, `Terminal` on macOS/Linux).
 3. Set identity, which will be used for your commits (savepoints): `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"`.
-4. Go to your project folder with `cd`, which stands for "change directory", using your OS path format:
-    - Windows: `cd C:\Users\YourName\Documents\MyFreeCADProject`
-    - macOS/Linux: `cd ~/Documents/MyFreeCADProject`
-5. Initialize repository: `git init .`
-6. Confirm setup: `git status`
+4. Confirm setup: `git --version`
 
 From here on you can use the workbench for all operations.
 
@@ -90,14 +86,13 @@ From here on you can use the workbench for all operations.
 DiffCAD needs baseline snapshots before it can show useful diffs. For an existing project, create those snapshots before making new CAD changes. To more efficiently use disk space for versioning, see the FreeCAD Git Tips section below before making your first git commit.
 
 0. **(Optional) FreeCAD Compression:** to more efficiently use disk space for versioning, see the FreeCAD Git Tips section below.
-1. **Create or open a git repository:** If your project does not use git yet, initialize one with your normal git client or run `git init .` in the project directory (see git setup instructions above)
-2. **Open a project file:** Start FreeCAD and open any document inside the repository.
-3. **Refresh the repository:** Switch to the **Diff Workbench** and click **Refresh Git Repository**. DiffCAD detects the repository from the open document.
-4. **Open project documents:** Click **Open All Documents** to open all FreeCAD documents in the repository.
-5. **Recompute documents:** Click **Recompute All** to make sure document state is current.
-6. **Generate snapshots:** Select **Working Tree** in the history list. Large projects may take some time.
-7. **Stage everything:** Click **Stage All**. DiffCAD saves documents, writes snapshot YAML files, and adds both to git.
-8. **Commit the baseline:** Use the **Commit** toolbar command or your regular git client.
+1. **Open a project file:** Start FreeCAD and open any project document.
+2. **Initialize repository (if needed):** If the file is not already in a git repository, click **Initialize Git Repository** in the Diff Workbench and select its project directory.
+3. **Open project documents:** Click **Refresh Git Repository** first, then click **Open All Documents** to open all FreeCAD documents in the repository.
+4. **Recompute documents:** Click **Recompute All** to make sure document state is current.
+5. **Generate snapshots:** Select **Working Tree** in the history list. Large projects may take some time.
+6. **Stage everything:** Click **Stage All**. DiffCAD saves documents, writes snapshot YAML files, and adds both to git.
+7. **Commit the baseline:** Use the **Commit** toolbar command or your regular git client.
 
 After that baseline commit, continue modeling normally and use DiffCAD to review new changes.
 
@@ -174,7 +169,7 @@ Contributions are welcome. Please open an issue for bugs, confusing diffs, setup
 ## Roadmap
 
 - [ ] Unstage documents from inside DiffCAD
-- [ ] Initialize new git repositories from inside DiffCAD
+- [x] Initialize new git repositories from inside DiffCAD
 - [ ] Move/rename snapshots when FCStd file is moved/renamed
 - [ ] Visual part diffs
 - [ ] Manual snapshot mode for simple projects without git

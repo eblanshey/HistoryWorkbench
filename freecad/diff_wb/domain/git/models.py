@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: This module contains the GitRepository and GitCommit frozen
-# dataclasses which represent a git repository and a git commit respectively.
-# These are core domain models with no external dependencies.
+# File responsibility: This module contains git domain dataclasses that represent
+# repositories, initialization candidates, and commits. These are core domain
+# models with no external dependencies.
 """Git domain models."""
 
 from dataclasses import dataclass
@@ -58,3 +58,18 @@ class GitCommit:
             String in format "id | author | timestamp | message"
         """
         return f"{self.id} | {self.author} | {self.timestamp.isoformat()} | {self.message}"
+
+
+@dataclass(frozen=True)
+class GitRepositoryInitCandidate:
+    """Directory candidate for repository initialization.
+
+    Attributes:
+        path: Absolute directory path to display/select.
+        is_available: True when this directory can be initialized.
+        existing_repository_path: Existing repository root that contains path.
+    """
+
+    path: str
+    is_available: bool
+    existing_repository_path: str | None = None

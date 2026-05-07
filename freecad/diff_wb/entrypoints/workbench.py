@@ -46,6 +46,7 @@ if Gui is not None:
             "DiffRecomputeActiveDocument",
             "DiffRecomputeAllOpenDocuments",
             "DiffOpenAllDocumentsInRepository",
+            "DiffInitializeGitRepository",
             "DiffCommit",
             # "DiffTakeSnapshot",
             # "DiffCompare",

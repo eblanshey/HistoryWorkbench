@@ -14,7 +14,7 @@ from ..resources import ICONPATH
 
 
 if TYPE_CHECKING:
-    pass
+    from ..domain.git.models import GitRepositoryInitCandidate
 
 
 class _SwapColumnsCommand:
@@ -218,6 +218,168 @@ class _RefreshRepositoryCommand:
         ui_registry.git_repository_presenter.refresh_repository_and_commits()
 
 
+class _InitializeGitRepositoryCommand:
+    """Command to initialize a git repository from open document directories."""
+
+    def GetResources(self) -> dict[str, str]:
+        """Return FreeCAD command metadata for UI integration."""
+        from .._container import get_container
+        from ..ui.translation_strings import INITIALIZE_REPOSITORY_MENU_TEXT, INITIALIZE_REPOSITORY_TOOLTIP
+
+        container = get_container()
+        return {
+            "MenuText": container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_MENU_TEXT),
+            "ToolTip": container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_TOOLTIP),
+            "Pixmap": os.path.join(ICONPATH, "CreateGitRepository.svg"),
+        }
+
+    def IsActive(self) -> bool:
+        """Return whether the command should be enabled."""
+        return True
+
+    def Activated(self) -> None:
+        """FreeCAD calls this when user clicks toolbar button."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from .._container import get_container
+        from ..ui.registry import ui_registry
+        from ..ui.translation_strings import (
+            ERROR_UNKNOWN,
+            INITIALIZE_REPOSITORY_FAILED_TITLE,
+            INITIALIZE_REPOSITORY_NO_CANDIDATES_MESSAGE,
+            INITIALIZE_REPOSITORY_NO_CANDIDATES_TITLE,
+            INITIALIZE_REPOSITORY_SUCCESS_TEMPLATE,
+            INITIALIZE_REPOSITORY_SUCCESS_TITLE,
+        )
+
+        container = get_container()
+        candidates_result = container.get_git_repository_init_candidates_action.execute()
+        if not candidates_result.is_success:
+            QMessageBox.information(
+                None,  # type: ignore[arg-type]
+                container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_NO_CANDIDATES_TITLE),
+                container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_NO_CANDIDATES_MESSAGE),
+            )
+            return
+
+        selected_directory = self._show_init_dialog(container, candidates_result.data)
+        if selected_directory is None:
+            return
+
+        init_result = container.initialize_git_repository_action.execute(selected_directory)
+        if not init_result.is_success:
+            QMessageBox.critical(
+                None,  # type: ignore[arg-type]
+                container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_FAILED_TITLE),
+                init_result.message or container.translate("Common", ERROR_UNKNOWN),
+            )
+            return
+
+        repository = init_result.data
+        self._store_initialized_repository(repository)
+
+        success_template = container.translate(
+            "InitializeGitRepository",
+            INITIALIZE_REPOSITORY_SUCCESS_TEMPLATE,
+        )
+        success_message = success_template.replace("%1", repository.absolute_path)
+        QMessageBox.information(
+            None,  # type: ignore[arg-type]
+            container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_SUCCESS_TITLE),
+            success_message,
+        )
+        ui_registry.git_repository_presenter.refresh_repository_and_commits()
+
+    def _show_init_dialog(self, container, candidates: list[GitRepositoryInitCandidate]) -> str | None:
+        """Show initialization selection dialog and return selected directory."""
+        from PySide6.QtWidgets import (
+            QButtonGroup,
+            QDialog,
+            QHBoxLayout,
+            QLabel,
+            QPushButton,
+            QRadioButton,
+            QVBoxLayout,
+        )
+
+        from ..ui.translation_strings import (
+            DIALOG_CANCEL,
+            INITIALIZE_REPOSITORY_BUTTON,
+            INITIALIZE_REPOSITORY_DIALOG_PROMPT,
+            INITIALIZE_REPOSITORY_DIALOG_TITLE,
+            INITIALIZE_REPOSITORY_DISABLED_REASON,
+            INITIALIZE_REPOSITORY_NO_AVAILABLE_MESSAGE,
+        )
+
+        dialog = QDialog(None)  # type: ignore[arg-type]
+        dialog.setWindowTitle(container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_DIALOG_TITLE))
+        dialog.setSizeGripEnabled(True)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_DIALOG_PROMPT)))
+
+        button_group = QButtonGroup(dialog)
+        first_available_button = None
+
+        for index, candidate in enumerate(candidates):
+            row_layout = QHBoxLayout()
+            radio = QRadioButton(candidate.path, dialog)
+            radio.setEnabled(candidate.is_available)
+            button_group.addButton(radio, index)
+            row_layout.addWidget(radio)
+            if candidate.is_available and first_available_button is None:
+                first_available_button = radio
+
+            if not candidate.is_available:
+                reason_label = QLabel(
+                    container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_DISABLED_REASON),
+                    dialog,
+                )
+                reason_label.setEnabled(False)
+                row_layout.addWidget(reason_label)
+
+            row_layout.addStretch()
+            layout.addLayout(row_layout)
+
+        if first_available_button is not None:
+            first_available_button.setChecked(True)
+        else:
+            no_available_text = container.translate(
+                "InitializeGitRepository",
+                INITIALIZE_REPOSITORY_NO_AVAILABLE_MESSAGE,
+            )
+            layout.addWidget(QLabel(no_available_text))
+
+        button_layout = QHBoxLayout()
+        initialize_button = QPushButton(container.translate("InitializeGitRepository", INITIALIZE_REPOSITORY_BUTTON))
+        initialize_button.setEnabled(first_available_button is not None)
+        cancel_button = QPushButton(container.translate("Common", DIALOG_CANCEL))
+        initialize_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+
+        button_layout.addStretch()
+        button_layout.addWidget(initialize_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        dialog.setMinimumWidth(680)
+        dialog.adjustSize()
+        target_height = min(360, dialog.sizeHint().height() + 8)
+        dialog.resize(dialog.width(), target_height)
+        if dialog.exec() != 1:
+            return None
+
+        selected_id = button_group.checkedId()
+        if selected_id < 0:
+            return None
+        return candidates[selected_id].path
+
+    def _store_initialized_repository(self, repository) -> None:
+        """Store initialized repository in UI state before refresh."""
+        from ..ui.registry import ui_registry
+
+        ui_registry.ui_state.git_repository = repository
+
+
 class _OpenAllDocumentsInRepositoryCommand:
     """Command to open all .FCStd documents under detected repository."""
 
@@ -338,6 +500,7 @@ def register_commands() -> None:
 
     Gui.addCommand("DiffCommit", _CommitCommand())
     Gui.addCommand("DiffRefreshRepository", _RefreshRepositoryCommand())
+    Gui.addCommand("DiffInitializeGitRepository", _InitializeGitRepositoryCommand())
     Gui.addCommand("DiffOpenAllDocumentsInRepository", _OpenAllDocumentsInRepositoryCommand())
     Gui.addCommand("DiffRecomputeAllOpenDocuments", _RecomputeAllOpenDocumentsCommand())
     Gui.addCommand("DiffRecomputeActiveDocument", _RecomputeActiveDocumentCommand())

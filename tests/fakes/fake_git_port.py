@@ -26,7 +26,7 @@ class FakeGitPort:
         _committed_files: Mapping of (git_root, commit) tuples to lists of FCStd file paths.
     """
 
-    def __init__(self, fail_stage: bool = False, fail_commit: bool = False) -> None:
+    def __init__(self, fail_stage: bool = False, fail_commit: bool = False, fail_init: bool = False) -> None:
         """Initialize the fake git port with empty mappings.
 
         Args:
@@ -41,6 +41,8 @@ class FakeGitPort:
         self._fail_stage = fail_stage
         # Flag to simulate commit failures
         self._fail_commit = fail_commit
+        # Flag to simulate git init failures
+        self._fail_init = fail_init
         # Staged paths for get_staged_paths
         self._staged_paths: list[str] = []
         # File contents mapping: (commit, git_path) -> content
@@ -51,6 +53,8 @@ class FakeGitPort:
         self._last_commit_call: tuple[str, str] | None = None
         # Maps (git_root, commit) tuples to lists of FCStd file paths
         self._committed_files: dict[tuple[str, str], list[str]] = {}
+        # Tracks last initialize_repository path call
+        self._last_init_path: str | None = None
 
     def add_git_repo(self, root_path: str) -> None:
         """Add a simulated git repository root.
@@ -330,3 +334,15 @@ class FakeGitPort:
             Empty list if no FCStd files changed or not configured.
         """
         return self._committed_files.get((git_root, commit), [])
+
+    def initialize_repository(self, path: str) -> bool:
+        """Initialize a fake git repository at path."""
+        self._last_init_path = path
+        if self._fail_init or not path:
+            return False
+        self.add_git_repo(path)
+        return True
+
+    def get_last_init_path(self) -> str | None:
+        """Return last path passed to initialize_repository."""
+        return self._last_init_path

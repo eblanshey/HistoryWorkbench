@@ -29,8 +29,10 @@ from ..actions.get_commits import GetCommitsAction
 from ..actions.get_committed_file_paths import GetCommittedFilePathsAction
 from ..actions.get_diff_settings import GetDiffSettingsAction
 from ..actions.get_dirty_documents import GetDirtyDocumentsAction
+from ..actions.get_git_repository_init_candidates import GetGitRepositoryInitCandidatesAction
 from ..actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from ..actions.get_staged_file_paths import GetStagedFilePathsAction
+from ..actions.initialize_git_repository import InitializeGitRepositoryAction
 from ..actions.open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
 from ..actions.recompute_all_open_documents import RecomputeAllOpenDocumentsAction
 from ..actions.save_diff_settings import SaveDiffSettingsAction
@@ -81,6 +83,8 @@ class ApplicationContainer:
     git_port: GitPort
     git_service: GitService
     find_active_git_repository_action: FindActiveGitRepositoryAction
+    get_git_repository_init_candidates_action: GetGitRepositoryInitCandidatesAction
+    initialize_git_repository_action: InitializeGitRepositoryAction
     get_commits_action: GetCommitsAction
     open_all_documents_in_repository_action: OpenAllDocumentsInRepositoryAction
     recompute_all_open_documents_action: RecomputeAllOpenDocumentsAction
@@ -144,6 +148,11 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         freecad_port=freecad_port,
         git_service=git_service,
     )
+    get_git_repository_init_candidates_action = GetGitRepositoryInitCandidatesAction(
+        freecad_port=freecad_port,
+        git_service=git_service,
+    )
+    initialize_git_repository_action = InitializeGitRepositoryAction(git_service=git_service)
 
     get_commits_action = GetCommitsAction(git_service=git_service)
     open_all_documents_in_repository_action = OpenAllDocumentsInRepositoryAction(
@@ -201,6 +210,8 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         git_port=git_port,
         git_service=git_service,
         find_active_git_repository_action=find_active_git_repository_action,
+        get_git_repository_init_candidates_action=get_git_repository_init_candidates_action,
+        initialize_git_repository_action=initialize_git_repository_action,
         get_commits_action=get_commits_action,
         open_all_documents_in_repository_action=open_all_documents_in_repository_action,
         recompute_all_open_documents_action=recompute_all_open_documents_action,

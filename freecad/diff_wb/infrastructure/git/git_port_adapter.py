@@ -622,3 +622,35 @@ class GitPortAdapter(GitPort):
             return [path for path in result.stdout.split("\x00") if path and is_fcstd_path(path)]
         except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError):
             return []
+
+    def initialize_repository(self, path: str) -> bool:
+        """Initialize git repository in directory using git init.
+
+        Args:
+            path: Directory path where git init should run.
+
+        Returns:
+            True if initialization succeeded, False otherwise.
+        """
+        if not path or not os.path.isdir(path):
+            Log.warning(f"Cannot initialize git repository because directory does not exist: {path}")
+            return False
+
+        try:
+            result = self._run_git(["init"], cwd=path, timeout=30)
+            if result is None:
+                return False
+            if result.returncode == 0:
+                Log.info(f"Initialized git repository: {path}")
+                return True
+            Log.warning(f"Git init failed: {result.stderr.strip()}")
+            return False
+        except subprocess.TimeoutExpired:
+            Log.warning(f"Git init timed out for path: {path}")
+            return False
+        except FileNotFoundError:
+            Log.warning("Git command not found")
+            return False
+        except (NotADirectoryError, OSError) as e:
+            Log.warning(f"Git init failed for path {path}: {e}")
+            return False

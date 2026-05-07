@@ -167,3 +167,14 @@ class GitPort(Protocol):
             Empty list if no FCStd files changed or error occurred.
         """
         ...
+
+    def initialize_repository(self, path: str) -> bool:
+        """Initialize a git repository in the given directory.
+
+        Args:
+            path: Absolute directory path where git init should run.
+
+        Returns:
+            True if initialization succeeded, False otherwise.
+        """
+        ...

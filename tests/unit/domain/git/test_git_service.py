@@ -262,6 +262,28 @@ class TestGetFileContents:
         assert result is None
 
 
+class TestInitializeRepository:
+    """Tests for GitService.initialize_repository behavior."""
+
+    def test_returns_repository_after_successful_initialization(self) -> None:
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+
+        result = service.initialize_repository("/home/user/project")
+
+        assert result is not None
+        assert result.name == "project"
+        assert result.absolute_path == "/home/user/project"
+        assert fake_port.get_last_init_path() == "/home/user/project"
+
+    def test_returns_none_when_initialization_fails(self) -> None:
+        service = GitService(git_port=FakeGitPort(fail_init=True))
+
+        result = service.initialize_repository("/home/user/project")
+
+        assert result is None
+
+
 class TestGetCommittedFiles:
     """Tests for GitService.get_committed_files() delegation."""
 

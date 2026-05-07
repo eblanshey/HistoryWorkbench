@@ -187,3 +187,18 @@ class GitService:
             List of relative paths (from git root) of .FCStd files changed in the commit.
         """
         return self._git_port.get_committed_files(repo.absolute_path, commit)
+
+    def initialize_repository(self, path: str) -> GitRepository | None:
+        """Initialize git repository in directory and return repository model.
+
+        Args:
+            path: Directory path where git init should run.
+
+        Returns:
+            GitRepository if initialization succeeded, None otherwise.
+        """
+        if not path:
+            return None
+        if not self._git_port.initialize_repository(path):
+            return None
+        return self.get_repository(path)

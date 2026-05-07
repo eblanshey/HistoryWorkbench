@@ -8,7 +8,9 @@ from .create_document_snapshot_working import CreateDocumentSnapshotForWorkingTr
 from .find_active_git_repository import FindActiveGitRepositoryAction
 from .get_commits import GetCommitsAction
 from .get_diff_settings import GetDiffSettingsAction
+from .get_git_repository_init_candidates import GetGitRepositoryInitCandidatesAction
 from .get_open_eligible_documents import GetOpenEligibleDocumentsAction
+from .initialize_git_repository import InitializeGitRepositoryAction
 from .open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
 from .recompute_all_open_documents import RecomputeAllOpenDocumentsAction
 from .result_models import (
@@ -32,6 +34,8 @@ __all__ = [
     "GetCommitsAction",
     "GetDiffSettingsAction",
     "GetOpenEligibleDocumentsAction",
+    "GetGitRepositoryInitCandidatesAction",
+    "InitializeGitRepositoryAction",
     "OpenAllDocumentsInRepositoryAction",
     "RecomputeAllOpenDocumentsAction",
     "SaveDiffSettingsAction",

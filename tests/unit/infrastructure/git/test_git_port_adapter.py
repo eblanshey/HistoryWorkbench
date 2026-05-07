@@ -248,6 +248,56 @@ class TestGitPortAdapter:
 
             assert result is None
 
+    def test_initialize_repository_success(self) -> None:
+        """Test successful git init returns True."""
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "init"],
+            returncode=0,
+            stdout="Initialized empty Git repository\n",
+            stderr="",
+        )
+
+        with (
+            patch.object(os.path, "isdir", return_value=True),
+            patch.object(subprocess, "run", return_value=mock_result) as mock_run,
+        ):
+            result = self.adapter.initialize_repository("/path/to/project")
+
+        assert result is True
+        mock_run.assert_called_once_with(
+            ["git", "init"],
+            cwd="/path/to/project",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+
+    def test_initialize_repository_returns_false_for_missing_directory(self) -> None:
+        """Test missing directory short-circuits with False."""
+        with patch.object(os.path, "isdir", return_value=False):
+            result = self.adapter.initialize_repository("/missing/path")
+
+        assert result is False
+
+    def test_initialize_repository_returns_false_on_non_zero_exit(self) -> None:
+        """Test git init failure return code returns False."""
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "init"],
+            returncode=1,
+            stdout="",
+            stderr="fatal: init failed",
+        )
+
+        with (
+            patch.object(os.path, "isdir", return_value=True),
+            patch.object(subprocess, "run", return_value=mock_result),
+        ):
+            result = self.adapter.initialize_repository("/path/to/project")
+
+        assert result is False
+
 
 class TestGitPortAdapterGetCommits:
     """Tests for the get_commits method of GitPortAdapter."""

@@ -67,7 +67,7 @@ DiffCAD is not yet available in the official FreeCAD Addon Manager repository. U
 3. Add this repository URL: `https://github.com/eblanshey/DiffCAD`
 4. Set the branch to `master`.
 5. Open **Tools > Addon Manager**.
-6. Search for **Diff Workbench** and install it.
+6. Search for **DiffCAD** and install it.
 7. Restart FreeCAD.
 
 ### Git Setup (Absolute Beginner)

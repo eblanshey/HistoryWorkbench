@@ -1,0 +1,46 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Configure Git</title>
+
+  <!-- Git diamond -->
+  <rect
+    x="10"
+    y="10"
+    width="44"
+    height="44"
+    rx="6"
+    fill="#F05032"
+    transform="rotate(45 32 32)"
+  />
+
+  <!-- Git branch -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 20 L38 36" />
+    <path d="M34 32 L43 23" />
+  </g>
+
+  <!-- Git nodes -->
+  <g fill="#FFFFFF">
+    <circle cx="22" cy="20" r="5" />
+    <circle cx="38" cy="36" r="5" />
+    <circle cx="43" cy="23" r="5" />
+  </g>
+
+  <!-- Gear badge -->
+  <circle cx="46" cy="46" r="15" fill="#2D3748" />
+
+  <!-- Gear teeth -->
+  <g fill="#FFFFFF" transform="translate(46 46)">
+    <rect x="-2" y="-13" width="4" height="6" rx="1" />
+    <rect x="-2" y="7" width="4" height="6" rx="1" />
+    <rect x="-13" y="-2" width="6" height="4" rx="1" />
+    <rect x="7" y="-2" width="6" height="4" rx="1" />
+    <rect x="-2" y="-13" width="4" height="6" rx="1" transform="rotate(45)" />
+    <rect x="-2" y="-13" width="4" height="6" rx="1" transform="rotate(135)" />
+    <rect x="-2" y="-13" width="4" height="6" rx="1" transform="rotate(225)" />
+    <rect x="-2" y="-13" width="4" height="6" rx="1" transform="rotate(315)" />
+
+    <!-- Gear body -->
+    <circle r="8" />
+    <circle r="3.5" fill="#2D3748" />
+  </g>
+</svg>

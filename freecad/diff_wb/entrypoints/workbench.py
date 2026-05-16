@@ -40,7 +40,7 @@ if Gui is not None:
         _preferences_page_registered = False
 
         Icon = os.path.join(ICONPATH, "Logo.svg")
-        toolbox = [
+        toolbar_commands = [
             "DiffOpenDiffWindow",
             "DiffRefreshRepository",
             "DiffRecomputeActiveDocument",
@@ -51,6 +51,10 @@ if Gui is not None:
             # "DiffTakeSnapshot",
             # "DiffCompare",
             # "DiffSwapColumns",
+        ]
+        menu_commands = [
+            *toolbar_commands,
+            "DiffConfigureGitCommand",
         ]
 
         def __init__(self):
@@ -102,8 +106,8 @@ if Gui is not None:
             # Setup toolbar and menu
             Log.info("Switching to diff_wb")
             qt_translate_noop = App.Qt.QT_TRANSLATE_NOOP
-            self.appendToolbar(qt_translate_noop("Workbench", "Diff Workbench"), self.toolbox)
-            self.appendMenu(qt_translate_noop("Workbench", "Diff Workbench"), self.toolbox)
+            self.appendToolbar(qt_translate_noop("Workbench", "Diff Workbench"), self.toolbar_commands)
+            self.appendMenu(qt_translate_noop("Workbench", "Diff Workbench"), self.menu_commands)
 
         @classmethod
         def _register_preferences_page(cls) -> None:

@@ -7,7 +7,7 @@
 import os
 from datetime import datetime
 
-from freecad.diff_wb.domain.git.models import GitCommit
+from freecad.diff_wb.domain.git.models import GitCommit, GitIdentity
 
 
 class FakeGitPort:
@@ -55,6 +55,9 @@ class FakeGitPort:
         self._committed_files: dict[tuple[str, str], list[str]] = {}
         # Tracks last initialize_repository path call
         self._last_init_path: str | None = None
+        self._identity: GitIdentity | None = None
+        self._last_save_identity_call: tuple[str, GitIdentity, bool] | None = None
+        self._can_write_global_identity = True
 
     def add_git_repo(self, root_path: str) -> None:
         """Add a simulated git repository root.
@@ -346,3 +349,21 @@ class FakeGitPort:
     def get_last_init_path(self) -> str | None:
         """Return last path passed to initialize_repository."""
         return self._last_init_path
+
+    def get_identity(self, git_root: str) -> GitIdentity | None:
+        """Return configured fake git identity."""
+        return self._identity
+
+    def save_identity(self, git_root: str, identity: GitIdentity, should_save_globally: bool) -> bool:
+        """Save fake git identity."""
+        self._last_save_identity_call = (git_root, identity, should_save_globally)
+        self._identity = identity
+        return True
+
+    def set_can_write_global_identity(self, can_write: bool) -> None:
+        """Set global git identity writability result."""
+        self._can_write_global_identity = can_write
+
+    def can_write_global_identity(self) -> bool:
+        """Return configured fake global git identity writability."""
+        return self._can_write_global_identity

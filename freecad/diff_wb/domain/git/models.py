@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # File responsibility: This module contains git domain dataclasses that represent
-# repositories, initialization candidates, and commits. These are core domain
+# repositories, identities, initialization candidates, and commits. These are core domain
 # models with no external dependencies.
 """Git domain models."""
 
@@ -58,6 +58,14 @@ class GitCommit:
             String in format "id | author | timestamp | message"
         """
         return f"{self.id} | {self.author} | {self.timestamp.isoformat()} | {self.message}"
+
+
+@dataclass(frozen=True)
+class GitIdentity:
+    """Git author identity used when creating commits."""
+
+    name: str
+    email: str
 
 
 @dataclass(frozen=True)

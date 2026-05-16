@@ -178,11 +178,38 @@ COMMIT_DIALOG_TITLE = "Git Commit"
 No placeholders. This is a static message.
 """
 
+CONFIGURE_GIT_DIALOG_TITLE = "Configure Git"
+"""Title for git identity configuration dialog."""
+
+CONFIGURE_GIT_IDENTITY_PROMPT = (
+    "Enter the name and email you'd like to use for your git identity, which is used for authoring git commits."
+)
+"""Prompt shown in the git identity configuration dialog."""
+
+CONFIGURE_GIT_GLOBAL_SAVE_FAILED_MESSAGE = (
+    "Could not save git identity for all repositories. Uncheck the global option to save it only for this repository."
+)
+"""Message shown when global git identity save fails and local save is available."""
+
+CONFIGURE_GIT_GLOBAL_CONFIG_NOT_WRITABLE_MESSAGE = (
+    "Global configuration option disabled because global config file not writeable."
+)
+"""Message shown when global git config cannot be written."""
+
 COMMIT_DIALOG_PROMPT = "Enter commit message:"
 """Prompt text for the commit message input dialog.
 
 No placeholders. This is a static message.
 """
+
+COMMIT_NAME_LABEL = "Name:"
+"""Label for git author name field in the commit dialog."""
+
+COMMIT_EMAIL_LABEL = "Email:"
+"""Label for git author email field in the commit dialog."""
+
+COMMIT_REMEMBER_IDENTITY_LABEL = "Configure globally for all repositories"
+"""Checkbox label for saving git author identity globally."""
 
 COMMIT_EMPTY_MESSAGE_TITLE = "Empty Message"
 """Title for the warning when commit message is empty.
@@ -195,6 +222,12 @@ COMMIT_EMPTY_MESSAGE = "Commit message cannot be empty"
 
 No placeholders. This is a static message.
 """
+
+COMMIT_IDENTITY_REQUIRED_MESSAGE = "Name and email are required to commit"
+"""Message shown when git author identity is missing from the commit dialog."""
+
+COMMIT_IDENTITY_SAVE_FAILED_MESSAGE = "Git identity could not be saved"
+"""Message shown when saving git author identity fails."""
 
 COMMIT_FAILED_TITLE = "Commit Failed"
 """Title for the error dialog when commit fails.

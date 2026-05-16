@@ -9,7 +9,7 @@
 
 from ...utils import Log
 from ..freecad_ports import DocumentLike
-from .models import GitCommit, GitRepository
+from .models import GitCommit, GitIdentity, GitRepository
 from .paths import git_path_name, relative_git_path
 from .ports import GitPort
 
@@ -175,6 +175,18 @@ class GitService:
             True if commit succeeded, False otherwise.
         """
         return self._git_port.commit(repo.absolute_path, message)
+
+    def get_identity(self, repo: GitRepository) -> GitIdentity | None:
+        """Get configured git author identity for repository context."""
+        return self._git_port.get_identity(repo.absolute_path)
+
+    def save_identity(self, repo: GitRepository, identity: GitIdentity, should_save_globally: bool) -> bool:
+        """Save git author identity locally or globally."""
+        return self._git_port.save_identity(repo.absolute_path, identity, should_save_globally)
+
+    def can_write_global_identity(self) -> bool:
+        """Return whether global git identity config can be written."""
+        return self._git_port.can_write_global_identity()
 
     def get_committed_files(self, repo: GitRepository, commit: str) -> list[str]:
         """Get list of FCStd file paths changed in a specific commit.

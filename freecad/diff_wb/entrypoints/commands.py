@@ -8,6 +8,7 @@ This module defines the FreeCAD commands that bridge user interactions
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ..resources import ICONPATH
@@ -15,6 +16,22 @@ from ..resources import ICONPATH
 
 if TYPE_CHECKING:
     from ..domain.git.models import GitRepositoryInitCandidate
+
+
+@dataclass(frozen=True)
+class CommitDialogResult:
+    """Commit dialog values collected from the user."""
+
+    message: str
+
+
+@dataclass(frozen=True)
+class GitConfigDialogResult:
+    """Git identity configuration values collected from the user."""
+
+    author_name: str
+    author_email: str
+    should_save_globally: bool
 
 
 class _SwapColumnsCommand:
@@ -41,6 +58,195 @@ class _SwapColumnsCommand:
         pass
 
 
+class _ConfigureGitCommand:
+    """Command to configure git author identity."""
+
+    def GetResources(self) -> dict[str, str]:
+        """Return FreeCAD command metadata for UI integration."""
+        return {
+            "MenuText": "Configure Git",
+            "ToolTip": "Configure git author name and email",
+            "Pixmap": os.path.join(ICONPATH, "ConfigureGit.svg"),
+        }
+
+    def IsActive(self) -> bool:
+        """Return whether the command should be enabled."""
+        return True
+
+    def Activated(self) -> None:
+        """FreeCAD calls this when user clicks toolbar button."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from .._container import get_container
+        from ..ui.registry import ui_registry
+        from ..ui.translation_strings import COMMIT_NO_REPOSITORY_MESSAGE, COMMIT_NO_REPOSITORY_TITLE
+
+        container = get_container()
+        repo = ui_registry.ui_state.git_repository
+        if repo is None:
+            QMessageBox.warning(
+                None,  # type: ignore[arg-type]
+                container.translate("Commit", COMMIT_NO_REPOSITORY_TITLE),
+                container.translate("Commit", COMMIT_NO_REPOSITORY_MESSAGE),
+            )
+            return
+
+        self.configure_repository(container, repo)
+
+    def configure_repository(self, container, repo) -> bool:
+        """Show git config dialog and save identity for a repository."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from ..domain.git.models import GitIdentity
+        from ..ui.translation_strings import (
+            COMMIT_FAILED_TITLE,
+            COMMIT_IDENTITY_REQUIRED_MESSAGE,
+            COMMIT_IDENTITY_SAVE_FAILED_MESSAGE,
+            CONFIGURE_GIT_GLOBAL_SAVE_FAILED_MESSAGE,
+        )
+
+        retry_message: str | None = None
+        initial_values = self._configured_identity_dialog_values(container, repo)
+        global_config_writable = self._can_write_global_identity(container)
+        while True:
+            dialog_result = self._show_git_config_dialog(
+                container,
+                message=retry_message,
+                initial_values=initial_values,
+                global_config_writable=global_config_writable,
+            )
+            if dialog_result is None:
+                return False
+
+            if not dialog_result.author_name or not dialog_result.author_email:
+                QMessageBox.warning(
+                    None,  # type: ignore[arg-type]
+                    container.translate("Commit", COMMIT_FAILED_TITLE),
+                    container.translate("Commit", COMMIT_IDENTITY_REQUIRED_MESSAGE),
+                )
+                return False
+
+            save_result = container.save_git_identity_action.execute(
+                repo,
+                GitIdentity(name=dialog_result.author_name, email=dialog_result.author_email),
+                dialog_result.should_save_globally,
+            )
+            if save_result.is_success:
+                return True
+
+            if not dialog_result.should_save_globally:
+                QMessageBox.critical(
+                    None,  # type: ignore[arg-type]
+                    container.translate("Commit", COMMIT_FAILED_TITLE),
+                    container.translate("Commit", COMMIT_IDENTITY_SAVE_FAILED_MESSAGE),
+                )
+                return False
+
+            retry_message = container.translate("Commit", CONFIGURE_GIT_GLOBAL_SAVE_FAILED_MESSAGE)
+            initial_values = dialog_result
+
+    def _can_write_global_identity(self, container) -> bool:
+        """Return whether global git identity config can be written."""
+        result = container.can_write_global_git_identity_action.execute()
+        if not result.is_success:
+            return False
+        return bool(result.data)
+
+    def _configured_identity_dialog_values(self, container, repo) -> GitConfigDialogResult | None:
+        """Return existing git identity as dialog defaults when configured."""
+        identity_result = container.get_git_identity_action.execute(repo)
+        identity = identity_result.data
+        if identity is None:
+            return None
+        return GitConfigDialogResult(
+            author_name=identity.name,
+            author_email=identity.email,
+            should_save_globally=False,
+        )
+
+    def _show_git_config_dialog(
+        self,
+        container,
+        *,
+        message: str | None = None,
+        initial_values: GitConfigDialogResult | None = None,
+        global_config_writable: bool = True,
+    ) -> GitConfigDialogResult | None:
+        """Show git identity configuration dialog."""
+        from PySide6.QtWidgets import (
+            QCheckBox,
+            QDialog,
+            QFormLayout,
+            QHBoxLayout,
+            QLabel,
+            QLineEdit,
+            QPushButton,
+            QVBoxLayout,
+        )
+
+        from ..ui.translation_strings import (
+            COMMIT_EMAIL_LABEL,
+            COMMIT_NAME_LABEL,
+            COMMIT_REMEMBER_IDENTITY_LABEL,
+            CONFIGURE_GIT_DIALOG_TITLE,
+            CONFIGURE_GIT_GLOBAL_CONFIG_NOT_WRITABLE_MESSAGE,
+            CONFIGURE_GIT_IDENTITY_PROMPT,
+            DIALOG_CANCEL,
+            DIALOG_OK,
+        )
+
+        dialog = QDialog(None)  # type: ignore[arg-type]
+        dialog.setWindowTitle(container.translate("Commit", CONFIGURE_GIT_DIALOG_TITLE))
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(container.translate("Commit", CONFIGURE_GIT_IDENTITY_PROMPT), dialog))
+        if message:
+            message_label = QLabel(message, dialog)
+            message_label.setStyleSheet("color: red;")
+            layout.addWidget(message_label)
+        form_layout = QFormLayout()
+        name_edit = QLineEdit(dialog)
+        email_edit = QLineEdit(dialog)
+        remember_checkbox = QCheckBox(container.translate("Commit", COMMIT_REMEMBER_IDENTITY_LABEL), dialog)
+        if initial_values is not None:
+            name_edit.setText(initial_values.author_name)
+            email_edit.setText(initial_values.author_email)
+            remember_checkbox.setChecked(initial_values.should_save_globally)
+        if not global_config_writable:
+            remember_checkbox.setChecked(False)
+            remember_checkbox.setEnabled(False)
+
+        form_layout.addRow(container.translate("Commit", COMMIT_NAME_LABEL), name_edit)
+        form_layout.addRow(container.translate("Commit", COMMIT_EMAIL_LABEL), email_edit)
+        layout.addLayout(form_layout)
+        layout.addWidget(remember_checkbox)
+        if not global_config_writable:
+            global_config_label = QLabel(
+                container.translate("Commit", CONFIGURE_GIT_GLOBAL_CONFIG_NOT_WRITABLE_MESSAGE),
+                dialog,
+            )
+            global_config_label.setStyleSheet("color: red;")
+            layout.addWidget(global_config_label)
+
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton(container.translate("Common", DIALOG_OK))
+        cancel_button = QPushButton(container.translate("Common", DIALOG_CANCEL))
+        ok_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        ok = dialog.exec() == 1  # QDialog.Accepted = 1
+        if not ok:
+            return None
+        return GitConfigDialogResult(
+            author_name=name_edit.text().strip(),
+            author_email=email_edit.text().strip(),
+            should_save_globally=remember_checkbox.isChecked(),
+        )
+
+
 class _CommitCommand:
     """Command to commit staged changes."""
 
@@ -63,8 +269,6 @@ class _CommitCommand:
         from .._container import get_container
         from ..ui.registry import ui_registry
         from ..ui.translation_strings import (
-            COMMIT_EMPTY_MESSAGE,
-            COMMIT_EMPTY_MESSAGE_TITLE,
             COMMIT_FAILED_TITLE,
             COMMIT_NO_REPOSITORY_MESSAGE,
             COMMIT_NO_REPOSITORY_TITLE,
@@ -95,22 +299,20 @@ class _CommitCommand:
             )
             return
 
-        # Show commit dialog with multi-line text area
-        message = self._show_commit_dialog(container)
-
-        if message is None:
+        identity_result = container.get_git_identity_action.execute(repo)
+        if identity_result.data is None and not _ConfigureGitCommand().configure_repository(container, repo):
             return
 
-        if not message.strip():
-            QMessageBox.warning(
-                None,  # type: ignore[arg-type]
-                container.translate("Commit", COMMIT_EMPTY_MESSAGE_TITLE),
-                container.translate("Commit", COMMIT_EMPTY_MESSAGE),
-            )
+        dialog_result = self._show_commit_dialog(container)
+
+        if dialog_result is None:
+            return
+
+        if not self._validate_commit_dialog_result(container, dialog_result):
             return
 
         # Execute commit action
-        result = container.commit_staging_action.execute(repo, message.strip())
+        result = container.commit_staging_action.execute(repo, dialog_result.message.strip())
 
         if result.is_success:
             container.log("Commit successful")
@@ -123,14 +325,32 @@ class _CommitCommand:
                 result.message or "Git commit failed",
             )
 
-    def _show_commit_dialog(self, container) -> str | None:
+    def _validate_commit_dialog_result(self, container, dialog_result: CommitDialogResult) -> bool:
+        """Validate commit dialog values and show warnings for invalid input."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from ..ui.translation_strings import (
+            COMMIT_EMPTY_MESSAGE,
+            COMMIT_EMPTY_MESSAGE_TITLE,
+        )
+
+        if not dialog_result.message.strip():
+            QMessageBox.warning(
+                None,  # type: ignore[arg-type]
+                container.translate("Commit", COMMIT_EMPTY_MESSAGE_TITLE),
+                container.translate("Commit", COMMIT_EMPTY_MESSAGE),
+            )
+            return False
+        return True
+
+    def _show_commit_dialog(self, container) -> CommitDialogResult | None:
         """Show the commit dialog and return the message or None if cancelled.
 
         Args:
             container: The application container.
 
         Returns:
-            The commit message string if user confirmed, None if cancelled.
+            Commit dialog result if user confirmed, None if cancelled.
         """
         from PySide6.QtWidgets import (
             QDialog,
@@ -191,7 +411,9 @@ class _CommitCommand:
         dialog.resize(500, 300)
 
         ok = dialog.exec() == 1  # QDialog.Accepted = 1
-        return text_edit.toPlainText() if ok else None
+        if not ok:
+            return None
+        return CommitDialogResult(message=text_edit.toPlainText())
 
 
 class _RefreshRepositoryCommand:
@@ -498,6 +720,7 @@ def register_commands() -> None:
     """Register the Diff Workbench commands with FreeCAD."""
     import FreeCADGui as Gui  # pylint: disable=import-error
 
+    Gui.addCommand("DiffConfigureGitCommand", _ConfigureGitCommand())
     Gui.addCommand("DiffCommit", _CommitCommand())
     Gui.addCommand("DiffRefreshRepository", _RefreshRepositoryCommand())
     Gui.addCommand("DiffInitializeGitRepository", _InitializeGitRepositoryCommand())

@@ -9,7 +9,7 @@
 
 from typing import Protocol
 
-from freecad.diff_wb.domain.git.models import GitCommit
+from freecad.diff_wb.domain.git.models import GitCommit, GitIdentity
 
 
 __all__ = ["GitPort"]
@@ -152,6 +152,38 @@ class GitPort(Protocol):
 
         Returns:
             True if commit succeeded, False otherwise.
+        """
+        ...
+
+    def get_identity(self, git_root: str) -> GitIdentity | None:
+        """Get configured git author identity for repository context.
+
+        Args:
+            git_root: Absolute path to git repository root.
+
+        Returns:
+            GitIdentity if both name and email are configured, None otherwise.
+        """
+        ...
+
+    def save_identity(self, git_root: str, identity: GitIdentity, should_save_globally: bool) -> bool:
+        """Save git author identity locally or globally.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            identity: Git identity to save.
+            should_save_globally: True for global config, False for local repo config.
+
+        Returns:
+            True if identity was saved, False otherwise.
+        """
+        ...
+
+    def can_write_global_identity(self) -> bool:
+        """Return whether global git identity config can be written.
+
+        Returns:
+            True if global git config is writable, False otherwise.
         """
         ...
 

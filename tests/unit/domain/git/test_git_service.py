@@ -305,3 +305,17 @@ class TestGetCommittedFiles:
         result = service.get_committed_files(repo=repo, commit="nonexistent")
 
         assert result == []
+
+
+class TestCanWriteGlobalIdentity:
+    """Tests for GitService.can_write_global_identity() delegation."""
+
+    @pytest.mark.parametrize("can_write", [True, False])
+    def test_returns_configured_global_identity_writability(self, can_write: bool) -> None:
+        fake_port = FakeGitPort()
+        fake_port.set_can_write_global_identity(can_write)
+        service = GitService(git_port=fake_port)
+
+        result = service.can_write_global_identity()
+
+        assert result is can_write

@@ -6,8 +6,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from freecad.diff_wb.application.actions.create_document_snapshot_working import (
     CreateDocumentSnapshotForWorkingTreeAction,
 )

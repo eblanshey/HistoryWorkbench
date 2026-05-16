@@ -12,7 +12,7 @@ from codecs import decode as codecs_decode
 from datetime import datetime
 from typing import Any
 
-from freecad.diff_wb.domain.git.models import GitCommit
+from freecad.diff_wb.domain.git.models import GitCommit, GitIdentity
 from freecad.diff_wb.domain.git.paths import is_fcstd_path
 from freecad.diff_wb.domain.git.ports import GitPort
 from freecad.diff_wb.utils import Log
@@ -61,6 +61,7 @@ class GitPortAdapter(GitPort):
         *,
         cwd: str,
         timeout: int,
+        extra_env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str] | None:
         """Run git command with consistent encoding and error handling."""
         if self._git_executable is None:
@@ -75,9 +76,87 @@ class GitPortAdapter(GitPort):
             "errors": "replace",
             "timeout": timeout,
         }
+        env_overrides = self._default_git_env()
+        if extra_env:
+            env_overrides |= extra_env
+        if env_overrides:
+            run_kwargs["env"] = os.environ | env_overrides
         run_kwargs.update(self._windows_no_console_kwargs())
 
         return subprocess.run([self._git_executable, *args], **run_kwargs)
+
+    def _global_git_config_home_path(self) -> str:
+        """Return home path used for global git config in current runtime."""
+        return os.environ.get("SNAP_REAL_HOME") or os.path.expanduser("~")
+
+    def _global_git_config_path(self) -> str:
+        """Return global git config path for current runtime."""
+        return os.path.join(self._global_git_config_home_path(), ".gitconfig")
+
+    def _default_git_env(self) -> dict[str, str]:
+        """Return default git environment overrides for current runtime."""
+        if "SNAP_REAL_HOME" not in os.environ:
+            return {}
+        return {"GIT_CONFIG_GLOBAL": self._global_git_config_path()}
+
+    def _global_git_config_env(self, config_path: str) -> dict[str, str]:
+        """Return env that makes git use a specific global config path."""
+        return {"GIT_CONFIG_GLOBAL": config_path}
+
+    def _writable_global_git_config_path(self) -> str | None:
+        """Return global git config path when writable."""
+        config_path = self._global_git_config_path()
+        if self._can_write_config_file(config_path):
+            return config_path
+        return None
+
+    def _can_write_config_file(self, path: str) -> bool:
+        """Return True when config file can be opened or created for writing."""
+        try:
+            with open(path, "a", encoding="utf-8"):
+                return True
+        except OSError as e:
+            Log.info(f"Global git config path is not writable: {path}: {e}")
+            return False
+
+    def _read_git_config_value(
+        self,
+        git_root: str,
+        args: list[str],
+        *,
+        extra_env: dict[str, str] | None = None,
+    ) -> str | None:
+        """Read one git config value."""
+        try:
+            result = self._run_git(args, cwd=git_root, timeout=5, extra_env=extra_env)
+        except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError) as e:
+            Log.warning(f"Git config read failed: {e}")
+            return None
+
+        if result is None or result.returncode != 0:
+            return None
+        value = result.stdout.strip()
+        return value or None
+
+    def _save_git_config_value(
+        self,
+        git_root: str,
+        args: list[str],
+        *,
+        extra_env: dict[str, str] | None = None,
+    ) -> bool:
+        """Save one git config value."""
+        try:
+            result = self._run_git(args, cwd=git_root, timeout=5, extra_env=extra_env)
+        except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError) as e:
+            Log.warning(f"Git config save failed: {e}")
+            return False
+
+        if result is None or result.returncode != 0:
+            stderr = "" if result is None else result.stderr.strip()
+            Log.warning(f"Git config save failed: {stderr}")
+            return False
+        return True
 
     def find_top_level_git_path(self, path: str) -> str | None:
         """Find git root using git CLI.
@@ -593,6 +672,43 @@ class GitPortAdapter(GitPort):
         except (NotADirectoryError, OSError) as e:
             Log.warning(f"Git error: {e}")
             return False
+
+    def get_identity(self, git_root: str) -> GitIdentity | None:
+        """Get configured git author identity from repository context."""
+        name = self._read_git_config_value(git_root, ["config", "--get", "user.name"])
+        email = self._read_git_config_value(git_root, ["config", "--get", "user.email"])
+        if name and email:
+            return GitIdentity(name=name, email=email)
+        return None
+
+    def save_identity(self, git_root: str, identity: GitIdentity, should_save_globally: bool) -> bool:
+        """Save git author identity to local or global config."""
+        if should_save_globally:
+            config_path = self._writable_global_git_config_path()
+            if config_path is None:
+                Log.warning("Cannot save global git identity because no writable global git config path is available")
+                return False
+            args_prefix = ["config", "--global"]
+            extra_env = self._global_git_config_env(config_path)
+        else:
+            args_prefix = ["config", "--local"]
+            extra_env = None
+
+        name_saved = self._save_git_config_value(
+            git_root,
+            [*args_prefix, "user.name", identity.name],
+            extra_env=extra_env,
+        )
+        email_saved = self._save_git_config_value(
+            git_root,
+            [*args_prefix, "user.email", identity.email],
+            extra_env=extra_env,
+        )
+        return name_saved and email_saved
+
+    def can_write_global_identity(self) -> bool:
+        """Return whether global git identity config can be written."""
+        return self._writable_global_git_config_path() is not None
 
     def get_committed_files(self, git_root: str, commit: str) -> list[str]:
         """Get FCStd file paths changed in a specific commit using git diff-tree.

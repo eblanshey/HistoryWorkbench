@@ -10,11 +10,13 @@ diff results into UI-friendly presentation models.
 """
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ...application.actions.create_document_diffs import CreateDocumentDiffsAction
 from ...application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from ...application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
+from ...application.actions.open_visual_feature_diff import OpenVisualFeatureDiffAction, OpenVisualFeatureDiffRequest
 from ...application.actions.result_models import (
     CreateDocumentDiffsRequest,
     DocumentDiffMode,
@@ -374,6 +376,7 @@ class DiffPresenter:
         create_document_diffs_action: CreateDocumentDiffsAction,
         stage_documents_action: StageDocumentsAction,
         get_dirty_documents_action: GetDirtyDocumentsAction,
+        open_visual_feature_diff_action: OpenVisualFeatureDiffAction,
         settings_repo: SettingsRepository | None = None,
     ) -> None:
         """Initialize with required dependencies.
@@ -395,11 +398,13 @@ class DiffPresenter:
         self._create_document_diffs = create_document_diffs_action
         self._stage_documents = stage_documents_action
         self._get_dirty_documents = get_dirty_documents_action
+        self._open_visual_feature_diff = open_visual_feature_diff_action
         self._settings_repo = settings_repo
         self._default_precision = DEFAULT_FLOAT_PRECISION
         self._diff_results_by_path: dict[str, DiffResult] = {}
         self._document_status_by_path: dict[str, DocumentDiffStatus] = {}
         self._dirty_paths: set[str] = set()
+        self._current_history_selection: HistorySelection | None = None
 
         # Wire up the callback for history selection
         self._view.set_history_selection_callback(self.on_history_item_selected)
@@ -429,6 +434,7 @@ class DiffPresenter:
         Args:
             selection: HistorySelection containing item_kind and optional commit_hash
         """
+        self._current_history_selection = selection
         if selection.item_kind == "WORKING_TREE":
             self._on_working_tree_selected()
         elif selection.item_kind == "STAGING":
@@ -709,10 +715,16 @@ class DiffPresenter:
 
         self.clear_property_diff()
 
-        current_selection = self._view.get_current_history_selection()
-        is_working_tree = current_selection is not None and current_selection.item_kind == "WORKING_TREE"
+        is_working_tree = (
+            self._current_history_selection is not None and self._current_history_selection.item_kind == "WORKING_TREE"
+        )
 
-        presentations = self._build_presentations(diff_results, dirty_paths, document_statuses, is_working_tree)
+        presentations = self._build_presentations(
+            diff_results,
+            dirty_paths,
+            document_statuses,
+            is_working_tree,
+        )
 
         present_paths = {p.git_path for p in presentations}
         presentations.extend(self._create_indicator_presentations(document_statuses, present_paths))
@@ -842,8 +854,72 @@ class DiffPresenter:
             label=node_diff.label,
             state=node_diff.state,
             has_changes=node_diff.has_deep_changes,
+            visual_diff_enabled=self._is_visual_diff_enabled(node_diff.type_id),
             children=[self._format_node(child) for child in node_diff.children],
         )
+
+    def _is_visual_diff_enabled(self, type_id: str) -> bool:
+        """Return True when node type is eligible for visual diff."""
+        return type_id.startswith("Part::") or type_id.startswith("PartDesign::") or type_id == "Sketcher::SketchObject"
+
+    def on_visual_diff_clicked(self, git_path: str, node_path: str) -> None:
+        """Open visual diff for one node in current history mode."""
+        current_selection = self._current_history_selection
+        if current_selection is None:
+            return
+
+        repo = self._ui_state.git_repository
+        if repo is None:
+            Log.warning("No git repository detected")
+            return
+
+        request = self._build_visual_diff_request(current_selection, repo, git_path, node_path)
+        if request is None:
+            return
+
+        result = self._open_visual_feature_diff.execute(request)
+        if not result.is_success and result.message:
+            Log.warning(result.message)
+
+    def _build_visual_diff_request(
+        self,
+        selection: HistorySelection,
+        repo: GitRepository,
+        git_path: str,
+        node_path: str,
+    ) -> OpenVisualFeatureDiffRequest | None:
+        """Build visual diff request for current history mode."""
+        if selection.item_kind == "WORKING_TREE":
+            working_tree_document_path = str((Path(repo.absolute_path) / git_path).resolve())
+            return OpenVisualFeatureDiffRequest(
+                repo=repo,
+                git_path=git_path,
+                node_path=node_path,
+                old_commit=None,
+                new_commit=None,
+                working_tree_document_path=working_tree_document_path,
+            )
+
+        if selection.item_kind == "STAGING":
+            return OpenVisualFeatureDiffRequest(
+                repo=repo,
+                git_path=git_path,
+                node_path=node_path,
+                old_commit="HEAD",
+                new_commit=None,
+            )
+
+        if selection.item_kind == "COMMIT" and selection.commit_hash:
+            return OpenVisualFeatureDiffRequest(
+                repo=repo,
+                git_path=git_path,
+                node_path=node_path,
+                old_commit=f"{selection.commit_hash}~1",
+                new_commit=selection.commit_hash,
+            )
+
+        Log.warning("Commit selection missing commit hash for visual diff")
+        return None
 
     def on_node_selected(self, git_path: str, node_path: str) -> None:
         """Handle tree node selection to display property diffs.

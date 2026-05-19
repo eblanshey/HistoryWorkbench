@@ -200,6 +200,10 @@ class DiffPanelView(QWidget):
         """
         self._document_diff_tree.set_node_selection_callback(callback)
 
+    def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
+        """Set callback for visual diff click with (git_path, node_path)."""
+        self._document_diff_tree.set_visual_diff_callback(callback)
+
     # DiffView protocol methods
     def show_doc_diff(self, nodes: list[NodePresentation], git_path: str = "") -> None:
         """Display the diff tree with color-coded nodes.

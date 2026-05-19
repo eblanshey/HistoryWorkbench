@@ -6,6 +6,7 @@
 
 import os
 from datetime import datetime
+from pathlib import Path
 
 from freecad.diff_wb.domain.git.models import GitCommit, GitIdentity
 
@@ -47,6 +48,7 @@ class FakeGitPort:
         self._staged_paths: list[str] = []
         # File contents mapping: (commit, git_path) -> content
         self._file_contents: dict[tuple[str | None, str], str] = {}
+        self._file_bytes: dict[tuple[str | None, str], bytes] = {}
         # Existing files mapping: (commit, git_path) -> exists
         self._file_exists: dict[tuple[str | None, str], bool] = {}
         # Tracks the last commit() call for argument verification
@@ -270,7 +272,21 @@ class FakeGitPort:
         key = (commit, git_path)
         if key in self._file_exists:
             return self._file_exists[key]
-        return key in self._file_contents
+        return key in self._file_contents or key in self._file_bytes
+
+    def write_file_from_ref(self, git_root: str, commit: str | None, git_path: str, destination: str) -> bool:
+        """Write configured fake file bytes to destination path."""
+        key = (commit, git_path)
+        content = self._file_bytes.get(key)
+        if content is None:
+            text_content = self._file_contents.get(key)
+            if text_content is None:
+                return False
+            content = text_content.encode("utf-8")
+        destination_path = Path(destination)
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        destination_path.write_bytes(content)
+        return True
 
     def commit(self, git_root: str, message: str) -> bool:
         """Fake implementation of commit for testing.
@@ -306,6 +322,10 @@ class FakeGitPort:
             content: File content string to return.
         """
         self._file_contents[(commit, git_path)] = content
+
+    def set_file_bytes(self, commit: str | None, git_path: str, content: bytes) -> None:
+        """Set binary file contents for a specific commit and path."""
+        self._file_bytes[(commit, git_path)] = content
 
     def get_last_commit_call(self) -> tuple[str, str] | None:
         """Get the arguments from the last commit() call.

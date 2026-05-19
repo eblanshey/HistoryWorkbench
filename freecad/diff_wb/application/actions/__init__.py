@@ -14,6 +14,7 @@ from .get_git_repository_init_candidates import GetGitRepositoryInitCandidatesAc
 from .get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from .initialize_git_repository import InitializeGitRepositoryAction
 from .open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
+from .open_visual_feature_diff import OpenVisualFeatureDiffAction
 from .recompute_all_open_documents import RecomputeAllOpenDocumentsAction
 from .result_models import (
     CompareResult,
@@ -42,6 +43,7 @@ __all__ = [
     "GetGitRepositoryInitCandidatesAction",
     "InitializeGitRepositoryAction",
     "OpenAllDocumentsInRepositoryAction",
+    "OpenVisualFeatureDiffAction",
     "RecomputeAllOpenDocumentsAction",
     "SaveDiffSettingsAction",
     "SaveGitIdentityAction",

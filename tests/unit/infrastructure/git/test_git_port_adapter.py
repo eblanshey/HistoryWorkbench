@@ -299,6 +299,26 @@ class TestGitPortAdapter:
 
         assert result is False
 
+    def test_write_file_from_ref_writes_bytes_without_decoding(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        destination = tmp_path / "old.FCStd"
+
+        class FakeProcess:
+            def __init__(self, stdout_target) -> None:  # type: ignore[no-untyped-def]
+                stdout_target.write(b"\x50\x4b\x03\x04")
+
+            def wait(self, timeout=None) -> int:  # type: ignore[no-untyped-def]
+                return 0
+
+        with patch.object(
+            subprocess, "Popen", side_effect=lambda *args, **kwargs: FakeProcess(kwargs["stdout"])
+        ) as mock_popen:
+            result = self.adapter.write_file_from_ref("/repo", None, "doc.FCStd", str(destination))
+
+        assert result is True
+        assert destination.read_bytes() == b"\x50\x4b\x03\x04"
+        kwargs = mock_popen.call_args.kwargs
+        assert "text" not in kwargs
+
 
 class TestGitPortAdapterGetCommits:
     """Tests for the get_commits method of GitPortAdapter."""

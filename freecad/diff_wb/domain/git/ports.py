@@ -130,6 +130,20 @@ class GitPort(Protocol):
         """
         ...
 
+    def write_file_from_ref(self, git_root: str, commit: str | None, git_path: str, destination: str) -> bool:
+        """Write file bytes from git ref/index to destination path.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference or None for index.
+            git_path: Relative path within repository.
+            destination: Absolute output file path.
+
+        Returns:
+            True if write succeeded, False otherwise.
+        """
+        ...
+
     def file_exists(self, git_root: str, commit: str | None, git_path: str) -> bool:
         """Check whether a file path exists at commit or index.
 

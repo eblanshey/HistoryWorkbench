@@ -151,6 +151,10 @@ class GitService:
         """
         return self._git_port.get_file_contents(repo.absolute_path, commit, git_path)
 
+    def write_file_from_ref(self, repo: GitRepository, commit: str | None, git_path: str, destination: str) -> bool:
+        """Write file bytes from git ref/index to destination path."""
+        return self._git_port.write_file_from_ref(repo.absolute_path, commit, git_path, destination)
+
     def file_exists(self, repo: GitRepository, commit: str | None, git_path: str) -> bool:
         """Check whether a file exists at commit or index.
 

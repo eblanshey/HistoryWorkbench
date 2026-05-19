@@ -26,6 +26,7 @@ class FakeDiffView:
         self._history_scroll_bottom_callback: Callable[[], None] | None = None
         self._add_button_callback: Callable[[str], None] | None = None
         self._stage_all_callback: Callable[[], None] | None = None
+        self._visual_diff_callback: Callable[[str, str], None] | None = None
         self._current_selection: Any = None
 
     def show_loading(self) -> None:
@@ -104,6 +105,16 @@ class FakeDiffView:
         """
         self._record_call("set_add_button_callback", callback=callback)
         self._add_button_callback = callback
+
+    def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
+        """Capture visual diff callback registration."""
+        self._record_call("set_visual_diff_callback", callback=callback)
+        self._visual_diff_callback = callback
+
+    def trigger_visual_diff_callback(self, git_path: str, node_path: str) -> None:
+        """Trigger visual diff callback for tests."""
+        if self._visual_diff_callback is not None:
+            self._visual_diff_callback(git_path, node_path)
 
     def trigger_add_button_callback(self, git_path: str) -> None:
         """Trigger the registered add button callback if one exists.

@@ -262,6 +262,24 @@ class TestGetFileContents:
         assert result is None
 
 
+class TestWriteFileFromRef:
+    """Tests for GitService.write_file_from_ref() delegation."""
+
+    def test_writes_binary_content_from_index(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        fake_port = FakeGitPort()
+        fake_port.set_file_bytes(None, "path/to/file.FCStd", b"\x50\x4b\x03\x04")
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+        destination = tmp_path / "out.FCStd"
+
+        result = service.write_file_from_ref(
+            repo=repo, commit=None, git_path="path/to/file.FCStd", destination=str(destination)
+        )
+
+        assert result is True
+        assert destination.read_bytes() == b"\x50\x4b\x03\x04"
+
+
 class TestInitializeRepository:
     """Tests for GitService.initialize_repository behavior."""
 

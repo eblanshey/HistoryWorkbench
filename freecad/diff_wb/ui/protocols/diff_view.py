@@ -127,6 +127,9 @@ class DiffView(Protocol):
                       document whose '+ Stage' button was clicked.
         """
 
+    def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
+        """Set callback for visual diff click with (git_path, node_path)."""
+
     def collapse_tree_item(self, git_path: str) -> None:
         """Collapse the root tree item for the given git_path.
 

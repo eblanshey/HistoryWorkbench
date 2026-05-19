@@ -103,6 +103,7 @@ class NodePresentation:
     label: str
     state: DiffState
     has_changes: bool
+    visual_diff_enabled: bool = False
     children: list[NodePresentation] = field(default_factory=list)
 
 

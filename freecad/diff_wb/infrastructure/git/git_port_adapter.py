@@ -602,7 +602,7 @@ class GitPortAdapter(GitPort):
         """
         # Get from index using :<path> syntax, or from specific commit
         try:
-            args = ["show", f":{git_path}"] if commit is None else ["show", f"{commit}:{git_path}"]
+            args = ["show", self._show_target(commit, git_path)]
             result = self._run_git(args, cwd=git_root, timeout=30)
             if result is None:
                 return None
@@ -619,6 +619,36 @@ class GitPortAdapter(GitPort):
         except (NotADirectoryError, OSError) as e:
             Log.warning(f"Git show failed for {git_path}: {e}")
             return None
+
+    def write_file_from_ref(self, git_root: str, commit: str | None, git_path: str, destination: str) -> bool:
+        """Write file bytes from git ref/index to destination path."""
+        if self._git_executable is None:
+            Log.warning("Git command not found - git may not be installed or not in PATH")
+            return False
+        try:
+            target = self._show_target(commit, git_path)
+            run_kwargs: dict[str, Any] = {"cwd": git_root, "stderr": subprocess.PIPE}
+            env_overrides = self._default_git_env()
+            if env_overrides:
+                run_kwargs["env"] = os.environ | env_overrides
+            run_kwargs.update(self._windows_no_console_kwargs())
+            with open(destination, "wb") as output:
+                process = subprocess.Popen([self._git_executable, "show", target], stdout=output, **run_kwargs)
+                return_code = process.wait(timeout=30)
+                return return_code == 0
+        except subprocess.TimeoutExpired:
+            Log.warning(f"Git show command timed out for {git_path}")
+            return False
+        except FileNotFoundError:
+            Log.warning("Git command not found")
+            return False
+        except (NotADirectoryError, OSError) as e:
+            Log.warning(f"Git show failed for {git_path}: {e}")
+            return False
+
+    def _show_target(self, commit: str | None, git_path: str) -> str:
+        """Build git show target for commit or index."""
+        return f":{git_path}" if commit is None else f"{commit}:{git_path}"
 
     def file_exists(self, git_root: str, commit: str | None, git_path: str) -> bool:
         """Check file existence at commit or index via git cat-file.

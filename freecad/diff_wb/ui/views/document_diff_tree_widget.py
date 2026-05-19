@@ -2,13 +2,13 @@
 
 from collections.abc import Callable
 
-from PySide6.QtCore import QCoreApplication, Qt
-from PySide6.QtGui import QBrush
+from PySide6.QtCore import QCoreApplication, QSize, Qt
+from PySide6.QtGui import QBrush, QIcon
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QPushButton,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -16,13 +16,22 @@ from PySide6.QtWidgets import (
 )
 
 from ...domain.diff.models import DiffState
+from ...resources import get_icon_path
 from ..presenters.presentation_models import DiffTreePresentation, DocumentStatusIndicator, NodePresentation
-from ..translation_strings import DIFF_SUMMARY_CHANGED_LABEL, STAGE_ALL_LABEL
+from ..translation_strings import DIFF_SUMMARY_CHANGED_LABEL, STAGE_ALL_LABEL, STAGE_LABEL, VISUAL_DIFF_TOOLTIP
 from .diff_theme import DIFF_STATE_ROLE, DiffItemDelegate, background_for_state, foreground_for_background
 from .models import HistorySelection
 
 
 __all__ = ["DocumentDiffTreeWidget"]
+
+
+# Tree rows use a 22px control box so text-only and icon rows stay the same height.
+TREE_ITEM_HEIGHT = 22
+# Icon stays 16px inside that 22px box, leaving 3px visual padding on each side.
+TREE_ITEM_ICON_SIZE = 16
+STAGE_BUTTON_WIDTH = 60
+STAGE_ALL_BUTTON_WIDTH = 82
 
 
 class DocumentDiffTreeWidget(QWidget):
@@ -34,7 +43,8 @@ class DocumentDiffTreeWidget(QWidget):
         self._on_stage_all_callback: Callable[[], None] | None = None
         self._on_node_selection_callback: Callable[[str, str], None] | None = None
         self._current_selection: HistorySelection | None = None
-        self._stage_buttons: dict[str, QPushButton] = {}
+        self._on_visual_diff_callback: Callable[[str, str], None] | None = None
+        self._stage_buttons: dict[str, QToolButton] = {}
         self._diff_item_delegate: DiffItemDelegate | None = None
         self._setup_ui()
 
@@ -53,9 +63,10 @@ class DocumentDiffTreeWidget(QWidget):
         self._changed_label.setStyleSheet("font-weight: bold;")
         summary_layout.addWidget(self._changed_label)
 
-        self._stage_all_button = QPushButton()
+        self._stage_all_button = QToolButton()
         self._stage_all_button.setText(QCoreApplication.translate("DiffView", STAGE_ALL_LABEL))
-        self._stage_all_button.setFixedWidth(70)
+        self._stage_all_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._stage_all_button.setFixedSize(STAGE_ALL_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
         self._stage_all_button.hide()
         self._stage_all_button.clicked.connect(self._on_stage_all_clicked)
         summary_layout.addWidget(self._stage_all_button)
@@ -84,6 +95,10 @@ class DocumentDiffTreeWidget(QWidget):
             callback: A callable receiving (git_path, node_path) when a node is clicked.
         """
         self._on_node_selection_callback = callback
+
+    def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
+        """Set callback for visual diff click with (git_path, node_path)."""
+        self._on_visual_diff_callback = callback
 
     def set_add_button_callback(self, callback: Callable[[str], None]) -> None:
         """Set the callback for when the '+ Stage' button is clicked.
@@ -132,10 +147,11 @@ class DocumentDiffTreeWidget(QWidget):
 
         top_level_text = git_path or "Unnamed Document"
         root_item = QTreeWidgetItem([top_level_text])
+        root_item.setSizeHint(0, QSize(0, TREE_ITEM_HEIGHT))
         root_item.setData(0, Qt.ItemDataRole.UserRole, git_path or top_level_text)
 
         for node in nodes:
-            root_item.addChild(self._create_tree_item(node))
+            self._add_tree_item(root_item, node, git_path)
 
         self._tree_widget.addTopLevelItem(root_item)
         self._expand_nodes_with_changes(root_item)
@@ -158,6 +174,7 @@ class DocumentDiffTreeWidget(QWidget):
             top_level_text = diff.git_path or "Unnamed Document"
 
             root_item = QTreeWidgetItem([top_level_text])
+            root_item.setSizeHint(0, QSize(0, TREE_ITEM_HEIGHT))
             root_item.setData(0, Qt.ItemDataRole.UserRole, diff.git_path or top_level_text)
 
             container = QWidget()
@@ -174,9 +191,11 @@ class DocumentDiffTreeWidget(QWidget):
             )
 
             if show_stage_button:
-                add_button = QPushButton("+ Stage")
+                add_button = QToolButton()
+                add_button.setText(QCoreApplication.translate("DiffView", STAGE_LABEL))
+                add_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
                 add_button.setEnabled(diff.stage_button_enabled)
-                add_button.setFixedWidth(40)
+                add_button.setFixedSize(STAGE_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
                 add_button.clicked.connect(lambda checked, gp=diff.git_path: self._on_add_button_clicked(gp))
                 layout.addWidget(add_button)
                 if diff.git_path:
@@ -186,8 +205,7 @@ class DocumentDiffTreeWidget(QWidget):
             self._tree_widget.setItemWidget(root_item, 0, container)
 
             for node in diff.nodes:
-                item = self._create_tree_item(node)
-                root_item.addChild(item)
+                self._add_tree_item(root_item, node, diff.git_path)
 
             self._expand_nodes_with_changes(root_item)
 
@@ -245,7 +263,14 @@ class DocumentDiffTreeWidget(QWidget):
         if has_changed_descendants:
             item.setExpanded(True)
 
-    def _create_tree_item(self, node: NodePresentation) -> QTreeWidgetItem:
+    def _add_tree_item(self, parent: QTreeWidgetItem, node: NodePresentation, git_path: str) -> None:
+        """Create, attach, and install optional row widget for a node."""
+        item, row_widget = self._create_tree_item(node, git_path)
+        parent.addChild(item)
+        if row_widget is not None:
+            self._tree_widget.setItemWidget(item, 0, row_widget)
+
+    def _create_tree_item(self, node: NodePresentation, git_path: str) -> tuple[QTreeWidgetItem, QWidget | None]:
         """Recursively create a QTreeWidgetItem from NodePresentation.
 
         Args:
@@ -258,17 +283,65 @@ class DocumentDiffTreeWidget(QWidget):
         text = node.label if node.label == name else f"{node.label} ({name})"
 
         item = QTreeWidgetItem([text])
+        item.setSizeHint(0, QSize(0, TREE_ITEM_HEIGHT))
         item.setToolTip(0, node.type_id)
         item.setData(0, Qt.ItemDataRole.UserRole, node.path)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, node.has_changes)
 
         self._apply_diff_state(item, node.state)
 
-        for child in node.children:
-            child_item = self._create_tree_item(child)
-            item.addChild(child_item)
+        row_widget = self._create_node_row_widget(item, node, text, git_path)
 
-        return item
+        for child in node.children:
+            self._add_tree_item(item, child, git_path)
+
+        return item, row_widget
+
+    def _create_node_row_widget(
+        self, item: QTreeWidgetItem, node: NodePresentation, text: str, git_path: str
+    ) -> QWidget | None:
+        """Create optional custom row widget with right-floating visual diff icon."""
+        if not node.visual_diff_enabled:
+            return None
+        container = QWidget()
+        container.setFixedHeight(TREE_ITEM_HEIGHT)
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(4, 0, 4, 0)
+        layout.setSpacing(4)
+        label = QLabel(text)
+        label.setFixedHeight(TREE_ITEM_HEIGHT)
+        label.setToolTip(node.type_id)
+        layout.addWidget(label)
+        layout.addStretch()
+
+        icon_size = QSize(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE)
+
+        button = QToolButton()
+        button.setIcon(QIcon(str(get_icon_path("VisualDiff.svg"))))
+        button.setIconSize(icon_size)
+        button.setToolTip(QCoreApplication.translate("DiffView", VISUAL_DIFF_TOOLTIP))
+        button.setAutoRaise(True)
+        button.setStyleSheet(
+            """
+            QToolButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 3px;
+            }
+            QToolButton:hover {
+                background-color: rgba(128, 128, 128, 35);
+            }
+            QToolButton:pressed {
+                background-color: rgba(128, 128, 128, 60);
+            }
+            """
+        )
+        button.setFixedSize(TREE_ITEM_HEIGHT, TREE_ITEM_HEIGHT)
+        button.clicked.connect(
+            lambda checked=False, item=item, gp=git_path, np=node.path: self._on_visual_diff_clicked(item, gp, np)
+        )
+        layout.addWidget(button)
+        return container
 
     def _apply_diff_state(self, item: QTreeWidgetItem, state: DiffState) -> None:
         """Apply semantic diff coloring data to a tree item."""
@@ -318,6 +391,12 @@ class DocumentDiffTreeWidget(QWidget):
 
         if git_path and node_path:
             self._on_node_selection_callback(git_path, node_path)
+
+    def _on_visual_diff_clicked(self, item: QTreeWidgetItem, git_path: str, node_path: str) -> None:
+        self._tree_widget.setCurrentItem(item)
+        self._on_tree_item_clicked(item, 0)
+        if self._on_visual_diff_callback is not None:
+            self._on_visual_diff_callback(git_path, node_path)
 
     def collapse_tree_item(self, git_path: str) -> None:
         """Collapse the root tree item for the given git_path.

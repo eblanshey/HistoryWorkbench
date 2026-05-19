@@ -178,8 +178,6 @@ class TestShowDocDiffsWithStageButtons:
 
     def test_stage_buttons_only_appear_when_working_tree_selected(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Stage buttons only appear when current selection is WORKING_TREE."""
-        from PySide6.QtWidgets import QPushButton
-
         from freecad.diff_wb.ui.presenters.presentation_models import (
             DiffTreePresentation,
             NodePresentation,
@@ -212,22 +210,10 @@ class TestShowDocDiffsWithStageButtons:
             ]
         )
 
-        # Should have Stage button - check by looking at actual tree item containers
-        has_stage_button = False
-        for i in range(widget.tree_widget.topLevelItemCount()):
-            item = widget.tree_widget.topLevelItem(i)
-            container = widget.tree_widget.itemWidget(item, 0)
-            if container is not None:
-                buttons = container.findChildren(QPushButton)
-                if any(button.text() == "+ Stage" for button in buttons):
-                    has_stage_button = True
-                    break
-        assert has_stage_button
+        assert widget._stage_buttons["parts/A.FCStd"].text() == "+ Stage"
 
     def test_stage_buttons_hidden_when_not_working_tree(self, widget) -> None:  # type: ignore[no-untyped-def]
         """Stage buttons are hidden when selection is not WORKING_TREE."""
-        from PySide6.QtWidgets import QPushButton
-
         from freecad.diff_wb.ui.presenters.presentation_models import (
             DiffTreePresentation,
             NodePresentation,
@@ -260,18 +246,7 @@ class TestShowDocDiffsWithStageButtons:
             ]
         )
 
-        # Should NOT have Stage button - check by looking at actual tree item containers
-        # (findChildren may find orphaned buttons from previous tests)
-        has_stage_button = False
-        for i in range(widget.tree_widget.topLevelItemCount()):
-            item = widget.tree_widget.topLevelItem(i)
-            container = widget.tree_widget.itemWidget(item, 0)
-            if container is not None:
-                buttons = container.findChildren(QPushButton)
-                if any(button.text() == "+ Stage" for button in buttons):
-                    has_stage_button = True
-                    break
-        assert not has_stage_button
+        assert "parts/A.FCStd" not in widget._stage_buttons
 
     def test_show_doc_diffs_with_empty_list_clears_tree(self, widget) -> None:  # type: ignore[no-untyped-def]
         """show_doc_diffs() clears tree when given empty list."""
@@ -348,23 +323,7 @@ class TestCallbackWiring:
             ]
         )
 
-        # Find and click the "+ Stage" button - look in tree item containers
-        from PySide6.QtWidgets import QPushButton
-
-        stage_button = None
-        for i in range(widget.tree_widget.topLevelItemCount()):
-            item = widget.tree_widget.topLevelItem(i)
-            container = widget.tree_widget.itemWidget(item, 0)
-            if container is not None:
-                buttons = container.findChildren(QPushButton)
-                for button in buttons:
-                    if button.text() == "+ Stage":
-                        stage_button = button
-                        break
-            if stage_button is not None:
-                break
-
-        assert stage_button is not None
+        stage_button = widget._stage_buttons["parts/A.FCStd"]
         stage_button.click()
 
         assert captured == ["parts/A.FCStd"]
@@ -421,6 +380,95 @@ class TestCallbackWiring:
         widget._on_tree_item_clicked(child_item, 0)
 
         assert captured == [("parts/A.FCStd", "Body")]
+
+    def test_visual_diff_button_only_for_enabled_nodes(self, widget) -> None:  # type: ignore[no-untyped-def]
+        """Visual diff button appears only when presentation enables it."""
+        from PySide6.QtWidgets import QToolButton
+
+        from freecad.diff_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
+        from freecad.diff_wb.ui.views.models import HistorySelection
+
+        widget.clear_doc_diffs()
+        widget.set_current_history_selection(HistorySelection(item_kind="WORKING_TREE", commit_hash=None))
+        widget.show_doc_diffs(
+            [
+                DiffTreePresentation(
+                    nodes=[
+                        NodePresentation(
+                            path="Body/Pad",
+                            type_id="PartDesign::Pad",
+                            label="Pad",
+                            state=DiffState.MODIFIED,
+                            has_changes=True,
+                            visual_diff_enabled=True,
+                            children=[],
+                        ),
+                        NodePresentation(
+                            path="Body/Sketch",
+                            type_id="App::FeaturePython",
+                            label="Sketch",
+                            state=DiffState.MODIFIED,
+                            has_changes=True,
+                            visual_diff_enabled=False,
+                            children=[],
+                        ),
+                    ],
+                    git_path="parts/A.FCStd",
+                    indicators=[],
+                )
+            ]
+        )
+        root = widget.tree_widget.topLevelItem(0)
+        assert root is not None
+        first = root.child(0)
+        second = root.child(1)
+        assert first is not None and second is not None
+        first_container = widget.tree_widget.itemWidget(first, 0)
+        second_container = widget.tree_widget.itemWidget(second, 0)
+        assert first_container is not None
+        assert second_container is None
+        assert len(first_container.findChildren(QToolButton)) == 1
+
+    def test_visual_diff_button_emits_git_path_and_node_path(self, widget) -> None:  # type: ignore[no-untyped-def]
+        """Visual diff button callback emits (git_path, node_path)."""
+        from PySide6.QtWidgets import QToolButton
+
+        from freecad.diff_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
+        from freecad.diff_wb.ui.views.models import HistorySelection
+
+        captured: list[tuple[str, str]] = []
+        widget.clear_doc_diffs()
+        widget.set_visual_diff_callback(lambda git_path, node_path: captured.append((git_path, node_path)))
+        widget.set_current_history_selection(HistorySelection(item_kind="WORKING_TREE", commit_hash=None))
+        widget.show_doc_diffs(
+            [
+                DiffTreePresentation(
+                    nodes=[
+                        NodePresentation(
+                            path="Body/Pad",
+                            type_id="PartDesign::Pad",
+                            label="Pad",
+                            state=DiffState.MODIFIED,
+                            has_changes=True,
+                            visual_diff_enabled=True,
+                            children=[],
+                        )
+                    ],
+                    git_path="parts/A.FCStd",
+                    indicators=[],
+                )
+            ]
+        )
+        root = widget.tree_widget.topLevelItem(0)
+        assert root is not None
+        child = root.child(0)
+        assert child is not None
+        container = widget.tree_widget.itemWidget(child, 0)
+        assert container is not None
+        buttons = container.findChildren(QToolButton)
+        assert len(buttons) == 1
+        buttons[0].click()
+        assert captured == [("parts/A.FCStd", "Body/Pad")]
 
 
 class TestDocumentDiffTreeWidgetIndependence:
@@ -544,8 +592,6 @@ class TestSetStageButtonEnabled:
 
     def test_set_stage_button_enabled_updates_button(self, widget) -> None:  # type: ignore[no-untyped-def]
         """set_stage_button_enabled() updates the stage button for given git_path."""
-        from PySide6.QtWidgets import QPushButton
-
         from freecad.diff_wb.ui.presenters.presentation_models import (
             DiffTreePresentation,
             NodePresentation,
@@ -575,22 +621,7 @@ class TestSetStageButtonEnabled:
             ]
         )
 
-        # Find stage button in tree item containers
-
-        stage_button = None
-        for i in range(widget.tree_widget.topLevelItemCount()):
-            item = widget.tree_widget.topLevelItem(i)
-            container = widget.tree_widget.itemWidget(item, 0)
-            if container is not None:
-                buttons = container.findChildren(QPushButton)
-                for button in buttons:
-                    if button.text() == "+ Stage":
-                        stage_button = button
-                        break
-            if stage_button is not None:
-                break
-
-        assert stage_button is not None
+        stage_button = widget._stage_buttons["parts/A.FCStd"]
         assert stage_button.isEnabled()
 
         widget.set_stage_button_enabled("parts/A.FCStd", False)

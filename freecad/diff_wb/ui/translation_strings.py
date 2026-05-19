@@ -62,16 +62,26 @@ DIFF_LOADING_MESSAGE = "Computing diff..."
 No placeholders. This is a static message.
 """
 
-STAGE_ALL_LABEL = "Stage All"
+STAGE_ALL_LABEL = "+ Stage All"
 """Label for the Stage All button in the Working Tree view.
 
 No placeholders. This is a static label displayed above the diff tree.
+"""
+
+STAGE_LABEL = "+ Stage"
+"""Label for a single-document stage button in the Working Tree view.
+
+No placeholders. This is a static label displayed in document rows.
 """
 
 DOC_STATUS_NEW_DOCUMENT_TOOLTIP = "New document"
 DOC_STATUS_OLD_SNAPSHOT_MISSING_TOOLTIP = "Cannot find old snapshot. Diff cannot be generated."
 DOC_STATUS_SNAPSHOT_MISSING_TOOLTIP = "The selected commit does not have a snapshot for this document"
 DOC_STATUS_INVALID_SNAPSHOT_TOOLTIP = "The older snapshot is invalid, so a diff cannot be generated."
+VISUAL_DIFF_TOOLTIP = "Open visual diff"
+VISUAL_DIFF_MISSING_FCSTD_MESSAGE = "Could not load FCStd from old or new side for visual diff."
+VISUAL_DIFF_MISSING_BREP_MESSAGE = "Could not find Shape BREP for this object in old or new document."
+VISUAL_DIFF_IMPORT_FAILURE_MESSAGE = "Could not import shape BREP files for visual diff."
 
 # ============================================================================
 # COMMON STRINGS

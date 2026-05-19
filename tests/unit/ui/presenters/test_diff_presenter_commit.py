@@ -6,6 +6,10 @@ from unittest.mock import MagicMock
 from freecad.diff_wb.application.actions.create_document_diffs import CreateDocumentDiffsAction
 from freecad.diff_wb.application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from freecad.diff_wb.application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
+from freecad.diff_wb.application.actions.open_visual_feature_diff import (
+    OpenVisualFeatureDiffAction,
+    OpenVisualFeatureDiffRequest,
+)
 from freecad.diff_wb.application.actions.result_models import (
     CreateDocumentDiffsRequest,
     DocumentDiffMode,
@@ -20,6 +24,7 @@ from freecad.diff_wb.domain.snapshots.models import Snapshot
 from freecad.diff_wb.ui.presenters.diff_presenter import DiffPresenter
 from freecad.diff_wb.ui.presenters.presentation_models import NewFileIndicator, OldSnapshotMissingIndicator
 from freecad.diff_wb.ui.state import UIState
+from freecad.diff_wb.ui.views.models import HistorySelection
 from tests.fakes.fake_diff_view import FakeDiffView
 
 
@@ -34,6 +39,7 @@ def _make_presenter() -> tuple[FakeDiffView, DiffPresenter, MagicMock]:
         create_document_diffs_action=create_document_diffs_action,
         stage_documents_action=MagicMock(spec=StageDocumentsAction),
         get_dirty_documents_action=MagicMock(spec=GetDirtyDocumentsAction),
+        open_visual_feature_diff_action=MagicMock(spec=OpenVisualFeatureDiffAction),
     )
     return view, presenter, create_document_diffs_action
 
@@ -137,3 +143,49 @@ class TestDiffPresenterStageSingleDocument:
         presenter.on_add_button_clicked("doc.FCStd")
 
         assert any(call["method"] == "clear_property_diff" for call in view.get_calls())
+
+
+class TestVisualDiffClickHandling:
+    def test_visual_diff_click_builds_working_tree_request(self) -> None:
+        view, presenter, _ = _make_presenter()
+        repo = GitRepository(name="repo", absolute_path="/tmp/repo")
+        presenter._ui_state.git_repository = repo
+        presenter._current_history_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+        snapshot = Snapshot(
+            snapshot_id="s1",
+            document_name="doc.FCStd",
+            timestamp=datetime.now(),
+            git_path="doc.FCStd",
+        )
+        presenter._diff_results_by_path["doc.FCStd"] = DiffResult(old_snapshot=snapshot, new_snapshot=snapshot)
+
+        presenter.on_visual_diff_clicked("doc.FCStd", "Body/Pad")
+
+        presenter._open_visual_feature_diff.execute.assert_called_once()
+        request = presenter._open_visual_feature_diff.execute.call_args.args[0]
+        assert isinstance(request, OpenVisualFeatureDiffRequest)
+        assert request.old_commit is None
+        assert request.new_commit is None
+        assert request.working_tree_document_path == "/tmp/repo/doc.FCStd"
+
+    def test_visual_diff_click_builds_commit_request(self) -> None:
+        view, presenter, _ = _make_presenter()
+        repo = GitRepository(name="repo", absolute_path="/tmp/repo")
+        presenter._ui_state.git_repository = repo
+        presenter._current_history_selection = HistorySelection(item_kind="COMMIT", commit_hash="abc123")
+
+        snapshot = Snapshot(
+            snapshot_id="s1",
+            document_name="doc.FCStd",
+            timestamp=datetime.now(),
+            git_path="doc.FCStd",
+        )
+        presenter._diff_results_by_path["doc.FCStd"] = DiffResult(old_snapshot=snapshot, new_snapshot=snapshot)
+
+        presenter.on_visual_diff_clicked("doc.FCStd", "Body/Pad")
+
+        request = presenter._open_visual_feature_diff.execute.call_args.args[0]
+        assert request.old_commit == "abc123~1"
+        assert request.new_commit == "abc123"
+        assert request.working_tree_document_path is None

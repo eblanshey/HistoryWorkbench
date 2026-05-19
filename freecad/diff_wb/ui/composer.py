@@ -49,12 +49,14 @@ def compose_and_register_ui(container: ApplicationContainer) -> DiffPanelView:
         create_document_diffs_action=container.create_document_diffs_action,
         stage_documents_action=container.stage_documents_action,
         get_dirty_documents_action=container.get_dirty_documents_action,
+        open_visual_feature_diff_action=container.open_visual_feature_diff_action,
         settings_repo=container.settings_repo,
     )
     ui_registry.register_diff_presenter(diff_presenter)
 
     # Connect tree widget callback using the new callback method
     view.set_node_selection_callback(diff_presenter.on_node_selected)
+    view.set_visual_diff_callback(diff_presenter.on_visual_diff_clicked)
 
     # Connect add button callback
     view.set_add_button_callback(diff_presenter.on_add_button_clicked)

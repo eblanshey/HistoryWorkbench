@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Two cubes sharing a face, forming a 1x2 rectangular block -->
+  <!-- Red cube on the left, green cube on the right, gray cube behind -->
+
+  <!-- Gray top face (behind, sharing the central vertical edge) -->
+  <polygon points="32,24.91 16.75,17.29 32,9.67 47.25,17.29" fill="#95a5a6" stroke="#4a4a4a" stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- Red top face -->
+  <polygon points="1.5,24.91 16.75,17.29 32,24.91 16.75,32.54" fill="#d63031" stroke="#7a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Red left face -->
+  <polygon points="1.5,24.91 16.75,32.54 16.75,54.30 1.5,46.68" fill="#d63031" stroke="#7a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Red front face -->
+  <polygon points="16.75,32.54 32,24.91 32,46.68 16.75,54.30" fill="#d63031" stroke="#7a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- Green top face -->
+  <polygon points="32,24.91 47.25,17.29 62.5,24.91 47.25,32.54" fill="#2ecc71" stroke="#1b5e20" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Green front face -->
+  <polygon points="32,24.91 47.25,32.54 47.25,54.30 32,46.68" fill="#2ecc71" stroke="#1b5e20" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Green right face -->
+  <polygon points="47.25,32.54 62.5,24.91 62.5,46.68 47.25,54.30" fill="#2ecc71" stroke="#1b5e20" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

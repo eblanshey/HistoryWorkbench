@@ -627,6 +627,7 @@ class GitPortAdapter(GitPort):
             return False
         try:
             target = self._show_target(commit, git_path)
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
             run_kwargs: dict[str, Any] = {"cwd": git_root, "stderr": subprocess.PIPE}
             env_overrides = self._default_git_env()
             if env_overrides:
@@ -639,8 +640,8 @@ class GitPortAdapter(GitPort):
         except subprocess.TimeoutExpired:
             Log.warning(f"Git show command timed out for {git_path}")
             return False
-        except FileNotFoundError:
-            Log.warning("Git command not found")
+        except FileNotFoundError as e:
+            Log.exception(f"File not found: {e}")
             return False
         except (NotADirectoryError, OSError) as e:
             Log.warning(f"Git show failed for {git_path}: {e}")
@@ -649,6 +650,18 @@ class GitPortAdapter(GitPort):
     def _show_target(self, commit: str | None, git_path: str) -> str:
         """Build git show target for commit or index."""
         return f":{git_path}" if commit is None else f"{commit}:{git_path}"
+
+    def resolve_ref(self, git_root: str, ref: str) -> str | None:
+        """Resolve git ref to full commit hash via git rev-parse."""
+        try:
+            result = self._run_git(["rev-parse", "--verify", f"{ref}^{{commit}}"], cwd=git_root, timeout=30)
+            if result is None or result.returncode != 0:
+                return None
+            resolved = result.stdout.strip()
+            return resolved or None
+        except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError) as e:
+            Log.warning(f"Git ref resolution failed for {ref}: {e}")
+            return None
 
     def file_exists(self, git_root: str, commit: str | None, git_path: str) -> bool:
         """Check file existence at commit or index via git cat-file.

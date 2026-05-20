@@ -13,6 +13,7 @@ from .models import (
     PropertyDiff,
     PropertyPathDiff,
 )
+from .visual_diff import FreeCADVisualDiffPort
 
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "DiffEngine",
     "TreeComparator",
     "PropertyComparator",
+    "FreeCADVisualDiffPort",
 ]

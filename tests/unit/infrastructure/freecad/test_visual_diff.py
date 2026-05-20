@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from freecad.diff_wb.infrastructure.freecad.visual_diff import FreeCADVisualDiff
+from freecad.diff_wb.infrastructure.freecad.freecad_visual_diff_creator import FreeCADVisualDiffCreator
 
 
 class FakeShape:
@@ -138,7 +138,7 @@ def test_visual_diff_creates_reference_and_colored_boolean_difference_features(
     fake_freecad_gui = _install_freecad_fakes(monkeypatch)
 
     ctx = FakeContext()
-    document = FreeCADVisualDiff(ctx).open_brep_visual_diff("old.brep", "new.brep")
+    document = FreeCADVisualDiffCreator(ctx).open_brep_visual_diff("old.brep", "new.brep", "Diff_Test_working")
 
     feature_by_name = {feature.name: feature for feature in document.features}
     expected_names = ["Old_Visual", "New_Visual", "Diff", "Unchanged_Visual", "Added_Visual", "Removed_Visual"]
@@ -161,7 +161,11 @@ def test_visual_diff_creates_reference_and_colored_boolean_difference_features(
     assert _shape_colors_by_name(feature_by_name, expected_colors) == expected_colors
     assert _line_colors_by_name(feature_by_name, expected_colors) == expected_colors
     assert _point_colors_by_name(feature_by_name, expected_colors) == expected_colors
-    assert _feature_transparency_by_name(feature_by_name) == {"Unchanged_Visual": 70}
+    assert _feature_transparency_by_name(feature_by_name) == {
+        "Unchanged_Visual": 50,
+        "Added_Visual": 50,
+        "Removed_Visual": 50,
+    }
     assert _feature_visibility_by_name(feature_by_name) == {"Old_Visual": False, "New_Visual": False}
     assert _feature_child_names(feature_by_name["Diff"]) == expected_diff_children
     assert document.recomputed is True
@@ -185,7 +189,7 @@ def test_visual_diff_creates_single_visual_when_one_side_missing(
     fake_freecad_gui = _install_freecad_fakes(monkeypatch)
     ctx = FakeContext()
 
-    document = FreeCADVisualDiff(ctx).open_brep_visual_diff(old_brep_path, new_brep_path)
+    document = FreeCADVisualDiffCreator(ctx).open_brep_visual_diff(old_brep_path, new_brep_path, "Diff_Test_working")
 
     assert [feature.name for feature in document.features] == [expected_name]
     assert document.features[0].Label == expected_name
@@ -198,7 +202,7 @@ def test_visual_diff_rejects_missing_old_and_new_paths() -> None:
     ctx = FakeContext()
 
     with pytest.raises(ValueError, match="At least one BREP path is required"):
-        FreeCADVisualDiff(ctx).open_brep_visual_diff(None, None)
+        FreeCADVisualDiffCreator(ctx).open_brep_visual_diff(None, None, "Diff_Test_working")
 
 
 def _install_freecad_fakes(monkeypatch: Any) -> FakeFreeCADGui:

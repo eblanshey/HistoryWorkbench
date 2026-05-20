@@ -280,6 +280,29 @@ class TestWriteFileFromRef:
         assert destination.read_bytes() == b"\x50\x4b\x03\x04"
 
 
+class TestResolveRef:
+    """Tests for GitService.resolve_ref() delegation."""
+
+    def test_returns_resolved_commit_hash(self) -> None:
+        fake_port = FakeGitPort()
+        fake_port.set_resolved_ref("HEAD~1", "abcdef1234567890abcdef1234567890abcdef12")
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.resolve_ref(repo, "HEAD~1")
+
+        assert result == "abcdef1234567890abcdef1234567890abcdef12"
+
+    def test_returns_none_when_ref_cannot_be_resolved(self) -> None:
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.resolve_ref(repo, "nonexistent-branch")
+
+        assert result is None
+
+
 class TestInitializeRepository:
     """Tests for GitService.initialize_repository behavior."""
 

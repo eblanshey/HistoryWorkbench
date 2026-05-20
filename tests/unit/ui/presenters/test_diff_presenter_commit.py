@@ -6,9 +6,10 @@ from unittest.mock import MagicMock
 from freecad.diff_wb.application.actions.create_document_diffs import CreateDocumentDiffsAction
 from freecad.diff_wb.application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from freecad.diff_wb.application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
-from freecad.diff_wb.application.actions.open_visual_feature_diff import (
-    OpenVisualFeatureDiffAction,
-    OpenVisualFeatureDiffRequest,
+from freecad.diff_wb.application.actions.open_visual_diff import (
+    OpenVisualDiffAction,
+    OpenVisualDiffRequest,
+    VisualDiffRequestType,
 )
 from freecad.diff_wb.application.actions.result_models import (
     CreateDocumentDiffsRequest,
@@ -39,7 +40,7 @@ def _make_presenter() -> tuple[FakeDiffView, DiffPresenter, MagicMock]:
         create_document_diffs_action=create_document_diffs_action,
         stage_documents_action=MagicMock(spec=StageDocumentsAction),
         get_dirty_documents_action=MagicMock(spec=GetDirtyDocumentsAction),
-        open_visual_feature_diff_action=MagicMock(spec=OpenVisualFeatureDiffAction),
+        open_visual_feature_diff_action=MagicMock(spec=OpenVisualDiffAction),
     )
     return view, presenter, create_document_diffs_action
 
@@ -164,10 +165,10 @@ class TestVisualDiffClickHandling:
 
         presenter._open_visual_feature_diff.execute.assert_called_once()
         request = presenter._open_visual_feature_diff.execute.call_args.args[0]
-        assert isinstance(request, OpenVisualFeatureDiffRequest)
+        assert isinstance(request, OpenVisualDiffRequest)
+        assert request.type is VisualDiffRequestType.WORKING
         assert request.old_commit is None
         assert request.new_commit is None
-        assert request.working_tree_document_path == "/tmp/repo/doc.FCStd"
 
     def test_visual_diff_click_builds_commit_request(self) -> None:
         view, presenter, _ = _make_presenter()
@@ -186,6 +187,6 @@ class TestVisualDiffClickHandling:
         presenter.on_visual_diff_clicked("doc.FCStd", "Body/Pad")
 
         request = presenter._open_visual_feature_diff.execute.call_args.args[0]
+        assert request.type is VisualDiffRequestType.COMMIT
         assert request.old_commit == "abc123~1"
         assert request.new_commit == "abc123"
-        assert request.working_tree_document_path is None

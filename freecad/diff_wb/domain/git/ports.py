@@ -144,6 +144,18 @@ class GitPort(Protocol):
         """
         ...
 
+    def resolve_ref(self, git_root: str, ref: str) -> str | None:
+        """Resolve git ref to full commit hash.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            ref: Commit reference such as HEAD, a hash, or HEAD~1.
+
+        Returns:
+            Full commit hash if ref resolves to a commit, None otherwise.
+        """
+        ...
+
     def file_exists(self, git_root: str, commit: str | None, git_path: str) -> bool:
         """Check whether a file path exists at commit or index.
 

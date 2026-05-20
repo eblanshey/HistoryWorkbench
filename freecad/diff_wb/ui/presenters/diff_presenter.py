@@ -10,13 +10,16 @@ diff results into UI-friendly presentation models.
 """
 
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ...application.actions.create_document_diffs import CreateDocumentDiffsAction
 from ...application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from ...application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
-from ...application.actions.open_visual_feature_diff import OpenVisualFeatureDiffAction, OpenVisualFeatureDiffRequest
+from ...application.actions.open_visual_diff import (
+    OpenVisualDiffAction,
+    OpenVisualDiffRequest,
+    VisualDiffRequestType,
+)
 from ...application.actions.result_models import (
     CreateDocumentDiffsRequest,
     DocumentDiffMode,
@@ -376,7 +379,7 @@ class DiffPresenter:
         create_document_diffs_action: CreateDocumentDiffsAction,
         stage_documents_action: StageDocumentsAction,
         get_dirty_documents_action: GetDirtyDocumentsAction,
-        open_visual_feature_diff_action: OpenVisualFeatureDiffAction,
+        open_visual_feature_diff_action: OpenVisualDiffAction,
         settings_repo: SettingsRepository | None = None,
     ) -> None:
         """Initialize with required dependencies.
@@ -887,33 +890,30 @@ class DiffPresenter:
         repo: GitRepository,
         git_path: str,
         node_path: str,
-    ) -> OpenVisualFeatureDiffRequest | None:
+    ) -> OpenVisualDiffRequest | None:
         """Build visual diff request for current history mode."""
         if selection.item_kind == "WORKING_TREE":
-            working_tree_document_path = str((Path(repo.absolute_path) / git_path).resolve())
-            return OpenVisualFeatureDiffRequest(
+            return OpenVisualDiffRequest(
                 repo=repo,
                 git_path=git_path,
                 node_path=node_path,
-                old_commit=None,
-                new_commit=None,
-                working_tree_document_path=working_tree_document_path,
+                type=VisualDiffRequestType.WORKING,
             )
 
         if selection.item_kind == "STAGING":
-            return OpenVisualFeatureDiffRequest(
+            return OpenVisualDiffRequest(
                 repo=repo,
                 git_path=git_path,
                 node_path=node_path,
-                old_commit="HEAD",
-                new_commit=None,
+                type=VisualDiffRequestType.STAGING,
             )
 
         if selection.item_kind == "COMMIT" and selection.commit_hash:
-            return OpenVisualFeatureDiffRequest(
+            return OpenVisualDiffRequest(
                 repo=repo,
                 git_path=git_path,
                 node_path=node_path,
+                type=VisualDiffRequestType.COMMIT,
                 old_commit=f"{selection.commit_hash}~1",
                 new_commit=selection.commit_hash,
             )

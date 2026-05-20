@@ -15,9 +15,10 @@ from ...domain.git.git_service import GitService
 from ...domain.git.ports import GitPort
 from ...domain.settings import SettingsRepository
 from ...domain.snapshots.gui_extractor import SnapshotExtractor
+from ...infrastructure.freecad.freecad_file_manager import FreeCadFileManagerAdapter
+from ...infrastructure.freecad.freecad_visual_diff_creator import FreeCADVisualDiffCreator
 from ...infrastructure.freecad.ports import get_app_port, get_port
 from ...infrastructure.freecad.settings_repo import FreeCADSettingsRepository
-from ...infrastructure.freecad.visual_diff import FreeCADVisualDiff
 from ...infrastructure.git.git_port_adapter import GitPortAdapter
 from ...infrastructure.persistence.snapshot_yaml_deserializer import SnapshotYamlDeserializer
 from ..actions.can_write_global_git_identity import CanWriteGlobalGitIdentityAction
@@ -37,7 +38,7 @@ from ..actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from ..actions.get_staged_file_paths import GetStagedFilePathsAction
 from ..actions.initialize_git_repository import InitializeGitRepositoryAction
 from ..actions.open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
-from ..actions.open_visual_feature_diff import OpenVisualFeatureDiffAction
+from ..actions.open_visual_diff import OpenVisualDiffAction
 from ..actions.recompute_all_open_documents import RecomputeAllOpenDocumentsAction
 from ..actions.save_diff_settings import SaveDiffSettingsAction
 from ..actions.save_git_identity import SaveGitIdentityAction
@@ -83,7 +84,7 @@ class ApplicationContainer:
     can_write_global_git_identity_action: CanWriteGlobalGitIdentityAction
     get_diff_settings_action: GetDiffSettingsAction
     save_diff_settings_action: SaveDiffSettingsAction
-    open_visual_feature_diff_action: OpenVisualFeatureDiffAction
+    open_visual_feature_diff_action: OpenVisualDiffAction
 
     # Settings repository for runtime precision and user preferences
     settings_repo: SettingsRepository
@@ -202,9 +203,11 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
     can_write_global_git_identity_action = CanWriteGlobalGitIdentityAction(git_service=git_service)
     get_diff_settings_action = GetDiffSettingsAction(settings_repo=settings_repo)
     save_diff_settings_action = SaveDiffSettingsAction(settings_repo=settings_repo)
-    open_visual_feature_diff_action = OpenVisualFeatureDiffAction(
+    file_manager = FreeCadFileManagerAdapter(git_service=git_service)
+    open_visual_feature_diff_action = OpenVisualDiffAction(
         git_service=git_service,
-        visual_diff=FreeCADVisualDiff(ctx),
+        visual_diff=FreeCADVisualDiffCreator(ctx),
+        file_manager=file_manager,
     )
 
     return ApplicationContainer(

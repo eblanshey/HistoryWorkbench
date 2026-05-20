@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from freecad.diff_wb.application.actions.open_visual_feature_diff import (
-    OpenVisualFeatureDiffAction,
-    OpenVisualFeatureDiffRequest,
+from freecad.diff_wb.application.actions.open_visual_diff import (
+    OpenVisualDiffAction,
+    OpenVisualDiffRequest,
+    VisualDiffRequestType,
 )
+from freecad.diff_wb.domain.freecad_ports import FreeCadFileManagerPort
 from freecad.diff_wb.domain.git.git_service import GitService
 from freecad.diff_wb.domain.git.models import GitRepository
+from freecad.diff_wb.ui.translation_strings import VISUAL_DIFF_INVALID_REQUEST_MESSAGE
 from tests.fakes.fake_git_port import FakeGitPort
 
 
@@ -19,44 +21,106 @@ from tests.fakes.fake_git_port import FakeGitPort
 class FakeVisualDiff:
     old_path: str | None = None
     new_path: str | None = None
+    document_name: str | None = None
 
-    def open_brep_visual_diff(self, old_brep_path: str | None, new_brep_path: str | None) -> object:
+    def open_brep_visual_diff(
+        self,
+        old_brep_path: str | None,
+        new_brep_path: str | None,
+        document_name: str,
+    ) -> object:
         self.old_path = old_brep_path
         self.new_path = new_brep_path
+        self.document_name = document_name
         return object()
 
 
-def _write_fcstd(path: Path, object_name: str, include_shape: bool = True) -> None:
-    with zipfile.ZipFile(path, "w") as archive:
-        if include_shape:
-            archive.writestr(f"PartData/{object_name}.Shape.brp", "BREP")
+class FakeFileManager(FreeCadFileManagerPort):
+    """Fake implementation of FreeCadFileManagerPort for testing."""
+
+    def __init__(self) -> None:
+        """Initialize fake source with empty prepared roots."""
+        self._prepared_roots: dict[str, Path | None] = {}
+        self._breps_found: dict[tuple[str, str], Path | None] = {}
+        self.prepared_revisions: list[str] = []
+
+    def prepare_document_revision(self, repo: GitRepository, git_path: str, revision: str) -> Path | None:
+        """Record preparation call and return configured root."""
+        self.prepared_revisions.append(revision)
+        return self._prepared_roots.get(revision)
+
+    def find_extracted_file(self, extract_root: Path, file_name: str) -> Path | None:
+        """Return configured extracted file path."""
+        return self._breps_found.get((str(extract_root), file_name))
+
+    def set_prepared_root(self, revision: str, root: Path | None) -> None:
+        """Set prepared root for a given revision."""
+        self._prepared_roots[revision] = root
+
+    def set_brep_found(self, extract_root: Path, brep_name: str, path: Path | None) -> None:
+        """Set BREP finding result."""
+        self._breps_found[(str(extract_root), brep_name)] = path
+
+
+def _action(
+    fake_port: FakeGitPort,
+    visual_diff: FakeVisualDiff,
+    file_manager: FakeFileManager,
+) -> OpenVisualDiffAction:
+    return OpenVisualDiffAction(
+        git_service=GitService(git_port=fake_port),
+        visual_diff=visual_diff,
+        file_manager=file_manager,
+    )
+
+
+def _brep(root: Path, object_name: str = "Pad") -> Path:
+    brep = root / "PartData" / f"{object_name}.Shape.brp"
+    brep.parent.mkdir(parents=True, exist_ok=True)
+    brep.write_text("BREP", encoding="utf-8")
+    return brep
+
+
+def test_document_name_construction(tmp_path: Path) -> None:
+    repo = GitRepository(name="repo", absolute_path="/repo")
+    fake_port = FakeGitPort()
+    visual_diff = FakeVisualDiff()
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    old_brep = _brep(old_extract)
+    new_brep = _brep(new_extract)
+    file_manager.set_prepared_root("staging", old_extract)
+    file_manager.set_prepared_root("working", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", old_brep)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", new_brep)
+
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "BasicFile.FCStd", "Body/Pad", VisualDiffRequestType.WORKING))
+
+    assert result.is_success is True
+    assert visual_diff.document_name == "Diff_BasicFile_Pad"
 
 
 def test_execute_opens_visual_diff_when_shape_present(tmp_path: Path) -> None:
     repo = GitRepository(name="repo", absolute_path="/repo")
     fake_port = FakeGitPort()
-    service = GitService(git_port=fake_port)
     visual_diff = FakeVisualDiff()
-    action = OpenVisualFeatureDiffAction(git_service=service, visual_diff=visual_diff)
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    old_brep = _brep(old_extract)
+    new_brep = _brep(new_extract)
+    file_manager.set_prepared_root("staging", old_extract)
+    file_manager.set_prepared_root("working", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", old_brep)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", new_brep)
 
-    new_fcstd = tmp_path / "new.FCStd"
-    old_fcstd = tmp_path / "old.FCStd"
-    _write_fcstd(new_fcstd, "Pad")
-    _write_fcstd(old_fcstd, "Pad")
-    fake_port.set_file_bytes(None, "doc.FCStd", old_fcstd.read_bytes())
-
-    result = action.execute(
-        OpenVisualFeatureDiffRequest(
-            repo=repo,
-            git_path="doc.FCStd",
-            node_path="Body/Pad",
-            old_commit=None,
-            new_commit=None,
-            working_tree_document_path=str(new_fcstd),
-        )
-    )
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.WORKING))
 
     assert result.is_success is True
+    assert file_manager.prepared_revisions == ["staging", "working"]
     assert visual_diff.old_path is not None and visual_diff.old_path.endswith("Pad.Shape.brp")
     assert visual_diff.new_path is not None and visual_diff.new_path.endswith("Pad.Shape.brp")
 
@@ -64,26 +128,18 @@ def test_execute_opens_visual_diff_when_shape_present(tmp_path: Path) -> None:
 def test_execute_opens_visual_diff_when_new_brep_missing(tmp_path: Path) -> None:
     repo = GitRepository(name="repo", absolute_path="/repo")
     fake_port = FakeGitPort()
-    service = GitService(git_port=fake_port)
     visual_diff = FakeVisualDiff()
-    action = OpenVisualFeatureDiffAction(git_service=service, visual_diff=visual_diff)
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    old_brep = _brep(old_extract)
+    file_manager.set_prepared_root("staging", old_extract)
+    file_manager.set_prepared_root("working", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", old_brep)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", None)
 
-    new_fcstd = tmp_path / "new.FCStd"
-    old_fcstd = tmp_path / "old.FCStd"
-    _write_fcstd(new_fcstd, "Pad", include_shape=False)
-    _write_fcstd(old_fcstd, "Pad")
-    fake_port.set_file_bytes(None, "doc.FCStd", old_fcstd.read_bytes())
-
-    result = action.execute(
-        OpenVisualFeatureDiffRequest(
-            repo=repo,
-            git_path="doc.FCStd",
-            node_path="Body/Pad",
-            old_commit=None,
-            new_commit=None,
-            working_tree_document_path=str(new_fcstd),
-        )
-    )
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.WORKING))
 
     assert result.is_success is True
     assert visual_diff.old_path is not None and visual_diff.old_path.endswith("Pad.Shape.brp")
@@ -93,26 +149,18 @@ def test_execute_opens_visual_diff_when_new_brep_missing(tmp_path: Path) -> None
 def test_execute_opens_visual_diff_when_old_brep_missing(tmp_path: Path) -> None:
     repo = GitRepository(name="repo", absolute_path="/repo")
     fake_port = FakeGitPort()
-    service = GitService(git_port=fake_port)
     visual_diff = FakeVisualDiff()
-    action = OpenVisualFeatureDiffAction(git_service=service, visual_diff=visual_diff)
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    new_brep = _brep(new_extract)
+    file_manager.set_prepared_root("staging", old_extract)
+    file_manager.set_prepared_root("working", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", None)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", new_brep)
 
-    new_fcstd = tmp_path / "new.FCStd"
-    old_fcstd = tmp_path / "old.FCStd"
-    _write_fcstd(new_fcstd, "Pad")
-    _write_fcstd(old_fcstd, "Pad", include_shape=False)
-    fake_port.set_file_bytes(None, "doc.FCStd", old_fcstd.read_bytes())
-
-    result = action.execute(
-        OpenVisualFeatureDiffRequest(
-            repo=repo,
-            git_path="doc.FCStd",
-            node_path="Body/Pad",
-            old_commit=None,
-            new_commit=None,
-            working_tree_document_path=str(new_fcstd),
-        )
-    )
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.WORKING))
 
     assert result.is_success is True
     assert visual_diff.old_path is None
@@ -122,53 +170,70 @@ def test_execute_opens_visual_diff_when_old_brep_missing(tmp_path: Path) -> None
 def test_execute_fails_when_brep_missing_from_both_sides(tmp_path: Path) -> None:
     repo = GitRepository(name="repo", absolute_path="/repo")
     fake_port = FakeGitPort()
-    service = GitService(git_port=fake_port)
     visual_diff = FakeVisualDiff()
-    action = OpenVisualFeatureDiffAction(git_service=service, visual_diff=visual_diff)
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    file_manager.set_prepared_root("staging", old_extract)
+    file_manager.set_prepared_root("working", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", None)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", None)
 
-    new_fcstd = tmp_path / "new.FCStd"
-    old_fcstd = tmp_path / "old.FCStd"
-    _write_fcstd(new_fcstd, "Pad", include_shape=False)
-    _write_fcstd(old_fcstd, "Pad", include_shape=False)
-    fake_port.set_file_bytes(None, "doc.FCStd", old_fcstd.read_bytes())
-
-    result = action.execute(
-        OpenVisualFeatureDiffRequest(
-            repo=repo,
-            git_path="doc.FCStd",
-            node_path="Body/Pad",
-            old_commit=None,
-            new_commit=None,
-            working_tree_document_path=str(new_fcstd),
-        )
-    )
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.WORKING))
 
     assert result.is_success is False
 
 
-def test_execute_reads_old_and_new_from_git_refs(tmp_path: Path) -> None:
+def test_execute_uses_head_and_staging_for_staging_request(tmp_path: Path) -> None:
     repo = GitRepository(name="repo", absolute_path="/repo")
     fake_port = FakeGitPort()
-    service = GitService(git_port=fake_port)
     visual_diff = FakeVisualDiff()
-    action = OpenVisualFeatureDiffAction(git_service=service, visual_diff=visual_diff)
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    old_brep = _brep(old_extract)
+    file_manager.set_prepared_root("HEAD", old_extract)
+    file_manager.set_prepared_root("staging", new_extract)
+    file_manager.set_brep_found(old_extract, "Pad.Shape.brp", old_brep)
 
-    old_fcstd = tmp_path / "old_commit.FCStd"
-    new_fcstd = tmp_path / "new_commit.FCStd"
-    _write_fcstd(old_fcstd, "Pad")
-    _write_fcstd(new_fcstd, "Pad")
-    fake_port.set_file_bytes("abc~1", "doc.FCStd", old_fcstd.read_bytes())
-    fake_port.set_file_bytes("abc", "doc.FCStd", new_fcstd.read_bytes())
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.STAGING))
 
+    assert result.is_success is True
+    assert file_manager.prepared_revisions == ["HEAD", "staging"]
+
+
+def test_execute_uses_commit_revisions_for_commit_request(tmp_path: Path) -> None:
+    repo = GitRepository(name="repo", absolute_path="/repo")
+    fake_port = FakeGitPort()
+    visual_diff = FakeVisualDiff()
+    file_manager = FakeFileManager()
+    old_extract = tmp_path / "old_extract"
+    new_extract = tmp_path / "new_extract"
+    new_brep = _brep(new_extract)
+    file_manager.set_prepared_root("abc~1", old_extract)
+    file_manager.set_prepared_root("abc", new_extract)
+    file_manager.set_brep_found(new_extract, "Pad.Shape.brp", new_brep)
+
+    action = _action(fake_port, visual_diff, file_manager)
     result = action.execute(
-        OpenVisualFeatureDiffRequest(
-            repo=repo,
-            git_path="doc.FCStd",
-            node_path="Body/Pad",
-            old_commit="abc~1",
-            new_commit="abc",
-            working_tree_document_path=None,
-        )
+        OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.COMMIT, "abc~1", "abc")
     )
 
     assert result.is_success is True
+    assert file_manager.prepared_revisions == ["abc~1", "abc"]
+
+
+def test_execute_fails_when_commit_request_missing_commits() -> None:
+    repo = GitRepository(name="repo", absolute_path="/repo")
+    fake_port = FakeGitPort()
+    visual_diff = FakeVisualDiff()
+    file_manager = FakeFileManager()
+
+    action = _action(fake_port, visual_diff, file_manager)
+    result = action.execute(OpenVisualDiffRequest(repo, "doc.FCStd", "Body/Pad", VisualDiffRequestType.COMMIT))
+
+    assert result.is_success is False
+    assert result.message == VISUAL_DIFF_INVALID_REQUEST_MESSAGE
+    assert file_manager.prepared_revisions == []

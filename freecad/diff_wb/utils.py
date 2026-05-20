@@ -5,6 +5,7 @@
 This module contains shared utilities including the unified logging system.
 """
 
+import traceback
 from typing import Protocol
 
 
@@ -131,7 +132,7 @@ class Logger:
         Args:
             message: The message to log
         """
-        _logger.error(message)
+        _logger.error(f"{message}\n{traceback.format_exc()}")
 
 
 # Module-level logger instance for convenient access

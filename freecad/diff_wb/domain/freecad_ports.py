@@ -8,7 +8,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
+
+from .git.models import GitRepository
 
 
 class DocumentObjectLike(Protocol):
@@ -170,10 +173,58 @@ class AppPort(Protocol):
         ...
 
 
+class FreeCadFileManagerPort(Protocol):
+    """Interface for FreeCAD file materialization and content lookup.
+
+    This Protocol defines the contract for preparing FreeCAD document revisions
+    from git commits, staging, or working tree files. Internal storage layout,
+    archive reuse, and extraction are implementation details of the adapter.
+
+    Attributes:
+        prepare_document_revision: Materialize and extract document revision.
+        find_extracted_file: Find file by name inside extracted document tree.
+    """
+
+    def prepare_document_revision(
+        self,
+        repo: GitRepository,
+        git_path: str,
+        revision: str,
+    ) -> Path | None:
+        """Materialize and extract requested revision; return extraction root path.
+
+        Args:
+            repo: Git repository model.
+            git_path: Relative path to FCStd file within repository.
+            revision: "working", "staging", or commit reference.
+
+        Returns:
+            Path to extraction root directory, or None if preparation fails.
+
+        Notes:
+            Internal implementation handles source selection (staging/working/commit),
+            storage layout, archive reuse, and safe extraction.
+        """
+        ...
+
+    def find_extracted_file(self, extract_root: Path, file_name: str) -> Path | None:
+        """Find file by name inside extracted document tree.
+
+        Args:
+            extract_root: Root directory of extracted FCStd archive.
+            file_name: Name of file to find (e.g., "Pad.Shape.brp").
+
+        Returns:
+            Path to BREP file if found, None otherwise.
+        """
+        ...
+
+
 __all__ = [
     "FreeCadContext",
     "FreeCadPort",
     "AppPort",
+    "FreeCadFileManagerPort",
     "DocumentLike",
     "DocumentObjectLike",
     "ConsoleLike",

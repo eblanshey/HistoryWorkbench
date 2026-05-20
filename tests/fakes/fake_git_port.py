@@ -51,6 +51,7 @@ class FakeGitPort:
         self._file_bytes: dict[tuple[str | None, str], bytes] = {}
         # Existing files mapping: (commit, git_path) -> exists
         self._file_exists: dict[tuple[str | None, str], bool] = {}
+        self._resolved_refs: dict[str, str] = {}
         # Tracks the last commit() call for argument verification
         self._last_commit_call: tuple[str, str] | None = None
         # Maps (git_root, commit) tuples to lists of FCStd file paths
@@ -327,6 +328,14 @@ class FakeGitPort:
         """Set binary file contents for a specific commit and path."""
         self._file_bytes[(commit, git_path)] = content
 
+    def set_resolved_ref(self, ref: str, resolved_hash: str) -> None:
+        """Set resolved commit hash for a ref."""
+        self._resolved_refs[ref] = resolved_hash
+
+    def resolve_ref(self, git_root: str, ref: str) -> str | None:
+        """Resolve fake git ref to configured full hash or None if not configured."""
+        return self._resolved_refs.get(ref)
+
     def get_last_commit_call(self) -> tuple[str, str] | None:
         """Get the arguments from the last commit() call.
 
@@ -387,3 +396,7 @@ class FakeGitPort:
     def can_write_global_identity(self) -> bool:
         """Return configured fake global git identity writability."""
         return self._can_write_global_identity
+
+    def reset_file_bytes(self) -> None:
+        """Clear all configured file bytes."""
+        self._file_bytes.clear()

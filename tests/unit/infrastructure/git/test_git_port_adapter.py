@@ -319,6 +319,21 @@ class TestGitPortAdapter:
         kwargs = mock_popen.call_args.kwargs
         assert "text" not in kwargs
 
+    def test_resolve_ref_returns_full_commit_hash(self) -> None:
+        commit_hash = "abcdef1234567890abcdef1234567890abcdef12"
+        mock_result = subprocess.CompletedProcess(
+            args=["git", "rev-parse", "--verify", "HEAD~1^{commit}"],
+            returncode=0,
+            stdout=f"{commit_hash}\n",
+            stderr="",
+        )
+
+        with patch.object(subprocess, "run", return_value=mock_result) as mock_run:
+            result = self.adapter.resolve_ref("/repo", "HEAD~1")
+
+        assert result == commit_hash
+        mock_run.assert_called_once()
+
 
 class TestGitPortAdapterGetCommits:
     """Tests for the get_commits method of GitPortAdapter."""

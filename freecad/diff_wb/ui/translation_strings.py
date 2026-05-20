@@ -82,6 +82,7 @@ VISUAL_DIFF_TOOLTIP = "Open visual diff"
 VISUAL_DIFF_MISSING_FCSTD_MESSAGE = "Could not load FCStd from old or new side for visual diff."
 VISUAL_DIFF_MISSING_BREP_MESSAGE = "Could not find Shape BREP for this object in old or new document."
 VISUAL_DIFF_IMPORT_FAILURE_MESSAGE = "Could not import shape BREP files for visual diff."
+VISUAL_DIFF_INVALID_REQUEST_MESSAGE = "Could not determine old and new revisions for visual diff."
 
 # ============================================================================
 # COMMON STRINGS

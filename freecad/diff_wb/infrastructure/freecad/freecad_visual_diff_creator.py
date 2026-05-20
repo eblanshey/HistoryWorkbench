@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, cast
 
 from ...domain.freecad_ports import FreeCadContext
@@ -12,23 +11,28 @@ from ...domain.freecad_ports import FreeCadContext
 
 Color = tuple[float, float, float, float]
 
+DIFF_FEATURE_TRANSPARENCY: int = 50
 UNCHANGED_COLOR: Color = (0.6, 0.6, 0.6, 1.0)
 ADDED_COLOR: Color = (0.0, 0.8, 0.0, 1.0)
 REMOVED_COLOR: Color = (0.9, 0.0, 0.0, 1.0)
 
 
-class FreeCADVisualDiff:
+class FreeCADVisualDiffCreator:
     """Open a new FreeCAD document importing old/new BREP as features."""
 
     def __init__(self, ctx: FreeCadContext) -> None:
         self._ctx = ctx
 
-    def open_brep_visual_diff(self, old_brep_path: str | None, new_brep_path: str | None) -> object:
+    def open_brep_visual_diff(
+        self,
+        old_brep_path: str | None,
+        new_brep_path: str | None,
+        document_name: str,
+    ) -> object:
         """Open a new document showing unchanged, added, and removed BREP regions."""
         if old_brep_path is None and new_brep_path is None:
             raise ValueError("At least one BREP path is required")
 
-        document_name = f"VisualDiff_{datetime.now().strftime('%H%M%S')}"
         document = self._ctx.app.newDocument(document_name)
 
         old_shape = self._load_shape(old_brep_path) if old_brep_path is not None else None
@@ -74,20 +78,20 @@ class FreeCADVisualDiff:
         unchanged_feature.Label = "Unchanged_Visual"
         unchanged_feature.Shape = cast(Any, old_shape).common(new_shape)
         self._set_color(unchanged_feature, UNCHANGED_COLOR)
-        unchanged_feature.ViewObject.Transparency = 50
+        unchanged_feature.ViewObject.Transparency = DIFF_FEATURE_TRANSPARENCY
         diff_folder.addObject(unchanged_feature)
 
         added_feature = cast(Any, document.addObject("Part::Feature", "Added_Visual"))
         added_feature.Label = "Added_Visual"
         added_feature.Shape = cast(Any, new_shape).cut(old_shape)
-        added_feature.ViewObject.Transparency = 50
+        added_feature.ViewObject.Transparency = DIFF_FEATURE_TRANSPARENCY
         self._set_color(added_feature, ADDED_COLOR)
         diff_folder.addObject(added_feature)
 
         removed_feature = cast(Any, document.addObject("Part::Feature", "Removed_Visual"))
         removed_feature.Label = "Removed_Visual"
         removed_feature.Shape = cast(Any, old_shape).cut(new_shape)
-        removed_feature.ViewObject.Transparency = 50
+        removed_feature.ViewObject.Transparency = DIFF_FEATURE_TRANSPARENCY
         self._set_color(removed_feature, REMOVED_COLOR)
         diff_folder.addObject(removed_feature)
 

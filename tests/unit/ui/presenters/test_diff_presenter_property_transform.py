@@ -10,7 +10,7 @@ import pytest
 from freecad.diff_wb.application.actions.create_document_diffs import CreateDocumentDiffsAction
 from freecad.diff_wb.application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from freecad.diff_wb.application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
-from freecad.diff_wb.application.actions.open_visual_feature_diff import OpenVisualFeatureDiffAction
+from freecad.diff_wb.application.actions.open_visual_diff import OpenVisualDiffAction
 from freecad.diff_wb.application.actions.stage_documents import StageDocumentsAction
 from freecad.diff_wb.domain.diff.models import DiffState, NodeDiff, PropertyDiff
 from freecad.diff_wb.domain.tree import Property
@@ -37,7 +37,7 @@ def _make_presenter() -> tuple[FakeDiffView, DiffPresenter]:
         create_document_diffs_action=MagicMock(spec=CreateDocumentDiffsAction),
         stage_documents_action=MagicMock(spec=StageDocumentsAction),
         get_dirty_documents_action=MagicMock(spec=GetDirtyDocumentsAction),
-        open_visual_feature_diff_action=MagicMock(spec=OpenVisualFeatureDiffAction),
+        open_visual_feature_diff_action=MagicMock(spec=OpenVisualDiffAction),
     )
     return view, presenter
 

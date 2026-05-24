@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # File responsibility: Defines the HistoryWorkbench class that integrates
-# the workbench into FreeCAD's GUI with menus and toolbars.
+# the workbench into FreeCAD's GUI with menus, toolbars, and UI panels.
+# Container initialization is deferred to Activated() for faster startup.
 """FreeCAD workbench registration for Diff Workbench.
 
 Defines the Gui.Workbench subclass used by FreeCAD to create menus/toolbars
-and activate the workbench.
+and activate the workbench. Container creation and command registration are
+deferred to Activated() for faster FreeCAD startup.
 """
 
 import os
@@ -70,42 +72,14 @@ if Gui is not None:
             return "Gui::PythonWorkbench"
 
         def Initialize(self) -> None:
-            """Called at first activation; create container and register commands."""
+            """Called at first activation; register commands and setup UI structure."""
 
-            from .._container import set_container
-            from ..application.di.container import create_application_container
             from ..entrypoints.commands import register_commands
-            from ..infrastructure.freecad.logger import FreeCADLogger
-            from ..infrastructure.freecad.ports import get_freecad_runtime_context
 
-            # Create runtime context
-            ctx = get_freecad_runtime_context()
-
-            # Create container (wires all actions/presenters)
-            container = create_application_container(ctx)
-
-            # Initialize global logger with FreeCAD logger
-            set_logger(FreeCADLogger(container._freecad_port))
-
-            # Make container globally available
-            set_container(container)
-
-            # Register commands
+            # Register commands (lightweight - just registers command names with FreeCAD)
             register_commands()
 
-            # Configure preferences page action dependencies for FreeCAD no-arg construction
-            from ..ui.views.settings_preferences_page import DiffSettingsPreferencesPage
-
-            DiffSettingsPreferencesPage.configure_actions(
-                container.get_diff_settings_action,
-                container.save_diff_settings_action,
-            )
-
-            # Register preferences page once
-            self._register_preferences_page()
-
             # Setup toolbar and menu
-            Log.info("Switching to project_history_wb")
             self.appendToolbar(
                 cast(str, QtCore.QT_TRANSLATE_NOOP("Workbench", "History Workbench")),
                 self.toolbar_commands,
@@ -187,14 +161,17 @@ if Gui is not None:
 
         def create_or_show_diff_panel(self) -> None:
             """Create the diff panel if it doesn't exist, or show/focus it if it does."""
-            # Create subwindow if it doesn't exist (was closed or never created)
-            if self._subwindow is None:
-                self._create_diff_panel()
-            else:
-                # Show existing subwindow and bring to front
-                self._subwindow.show()
-                self._subwindow.raise_()
-                self._subwindow.setFocus()
+            try:
+                # Create subwindow if it doesn't exist (was closed or never created)
+                if self._subwindow is None:
+                    self._create_diff_panel()
+                else:
+                    # Show existing subwindow and bring to front
+                    self._subwindow.show()
+                    self._subwindow.raise_()
+                    self._subwindow.setFocus()
+            except (RuntimeError, AttributeError, TypeError) as e:
+                Log.exception(f"Error creating/showing diff panel: {e}")
 
         def Deactivated(self) -> None:
             """Called when this workbench is deactivated."""

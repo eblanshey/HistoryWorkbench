@@ -314,7 +314,7 @@ How it works: open FreeCAD documents are checked one by one until one is found t
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="230"/>
+        <location filename="../../entrypoints/workbench.py" line="207"/>
         <source>History Panel</source>
         <translation type="unfinished"></translation>
     </message>
@@ -499,19 +499,19 @@ How it works: open FreeCAD documents are checked one by one until one is found t
 <context>
     <name>Workbench</name>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="64"/>
-        <location filename="../../entrypoints/workbench.py" line="135"/>
+        <location filename="../../entrypoints/workbench.py" line="66"/>
+        <location filename="../../entrypoints/workbench.py" line="109"/>
         <source>History</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="65"/>
+        <location filename="../../entrypoints/workbench.py" line="67"/>
         <source>Track project iterations and history</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="110"/>
-        <location filename="../../entrypoints/workbench.py" line="114"/>
+        <location filename="../../entrypoints/workbench.py" line="84"/>
+        <location filename="../../entrypoints/workbench.py" line="88"/>
         <source>History Workbench</source>
         <translation type="unfinished"></translation>
     </message>

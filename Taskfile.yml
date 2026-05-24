@@ -87,3 +87,57 @@ tasks:
     summary: Executes integration tests using FreeCAD's Python interpreter
     cmds:
       - "./run_integration_tests.sh {{.CLI_ARGS | default \"\"}}"
+
+  translations:update:
+    desc: Extract translatable strings into ProjectHistory.ts
+    cmds:
+      - "lupdate -extensions py freecad/diff_wb -ts freecad/diff_wb/resources/translations/ProjectHistory.ts"
+
+  translations:update-locales:
+    desc: Merge extracted strings into locale .ts files
+    cmds:
+      - |
+          set -- freecad/diff_wb/resources/translations/ProjectHistory_*.ts
+          if [ "$1" = "freecad/diff_wb/resources/translations/ProjectHistory_*.ts" ]; then
+            printf '%s\n' "No locale translation files to update"
+            exit 0
+          fi
+          lupdate -extensions py freecad/diff_wb -ts "$@"
+
+  translations:verify-clean:
+    desc: Fail if translation artifacts are stale after refresh
+    cmds:
+      - task: translations:refresh
+      - |
+          git diff --exit-code -- \
+            freecad/diff_wb/resources/translations/ProjectHistory.ts \
+            'freecad/diff_wb/resources/translations/ProjectHistory_*.ts' \
+            'freecad/diff_wb/resources/translations/ProjectHistory_*.qm'
+      - |
+          untracked=$(git ls-files --others --exclude-standard -- \
+            freecad/diff_wb/resources/translations/ProjectHistory.ts \
+            'freecad/diff_wb/resources/translations/ProjectHistory_*.ts' \
+            'freecad/diff_wb/resources/translations/ProjectHistory_*.qm')
+          if [ -n "$untracked" ]; then
+            printf '%s\n' "Untracked translation artifacts detected:" 
+            printf '%s\n' "$untracked"
+            exit 1
+          fi
+
+  translations:compile:
+    desc: Compile locale translation .ts files to .qm
+    cmds:
+      - |
+          set -- freecad/diff_wb/resources/translations/ProjectHistory_*.ts
+          if [ "$1" = "freecad/diff_wb/resources/translations/ProjectHistory_*.ts" ]; then
+            printf '%s\n' "No locale translation files to compile"
+            exit 0
+          fi
+          lrelease "$@"
+
+  translations:refresh:
+    desc: Extract template, update locales, and compile translations
+    cmds:
+      - task: translations:update
+      - task: translations:update-locales
+      - task: translations:compile

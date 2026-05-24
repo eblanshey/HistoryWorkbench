@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Enforce up-to-date translation artifacts before commit.
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+task translations:verify-clean

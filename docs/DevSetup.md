@@ -97,6 +97,17 @@ Run tests (includes unit and integration):
 task test
 ```
 
+## Configure Git Hooks
+
+Enable repository-managed hooks so translation artifacts are verified before each commit:
+
+```bash
+git config core.hooksPath scripts/githooks
+chmod +x scripts/githooks/pre-commit
+```
+
+The pre-commit hook runs `task translations:verify-clean`.
+
 ## Linux FreeCAD AppImage Runtime
 
 The scripts `./run_with_freecad.sh` and `./run_integration_tests.sh` need an extracted FreeCAD AppImage and the `FREECAD_ROOT` environment variable.

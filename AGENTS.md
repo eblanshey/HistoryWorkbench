@@ -17,6 +17,7 @@
 - No hacky patches allowed. If seems like a lot of work needed to implement something cleanly without patches, stop and ask the user for direction. Strive for 100% clean, readable, maintainable code.
   - Similarly, NO backwards-compatibility code is allowed ANYWHERE, unless explicitly approved by the user.
 - All user-facing English words and phrases must use `translate("ProjectHistory", "...")` literals at display sites, or `QT_TRANSLATE_NOOP` with correct context when deferred (command `GetResources()` uses exact command context; workbench labels use `Workbench`; property descriptions use `App::Property`). Logs do not require translation.
+- When changing user-facing text, run `task translations:refresh` before the completion of your work.
 - Read the `docs/Architecture.md` guidelines when planning new features.
 - Do not remove useful line comments when refactoring
 - Keep cyclomatic complexity at B (5-10) or better in the src dir: `uv run radon cc --min C freecad/diff_wb --no-assert -s`

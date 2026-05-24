@@ -114,6 +114,9 @@ class FreeCadPortAdapter:
         result = qt_obj.translate(context, text)
         return result
 
+    def get_main_window(self) -> object | None:
+        return self._ctx.gui.getMainWindow()
+
 
 def get_port(ctx: FreeCadContext) -> FreeCadPort:
     """Get a FreeCadPort instance.

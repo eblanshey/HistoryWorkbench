@@ -87,6 +87,7 @@ class GuiLike(Protocol):
     """Minimal Protocol for the FreeCAD GUI module."""
 
     def getDocument(self, doc_name: str) -> GuiDocumentLike | None: ...
+    def getMainWindow(self) -> object | None: ...
 
 
 @dataclass(frozen=True)
@@ -163,6 +164,10 @@ class FreeCadPort(Protocol):
 
     def debug(self, text: str) -> None:
         """Log a debug message to the FreeCAD console."""
+        ...
+
+    def get_main_window(self) -> object | None:
+        """Get the FreeCAD main window widget, or None if not available."""
         ...
 
 

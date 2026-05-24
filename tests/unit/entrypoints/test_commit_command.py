@@ -308,8 +308,8 @@ class TestCommitCommand:
         ):
             command.Activated()
 
-        mock_configure.assert_called_once_with(mock_container, mock_repo)
-        mock_dialog.assert_called_once_with(mock_container)
+        mock_configure.assert_called_once_with(mock_container, mock_repo, mock_container._freecad_port.get_main_window())
+        mock_dialog.assert_called_once_with(mock_container._freecad_port.get_main_window())
         mock_container.commit_staging_action.execute.assert_called_once_with(mock_repo, "Add feature")
         mock_message_box.warning.assert_not_called()
         mock_message_box.critical.assert_not_called()
@@ -340,7 +340,7 @@ class TestCommitCommand:
         ):
             command.Activated()
 
-        mock_configure.assert_called_once_with(mock_container, mock_repo)
+        mock_configure.assert_called_once_with(mock_container, mock_repo, mock_container._freecad_port.get_main_window())
         mock_dialog.assert_not_called()
         mock_container.commit_staging_action.execute.assert_not_called()
 
@@ -431,7 +431,7 @@ class TestConfigureGitCommand:
         )
 
         with patch.object(command, "_show_git_config_dialog", return_value=dialog_result):
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is True
         mock_container.save_git_identity_action.execute.assert_called_once_with(
@@ -458,7 +458,7 @@ class TestConfigureGitCommand:
         )
 
         with patch.object(command, "_show_git_config_dialog", return_value=dialog_result):
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is False
         mock_message_box.warning.assert_called_once()
@@ -474,7 +474,7 @@ class TestConfigureGitCommand:
         command = _ConfigureGitCommand()
 
         with patch.object(command, "_show_git_config_dialog", return_value=None):
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is False
         mock_message_box.warning.assert_not_called()
@@ -510,11 +510,12 @@ class TestConfigureGitCommand:
             "_show_git_config_dialog",
             side_effect=[global_dialog_result, local_dialog_result],
         ) as mock_dialog:
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is True
         assert mock_dialog.call_count == 2
         assert mock_dialog.call_args_list[0].kwargs == {
+            "parent": None,
             "message": None,
             "initial_values": None,
             "global_config_writable": True,
@@ -544,7 +545,7 @@ class TestConfigureGitCommand:
         )
 
         with patch.object(command, "_show_git_config_dialog", return_value=dialog_result) as mock_dialog:
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is True
         assert mock_dialog.call_args.kwargs["initial_values"] == GitConfigDialogResult(
@@ -574,7 +575,7 @@ class TestConfigureGitCommand:
         )
 
         with patch.object(command, "_show_git_config_dialog", return_value=dialog_result) as mock_dialog:
-            result = command.configure_repository(mock_container, mock_repo)
+            result = command.configure_repository(mock_container, mock_repo, None)
 
         assert result is True
         assert mock_dialog.call_args.kwargs["global_config_writable"] is False

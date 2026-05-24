@@ -12,17 +12,20 @@ class FakeFreeCadPort(FreeCadPort):
         self,
         active_document: object | None = None,
         open_documents: list[object] | None = None,
+        main_window: object | None = None,
     ) -> None:
         """Initialize with optional active document and open documents.
 
         Args:
             active_document: Mock document object or None
             open_documents: List of mock document objects or empty list
+            main_window: Mock main window object or None
         """
         self._active_document: object | None = active_document
         self._open_documents: list[DocumentLike] = (
             cast(list[DocumentLike], open_documents) if open_documents is not None else []
         )
+        self._main_window: object | None = main_window
         self.opened_document_paths: list[str] = []
         self._call_log: list[str] = []  # Track method calls for verification
 
@@ -100,3 +103,8 @@ class FakeFreeCadPort(FreeCadPort):
         """Return text unchanged (not implementing translation)."""
         self._call_log.append(f"translate:{context}:{text}")
         return text
+
+    def get_main_window(self) -> object | None:
+        """Return the configured main window."""
+        self._call_log.append("get_main_window")
+        return self._main_window

@@ -14,8 +14,8 @@
 
 ---
 
-<a href="https://raw.githubusercontent.com/eblanshey/history-workbench/master/docs/LightScreenshot.png"><img src="https://raw.githubusercontent.com/eblanshey/history-workbench/master/docs/LightScreenshot.png" alt="History Workbench light theme screenshot" /></a>
-<a href="https://raw.githubusercontent.com/eblanshey/history-workbench/master/docs/DarkScreenshot.png"><img src="https://raw.githubusercontent.com/eblanshey/history-workbench/master/docs/DarkScreenshot.png" alt="History Workbench dark theme screenshot" /></a>
+<a href="https://raw.githubusercontent.com/eblanshey/HistoryWorkbench/master/docs/LightScreenshot.png"><img src="https://raw.githubusercontent.com/eblanshey/HistoryWorkbench/master/docs/LightScreenshot.png" alt="History Workbench light theme screenshot" /></a>
+<a href="https://raw.githubusercontent.com/eblanshey/HistoryWorkbench/master/docs/DarkScreenshot.png"><img src="https://raw.githubusercontent.com/eblanshey/HistoryWorkbench/master/docs/DarkScreenshot.png" alt="History Workbench dark theme screenshot" /></a>
 
 ## Intro
 
@@ -57,7 +57,7 @@ History Workbench is not yet available in the official FreeCAD Addon Manager rep
 
 1. Open FreeCAD.
 2. Go to **Edit > Preferences > Addon Manager > Custom repositories**.
-3. Add this repository URL: `https://github.com/eblanshey/history-workbench`
+3. Add this repository URL: `https://github.com/eblanshey/HistoryWorkbench`
 4. Set the branch to `master`.
 5. Open **Tools > Addon Manager**.
 6. Search for **History Workbench** and install it.

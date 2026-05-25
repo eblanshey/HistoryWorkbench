@@ -33,9 +33,9 @@ packages = ["freecad"]
 "freecad/history_wb/resources" = "freecad/history_wb/resources"
 
 [project.urls]
-Homepage = "https://github.com/eblanshey/history-workbench"
-Repository = "https://github.com/eblanshey/history-workbench"
-Issues = "https://github.com/eblanshey/history-workbench/issues"
+Homepage = "https://github.com/eblanshey/HistoryWorkbench"
+Repository = "https://github.com/eblanshey/HistoryWorkbench"
+Issues = "https://github.com/eblanshey/HistoryWorkbench/issues"
 
 [tool.mypy]
 python_version = "3.12"

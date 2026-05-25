@@ -15,8 +15,8 @@ History Workbench integration tests use FreeCAD's bundled Python 3.11 on Linux. 
 ## Clone The Repository
 
 ```bash
-git clone https://github.com/eblanshey/history-workbench.git
-cd history-workbench
+git clone https://github.com/eblanshey/HistoryWorkbench.git
+cd HistoryWorkbench
 ```
 
 If you already have a checkout, run the setup commands from the repository root.
@@ -72,10 +72,10 @@ To find the correct `Mod` directory from FreeCAD:
 Linux example:
 
 ```bash
-ln -s /path/to/history-workbench ~/.local/share/FreeCAD/v1-1/Mod/HistoryWorkbench
+ln -s /path/to/HistoryWorkbench ~/.local/share/FreeCAD/v1-1/Mod/HistoryWorkbench
 ```
 
-Use the absolute path to your local checkout in place of `/path/to/history-workbench`.
+Use the absolute path to your local checkout in place of `/path/to/HistoryWorkbench`.
 
 ## Start FreeCAD
 

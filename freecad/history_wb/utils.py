@@ -9,6 +9,8 @@ and translation helper for FreeCAD UI text.
 import traceback
 from typing import Protocol
 
+from .qt import QtCore
+
 
 class LoggerProtocol(Protocol):
     """Logger protocol for consistent logging interface.
@@ -158,10 +160,8 @@ def format_float(value: float, precision: int) -> str:
         Formatted string like "1.23" or "-0.01".
     """
     try:
-        from PyQt5.QtCore import QLocale  # type: ignore[import-not-found]
-
-        return QLocale().toString(value, "f", precision)  # type: ignore[no-any-return]
-    except ImportError:
+        return QtCore.QLocale().toString(value, ord("f"), precision)
+    except (AttributeError, RuntimeError):
         # Fall back to Python's built-in formatting when Qt is unavailable
         return f"{value:.{precision}f}"
 

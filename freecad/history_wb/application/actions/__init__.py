@@ -16,6 +16,7 @@ from .initialize_git_repository import InitializeGitRepositoryAction
 from .open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
 from .open_visual_diff import OpenVisualDiffAction
 from .recompute_all_open_documents import RecomputeAllOpenDocumentsAction
+from .restore_documents import RestoreDocumentsAction
 from .result_models import (
     CompareResult,
     CreateDocumentDiffsRequest,
@@ -46,6 +47,7 @@ __all__ = [
     "OpenAllDocumentsInRepositoryAction",
     "OpenVisualDiffAction",
     "RecomputeAllOpenDocumentsAction",
+    "RestoreDocumentsAction",
     "SaveDiffSettingsAction",
     "SaveGitIdentityAction",
     "CreateDocumentSnapshotForWorkingTreeAction",

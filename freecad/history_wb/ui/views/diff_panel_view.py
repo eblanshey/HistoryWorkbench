@@ -181,6 +181,10 @@ class DiffPanelView(QtWidgets.QWidget):
         """Set callback for Current Files context action Mark All Reviewed."""
         self._history_panel.set_mark_all_reviewed_from_in_progress_callback(callback)
 
+    def set_restore_all_from_history_context_callback(self, callback: Callable[[HistorySelection], None]) -> None:
+        """Set callback for restore actions from history context menu."""
+        self._history_panel.set_restore_all_from_history_context_callback(callback)
+
     def set_stage_all_button_visible(self, visible: bool) -> None:
         """Show or hide the Mark All Reviewed button.
 
@@ -222,6 +226,22 @@ class DiffPanelView(QtWidgets.QWidget):
     def set_remove_all_button_enabled(self, enabled: bool) -> None:
         """Enable or disable summary-bar Remove All button."""
         self._document_diff_tree.set_remove_all_button_enabled(enabled)
+
+    def set_restore_button_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for per-file restore action."""
+        self._document_diff_tree.set_restore_button_callback(callback)
+
+    def set_restore_all_button_callback(self, callback: Callable[[], None]) -> None:
+        """Set callback for summary-bar restore-all action."""
+        self._document_diff_tree.set_restore_all_button_callback(callback)
+
+    def set_restore_all_button_visible(self, visible: bool) -> None:
+        """Show or hide summary-bar restore-all button."""
+        self._document_diff_tree.set_restore_all_button_visible(visible)
+
+    def set_restore_all_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable summary-bar restore-all button."""
+        self._document_diff_tree.set_restore_all_button_enabled(enabled)
 
     def set_node_selection_callback(self, callback: Callable[[str, str], None]) -> None:
         """Set callback for node selection with (git_path, node_path).
@@ -434,3 +454,96 @@ class DiffPanelView(QtWidgets.QWidget):
             author_email=email_edit.text().strip(),
             should_save_globally=remember_checkbox.isChecked(),
         )
+
+    def show_restore_file_confirmation_dialog(self, _git_path: str) -> bool:
+        """Show destructive confirmation dialog for file restore."""
+        title = translate("History", "Restore")
+        message = translate(
+            "History",
+            "This operation will overwrite the current files on disk with the selected saved copies.\n\nOpen FreeCAD "
+            "documents will be closed and reopened to ensure links are updated.\n\n"
+            "Unsaved in-memory changes in open files will be lost.\n\nSaved history is not affected.",
+        )
+        restore_button_text = translate("History", "Restore")
+        cancel_button_text = translate("History", "Cancel")
+        dialog = QtWidgets.QMessageBox(self)
+        dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        dialog.setWindowTitle(title)
+        dialog.setText(message)
+        restore_button = dialog.addButton(restore_button_text, QtWidgets.QMessageBox.ButtonRole.DestructiveRole)
+        dialog.addButton(cancel_button_text, QtWidgets.QMessageBox.ButtonRole.RejectRole)
+        dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+        dialog.exec()
+        return dialog.clickedButton() == restore_button
+
+    def show_restore_scope_dialog(self) -> str | None:
+        """Show bulk scope picker for restore-all action."""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(translate("History", "Restore All"))
+        dialog.setMinimumWidth(620)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setSpacing(10)
+        title_label = QtWidgets.QLabel(translate("History", "Which files would you like to restore?"))
+        title_label.setWordWrap(True)
+        layout.addWidget(title_label)
+        listed = QtWidgets.QRadioButton(translate("History", "Listed FreeCAD files"))
+        listed_desc = QtWidgets.QLabel(
+            translate(
+                "History",
+                "Restore only the FreeCAD files changed in the selected iteration. "
+                "Other files on disk are left unchanged.",
+            )
+        )
+        listed_desc.setWordWrap(True)
+        all_fcstd = QtWidgets.QRadioButton(translate("History", "All FreeCAD files"))
+        all_desc = QtWidgets.QLabel(
+            translate(
+                "History",
+                "Restore all previously saved FreeCAD files to how they were in this iteration. "
+                "Any previously saved FreeCAD files that did not exist in this iteration are removed. "
+                "New files not yet saved to history are kept.",
+            )
+        )
+        all_desc.setWordWrap(True)
+        listed_desc.setIndent(22)
+        all_desc.setIndent(22)
+        scope_group = QtWidgets.QButtonGroup(dialog)
+        scope_group.setExclusive(True)
+        scope_group.addButton(listed)
+        scope_group.addButton(all_fcstd)
+        listed.setChecked(True)
+
+        listed_group = QtWidgets.QWidget(dialog)
+        listed_group_layout = QtWidgets.QVBoxLayout(listed_group)
+        listed_group_layout.setContentsMargins(0, 0, 0, 0)
+        listed_group_layout.setSpacing(2)
+        listed_group_layout.addWidget(listed)
+        listed_group_layout.addWidget(listed_desc)
+
+        all_group = QtWidgets.QWidget(dialog)
+        all_group_layout = QtWidgets.QVBoxLayout(all_group)
+        all_group_layout.setContentsMargins(0, 0, 0, 0)
+        all_group_layout.setSpacing(2)
+        all_group_layout.addWidget(all_fcstd)
+        all_group_layout.addWidget(all_desc)
+
+        layout.addWidget(listed_group)
+        layout.addWidget(all_group)
+        buttons = QtWidgets.QDialogButtonBox(self)
+        restore_button = buttons.addButton(
+            translate("History", "Restore"),
+            QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole,
+        )
+        cancel_button = buttons.addButton(
+            translate("History", "Cancel"),
+            QtWidgets.QDialogButtonBox.ButtonRole.RejectRole,
+        )
+        cancel_button.setDefault(True)
+        cancel_button.setAutoDefault(True)
+        restore_button.clicked.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.resize(700, dialog.sizeHint().height())
+        if dialog.exec() != 1:
+            return None
+        return "listed_fcstd" if listed.isChecked() else "all_fcstd"

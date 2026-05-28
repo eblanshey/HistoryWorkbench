@@ -358,7 +358,6 @@ class TestGitPortAdapterGetCommits:
 
         with patch.object(subprocess, "run", return_value=mock_result) as mock_run:
             commits = self.adapter.get_commits("/path/to/repo")
-
             # Verify subprocess.run was called with correct arguments
             mock_run.assert_called_once_with(
                 ["git", "log", "-n20", "--format=%H%x00%B%x00%an%x00%aI%x00"],

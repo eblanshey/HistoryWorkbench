@@ -36,7 +36,7 @@ def _main_window_parent(container) -> QWidget | None:
     return main_window  # type: ignore[return-value]
 
 
-def _ensure_git_repository_presenter_available(container: "ApplicationContainer") -> "GitRepositoryPresenter | None":
+def _ensure_git_repository_presenter_available(container: ApplicationContainer) -> GitRepositoryPresenter | None:
     """Return git repository presenter, composing UI panel first when needed."""
     from ..ui.registry import ui_registry
 
@@ -118,7 +118,6 @@ class _CommitCommand:
     def Activated(self) -> None:
         """FreeCAD calls this when user clicks toolbar button."""
         from .._container import get_container
-        from ..ui.registry import ui_registry
 
         container = get_container()
         presenter = _ensure_git_repository_presenter_available(container)

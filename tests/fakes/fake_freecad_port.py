@@ -55,6 +55,8 @@ class FakeFreeCadPort(FreeCadPort):
         )
         self._main_window: object | None = main_window
         self.opened_document_paths: list[str] = []
+        self.closed_document_names: list[str] = []
+        self.active_document_names: list[str] = []
         self._call_log: list[str] = []  # Track method calls for verification
 
     def get_active_document(self) -> DocumentLike | None:
@@ -87,6 +89,17 @@ class FakeFreeCadPort(FreeCadPort):
         )
         self._open_documents.append(opened_doc)
         return opened_doc
+
+    def close_document(self, name: str) -> None:
+        """Track close call and remove document by name."""
+        self._call_log.append(f"close_document:{name}")
+        self.closed_document_names.append(name)
+        self._open_documents = [doc for doc in self._open_documents if getattr(doc, "Name", "") != name]
+
+    def set_active_document(self, name: str) -> None:
+        """Track set active document calls."""
+        self._call_log.append(f"set_active_document:{name}")
+        self.active_document_names.append(name)
 
     def get_object(self, doc: DocumentLike, name: str) -> DocumentObjectLike | None:
         """Return None (not implemented in fake)."""

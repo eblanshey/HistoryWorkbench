@@ -12,9 +12,9 @@ from freecad.history_wb.application.actions.commit_staging import CommitStagingA
 from freecad.history_wb.application.actions.find_active_git_repository import (
     FindActiveGitRepositoryAction,
 )
+from freecad.history_wb.application.actions.get_commits import GetCommitsAction
 from freecad.history_wb.application.actions.get_git_identity import GetGitIdentityAction
 from freecad.history_wb.application.actions.get_staged_file_paths import GetStagedFilePathsAction
-from freecad.history_wb.application.actions.get_commits import GetCommitsAction
 from freecad.history_wb.application.actions.save_git_identity import SaveGitIdentityAction
 from freecad.history_wb.domain.git.models import GitRepository
 from freecad.history_wb.ui.state import UIState

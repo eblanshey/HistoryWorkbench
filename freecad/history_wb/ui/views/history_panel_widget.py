@@ -120,6 +120,7 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         self._on_selection_changed_callback: Callable[[HistorySelection | None], None] | None = None
         self._on_remove_all_from_reviewed_callback: Callable[[], None] | None = None
         self._on_mark_all_reviewed_from_in_progress_callback: Callable[[], None] | None = None
+        self._on_restore_all_from_history_context_callback: Callable[[HistorySelection], None] | None = None
         self._current_selection: HistorySelection | None = None
         self._current_repository_path: str | None = None
         self._history_scroll_bottom_armed = True
@@ -353,6 +354,10 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         """Set callback for Mark All Reviewed context action on Current Files row."""
         self._on_mark_all_reviewed_from_in_progress_callback = callback
 
+    def set_restore_all_from_history_context_callback(self, callback: Callable[[HistorySelection], None]) -> None:
+        """Set callback for history-row restore actions."""
+        self._on_restore_all_from_history_context_callback = callback
+
     def append_commits(self, commits: list[GitCommit]) -> None:
         """Append commit entries after existing history rows."""
         for commit in commits:
@@ -424,10 +429,12 @@ class HistoryPanelWidget(QtWidgets.QWidget):
             self._show_mark_all_reviewed_menu(pos)
             return
 
-        if not self._is_staging_selection(item_data):
+        if self._is_staging_selection(item_data):
+            self._show_reviewed_context_menu(pos, item_data)
             return
 
-        self._show_remove_all_from_reviewed_menu(pos)
+        if item_data.item_kind == "COMMIT" and item_data.commit_hash:
+            self._show_commit_context_menu(pos, item_data)
 
     def _is_working_tree_selection(self, selection: HistorySelection) -> bool:
         """Return whether selection points to Current Files pseudo-row."""
@@ -446,9 +453,8 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         if selected_action == action and self._on_mark_all_reviewed_from_in_progress_callback is not None:
             self._on_mark_all_reviewed_from_in_progress_callback()
 
-    def _show_remove_all_from_reviewed_menu(self, pos: QtCore.QPoint) -> None:
-        """Show context action for removing all files from Reviewed."""
-
+    def _show_reviewed_context_menu(self, pos: QtCore.QPoint, selection: HistorySelection) -> None:
+        """Show Reviewed context menu actions."""
         tooltip = translate(
             "History",
             "Remove document(s) from Reviewed. The current file(s) stay unchanged "
@@ -456,12 +462,23 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         )
         menu = QtWidgets.QMenu(self._history_list)
         menu.setToolTipsVisible(True)
+        restore_action = menu.addAction(translate("History", "Restore reviewed files"))
         action = menu.addAction(translate("History", "Remove All from Reviewed"))
         action.setToolTip(tooltip)
         action.setStatusTip(tooltip)
         selected_action = menu.exec(self._history_list.mapToGlobal(pos))
+        if selected_action == restore_action and self._on_restore_all_from_history_context_callback is not None:
+            self._on_restore_all_from_history_context_callback(selection)
         if selected_action == action and self._on_remove_all_from_reviewed_callback is not None:
             self._on_remove_all_from_reviewed_callback()
+
+    def _show_commit_context_menu(self, pos: QtCore.QPoint, selection: HistorySelection) -> None:
+        """Show commit-row restore action."""
+        menu = QtWidgets.QMenu(self._history_list)
+        restore_action = menu.addAction(translate("History", "Restore all files from iteration"))
+        selected_action = menu.exec(self._history_list.mapToGlobal(pos))
+        if selected_action == restore_action and self._on_restore_all_from_history_context_callback is not None:
+            self._on_restore_all_from_history_context_callback(selection)
 
     def _on_history_scrollbar_value_changed(self, value: int) -> None:
         """Notify callback when history scrollbar is near bottom."""

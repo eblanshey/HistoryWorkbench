@@ -37,8 +37,13 @@ def _mock_container() -> MagicMock:
     mock.get_git_identity_action = MagicMock()
     mock.save_git_identity_action = MagicMock()
     mock.can_write_global_git_identity_action = MagicMock()
+    mock.restore_documents_action = MagicMock()
     mock.find_active_git_repository_action = MagicMock()
     mock.get_commits_action = MagicMock()
+    mock.commit_staging_action = MagicMock()
+    mock.get_git_identity_action = MagicMock()
+    mock.save_git_identity_action = MagicMock()
+    mock.can_write_global_git_identity_action = MagicMock()
     mock.settings_repo = MagicMock()
     return mock
 
@@ -109,7 +114,10 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         assert diff_kwargs["stage_documents_action"] is mock_container.stage_documents_action
         assert diff_kwargs["unstage_documents_action"] is mock_container.unstage_documents_action
         assert diff_kwargs["get_dirty_documents_action"] is mock_container.get_dirty_documents_action
+        assert diff_kwargs["get_staged_file_paths_action"] is mock_container.get_staged_file_paths_action
+        assert diff_kwargs["get_committed_file_paths_action"] is mock_container.get_committed_file_paths_action
         assert diff_kwargs["open_visual_feature_diff_action"] is mock_container.open_visual_feature_diff_action
+        assert diff_kwargs["restore_documents_action"] is mock_container.restore_documents_action
 
         # GitRepositoryPresenter receives correct actions from container
         git_kwargs = MockGitPresenter.call_args.kwargs
@@ -119,10 +127,7 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         assert git_kwargs["commit_staging_action"] is mock_container.commit_staging_action
         assert git_kwargs["get_git_identity_action"] is mock_container.get_git_identity_action
         assert git_kwargs["save_git_identity_action"] is mock_container.save_git_identity_action
-        assert (
-            git_kwargs["can_write_global_git_identity_action"]
-            is mock_container.can_write_global_git_identity_action
-        )
+        assert git_kwargs["can_write_global_git_identity_action"] is mock_container.can_write_global_git_identity_action
 
         # set_node_selection_callback wired to presenter
         mock_view.set_node_selection_callback.assert_called_once_with(mock_diff_presenter.on_node_selected)

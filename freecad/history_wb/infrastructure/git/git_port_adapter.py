@@ -740,6 +740,50 @@ class GitPortAdapter(GitPort):
             Log.warning(f"Git ref resolution failed for {ref}: {e}")
             return None
 
+    def restore_paths_from_ref(self, git_root: str, commit: str | None, paths: list[str]) -> bool:
+        """Restore selected paths into worktree from commit or index."""
+        if not paths:
+            Log.debug("Git restore skipped: no paths provided")
+            return True
+        try:
+            args = ["restore", "--worktree"]
+            if commit is not None:
+                args.append(f"--source={commit}")
+            args.extend(["--", *paths])
+            result = self._run_git(args, cwd=git_root, timeout=30)
+            if result is None:
+                Log.warning("Git restore failed: git executable unavailable")
+                return False
+            if result.returncode != 0:
+                Log.warning(f"Git restore failed: {result.stderr.strip()}")
+                return False
+            return True
+        except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError) as e:
+            Log.warning(f"Git restore command failed: {e}")
+            return False
+
+    def get_all_fcstd_paths(self, git_root: str, commit: str | None) -> list[str]:
+        """Return all FCStd paths available in selected commit or index."""
+        try:
+            args = ["ls-files", "-z"] if commit is None else ["ls-tree", "-r", "-z", "--name-only", commit]
+            result = self._run_git(args, cwd=git_root, timeout=30)
+            if result is None:
+                Log.warning("Git path listing failed: git executable unavailable")
+                return []
+            if result.returncode != 0:
+                source_name = "index" if commit is None else f"commit {commit}"
+                Log.warning(f"Git path listing failed for {source_name}: {result.stderr.strip()}")
+                return []
+            return [path for path in result.stdout.split("\x00") if path and is_fcstd_path(path)]
+        except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError, OSError) as e:
+            source_name = "index" if commit is None else f"commit {commit}"
+            Log.warning(f"Git path listing failed for {source_name}: {e}")
+            return []
+
+    def get_current_saved_fcstd_paths(self, git_root: str) -> list[str]:
+        """Return current FCStd paths saved in history (ls-files)."""
+        return self.get_all_fcstd_paths(git_root, None)
+
     def file_exists(self, git_root: str, commit: str | None, git_path: str) -> bool:
         """Check file existence at commit or index via git cat-file.
 

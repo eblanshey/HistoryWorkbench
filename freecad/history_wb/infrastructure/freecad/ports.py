@@ -58,6 +58,12 @@ class FreeCadPortAdapter:
     def open_document(self, path: str) -> DocumentLike:
         return self._ctx.app.openDocument(path)
 
+    def close_document(self, name: str) -> None:
+        self._ctx.app.closeDocument(name)
+
+    def set_active_document(self, name: str) -> None:
+        self._ctx.app.setActiveDocument(name)
+
     def get_object(self, doc: DocumentLike, name: str) -> object | None:
         return doc.getObject(name)
 
@@ -103,7 +109,7 @@ class FreeCadPortAdapter:
         self._ctx.app.Console.PrintMessage(text + "\n")
 
     def debug(self, text: str) -> None:
-        self._ctx.app.Console.PrintDebug(text + "\n")
+        self._ctx.app.Console.PrintLog(text + "\n")
 
     def translate(self, context: str, text: str) -> str:
         try:

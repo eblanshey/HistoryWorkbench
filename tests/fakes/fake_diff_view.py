@@ -32,6 +32,9 @@ class FakeDiffView:
         self._mark_all_reviewed_from_in_progress_callback: Callable[[], None] | None = None
         self._remove_all_button_callback: Callable[[], None] | None = None
         self._visual_diff_callback: Callable[[str, str], None] | None = None
+        self._restore_button_callback: Callable[[str], None] | None = None
+        self._restore_all_button_callback: Callable[[], None] | None = None
+        self._restore_all_from_history_context_callback: Callable[[HistorySelection], None] | None = None
         self._current_selection: Any = None
 
     def show_loading(self) -> None:
@@ -285,6 +288,24 @@ class FakeDiffView:
         self._record_call("set_remove_all_button_callback", callback=callback)
         self._remove_all_button_callback = callback
 
+    def set_restore_button_callback(self, callback: Callable[[str], None]) -> None:
+        self._record_call("set_restore_button_callback", callback=callback)
+        self._restore_button_callback = callback
+
+    def set_restore_all_button_callback(self, callback: Callable[[], None]) -> None:
+        self._record_call("set_restore_all_button_callback", callback=callback)
+        self._restore_all_button_callback = callback
+
+    def set_restore_all_from_history_context_callback(self, callback: Callable[[HistorySelection], None]) -> None:
+        self._record_call("set_restore_all_from_history_context_callback", callback=callback)
+        self._restore_all_from_history_context_callback = callback
+
+    def set_restore_all_button_visible(self, visible: bool) -> None:
+        self._record_call("set_restore_all_button_visible", visible=visible)
+
+    def set_restore_all_button_enabled(self, enabled: bool) -> None:
+        self._record_call("set_restore_all_button_enabled", enabled=enabled)
+
     def get_current_history_selection(self) -> HistorySelection | None:
         """Return currently selected history entry for presenter logic."""
         return self._current_selection
@@ -292,3 +313,11 @@ class FakeDiffView:
     def set_current_history_selection(self, selection: HistorySelection | None) -> None:
         """Test helper to set current history selection."""
         self._current_selection = selection
+
+    def show_restore_file_confirmation_dialog(self, git_path: str) -> bool:
+        self._record_call("show_restore_file_confirmation_dialog", git_path=git_path)
+        return True
+
+    def show_restore_scope_dialog(self) -> str | None:
+        self._record_call("show_restore_scope_dialog")
+        return "listed_fcstd"

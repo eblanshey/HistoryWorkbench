@@ -196,6 +196,21 @@ class DiffView(Protocol):
     def set_remove_all_button_callback(self, callback: Callable[[], None]) -> None:
         """Set callback for summary-bar Remove All button."""
 
+    def set_restore_button_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for per-file Restore button."""
+
+    def set_restore_all_button_callback(self, callback: Callable[[], None]) -> None:
+        """Set callback for summary-bar Restore All button."""
+
+    def set_restore_all_from_history_context_callback(self, callback: Callable[[HistorySelection], None]) -> None:
+        """Set callback for history-list context restore actions."""
+
+    def set_restore_all_button_visible(self, visible: bool) -> None:
+        """Show or hide summary-bar Restore All button."""
+
+    def set_restore_all_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable summary-bar Restore All button."""
+
     def get_current_history_selection(self) -> HistorySelection | None:
         """Return currently selected history entry, if any."""
 
@@ -219,3 +234,9 @@ class DiffView(Protocol):
         global_config_writable: bool = True,
     ) -> GitConfigDialogResult | None:
         """Show configure-author dialog and return entered values or None."""
+
+    def show_restore_file_confirmation_dialog(self, git_path: str) -> bool:
+        """Show destructive confirmation for one file restore."""
+
+    def show_restore_scope_dialog(self) -> str | None:
+        """Show bulk restore scope picker. Returns listed_fcstd, all_fcstd, or None."""

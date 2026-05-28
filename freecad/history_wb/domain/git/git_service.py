@@ -163,6 +163,18 @@ class GitService:
         """Write file bytes from git ref/index to destination path."""
         return self._git_port.write_file_from_ref(repo.absolute_path, commit, git_path, destination)
 
+    def restore_paths_from_ref(self, repo: GitRepository, commit: str | None, paths: list[str]) -> bool:
+        """Restore repository paths in worktree from commit or index."""
+        return self._git_port.restore_paths_from_ref(repo.absolute_path, commit, paths)
+
+    def get_all_fcstd_paths(self, repo: GitRepository, commit: str | None) -> list[str]:
+        """Return all FCStd paths present at commit or index."""
+        return self._git_port.get_all_fcstd_paths(repo.absolute_path, commit)
+
+    def get_current_saved_fcstd_paths(self, repo: GitRepository) -> list[str]:
+        """Return current FCStd paths saved in history."""
+        return self._git_port.get_current_saved_fcstd_paths(repo.absolute_path)
+
     def resolve_ref(self, repo: GitRepository, ref: str) -> str | None:
         """Resolve git ref to full commit hash."""
         return self._git_port.resolve_ref(repo.absolute_path, ref)

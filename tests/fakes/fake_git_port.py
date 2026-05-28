@@ -70,6 +70,9 @@ class FakeGitPort:
         self._can_write_global_identity = True
         self._last_unstage_files_call: tuple[str, list[str]] | None = None
         self._last_unstage_all_call: str | None = None
+        self._last_restore_call: tuple[str, str | None, list[str]] | None = None
+        self._all_fcstd_paths: dict[tuple[str, str | None], list[str]] = {}
+        self._current_saved_fcstd_paths: dict[str, list[str]] = {}
 
     def add_git_repo(self, root_path: str) -> None:
         """Add a simulated git repository root.
@@ -307,6 +310,31 @@ class FakeGitPort:
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         destination_path.write_bytes(content)
         return True
+
+    def restore_paths_from_ref(self, git_root: str, commit: str | None, paths: list[str]) -> bool:
+        """Record restore call and succeed."""
+        self._last_restore_call = (git_root, commit, paths)
+        return True
+
+    def get_all_fcstd_paths(self, git_root: str, commit: str | None) -> list[str]:
+        """Return configured FCStd path set for source."""
+        return self._all_fcstd_paths.get((git_root, commit), [])
+
+    def get_current_saved_fcstd_paths(self, git_root: str) -> list[str]:
+        """Return configured current saved FCStd paths."""
+        return self._current_saved_fcstd_paths.get(git_root, [])
+
+    def set_all_fcstd_paths(self, root_path: str, commit: str | None, paths: list[str]) -> None:
+        """Set FCStd path set returned for commit/index source."""
+        self._all_fcstd_paths[(root_path, commit)] = paths
+
+    def set_current_saved_fcstd_paths(self, root_path: str, paths: list[str]) -> None:
+        """Set FCStd paths returned for current saved history set."""
+        self._current_saved_fcstd_paths[root_path] = paths
+
+    def get_last_restore_call(self) -> tuple[str, str | None, list[str]] | None:
+        """Return last restore_paths_from_ref call args."""
+        return self._last_restore_call
 
     def commit(self, git_root: str, message: str) -> bool:
         """Fake implementation of commit for testing.

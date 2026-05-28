@@ -167,6 +167,35 @@ class GitPort(Protocol):
         """
         ...
 
+    def restore_paths_from_ref(self, git_root: str, commit: str | None, paths: list[str]) -> bool:
+        """Restore repository paths in worktree from commit or index.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference or None for index.
+            paths: Relative repository paths to restore.
+
+        Returns:
+            True if restore succeeded, False otherwise.
+        """
+        ...
+
+    def get_all_fcstd_paths(self, git_root: str, commit: str | None) -> list[str]:
+        """Return all FCStd paths present at commit or index.
+
+        Args:
+            git_root: Absolute path to git repository root.
+            commit: Commit reference or None for index.
+
+        Returns:
+            Relative FCStd paths present in selected source.
+        """
+        ...
+
+    def get_current_saved_fcstd_paths(self, git_root: str) -> list[str]:
+        """Return current FCStd paths saved in history (git index entries)."""
+        ...
+
     def resolve_ref(self, git_root: str, ref: str) -> str | None:
         """Resolve git ref to full commit hash.
 

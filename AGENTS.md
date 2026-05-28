@@ -20,6 +20,7 @@
 - When changing user-facing text, run `task translations:refresh` before the completion of your work.
 - Read the `docs/Architecture.md` guidelines when planning new features.
 - Do not remove useful line comments when refactoring
+- DO add comments for all public functions/methods, and private/internal methods when their name doesn't describe their logic well enough
 - Keep cyclomatic complexity at B (5-10) or better in the src dir: `uv run radon cc --min C freecad/history_wb --no-assert -s`
 
 Terse like caveman. Technical substance exact. Only fluff die.

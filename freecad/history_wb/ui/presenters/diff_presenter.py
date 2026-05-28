@@ -13,12 +13,20 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from ...application.actions.create_document_diffs import CreateDocumentDiffsAction
+from ...application.actions.get_committed_file_paths import GetCommittedFilePathsAction
 from ...application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from ...application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
+from ...application.actions.get_staged_file_paths import GetStagedFilePathsAction
 from ...application.actions.open_visual_diff import (
     OpenVisualDiffAction,
     OpenVisualDiffRequest,
     VisualDiffRequestType,
+)
+from ...application.actions.restore_documents import (
+    RestoreDocumentsAction,
+    RestoreDocumentsRequest,
+    RestoreScope,
+    RestoreSource,
 )
 from ...application.actions.result_models import (
     CreateDocumentDiffsRequest,
@@ -34,7 +42,7 @@ from ...domain.git.models import GitRepository
 from ...domain.settings import SettingsRepository
 from ...domain.tree import Property
 from ...domain.tree.data_path import PropertyPathType
-from ...utils import Log, format_float
+from ...utils import Log, format_float, translate
 from ..protocols.diff_view import DiffView
 from ..state import UIState
 from ..views.models import HistorySelection
@@ -381,7 +389,10 @@ class DiffPresenter:
         stage_documents_action: StageDocumentsAction,
         unstage_documents_action: UnstageDocumentsAction,
         get_dirty_documents_action: GetDirtyDocumentsAction,
+        get_staged_file_paths_action: GetStagedFilePathsAction,
+        get_committed_file_paths_action: GetCommittedFilePathsAction,
         open_visual_feature_diff_action: OpenVisualDiffAction,
+        restore_documents_action: RestoreDocumentsAction,
         settings_repo: SettingsRepository | None = None,
     ) -> None:
         """Initialize with required dependencies.
@@ -405,6 +416,9 @@ class DiffPresenter:
         self._unstage_documents = unstage_documents_action
         self._get_dirty_documents = get_dirty_documents_action
         self._open_visual_feature_diff = open_visual_feature_diff_action
+        self._restore_documents = restore_documents_action
+        self._get_staged_file_paths = get_staged_file_paths_action
+        self._get_committed_file_paths = get_committed_file_paths_action
         self._settings_repo = settings_repo
         self._default_precision = DEFAULT_FLOAT_PRECISION
         self._diff_results_by_path: dict[str, DiffResult] = {}
@@ -421,6 +435,9 @@ class DiffPresenter:
         self._view.set_remove_from_reviewed_button_callback(self.on_remove_from_reviewed_button_clicked)
         self._view.set_remove_all_from_reviewed_callback(self.on_remove_all_from_reviewed_clicked)
         self._view.set_mark_all_reviewed_from_in_progress_callback(self.on_stage_all_clicked)
+        self._view.set_restore_button_callback(self.on_restore_document_clicked)
+        self._view.set_restore_all_button_callback(self.on_restore_all_clicked)
+        self._view.set_restore_all_from_history_context_callback(self.on_restore_all_from_history_context)
 
     def _get_precision(self) -> int:
         """Get the current float precision from settings or use default.
@@ -743,6 +760,81 @@ class DiffPresenter:
         elif current_selection.item_kind == "WORKING_TREE":
             self._on_working_tree_selected()
 
+    def on_restore_document_clicked(self, git_path: str) -> None:
+        """Restore one document for current staging/commit source."""
+        current = self._current_history_selection
+        repo = self._ui_state.git_repository
+        if current is None or repo is None:
+            return
+        if current.item_kind not in ("STAGING", "COMMIT"):
+            return
+        source, commit_hash = self._restore_source_from_selection(current)
+        if not self._view.show_restore_file_confirmation_dialog(git_path):
+            return
+        request = RestoreDocumentsRequest(
+            repo=repo,
+            source=source,
+            scope=RestoreScope.SINGLE_PATH,
+            commit_hash=commit_hash,
+            paths=[git_path],
+        )
+        self._execute_restore(request)
+
+    def on_restore_all_clicked(self) -> None:
+        """Restore listed/all files for current staging/commit source."""
+        current = self._current_history_selection
+        if current is None:
+            return
+        self.on_restore_all_from_history_context(current)
+
+    def on_restore_all_from_history_context(self, selection: HistorySelection) -> None:
+        """Restore from history context selection without changing selected row."""
+        repo = self._ui_state.git_repository
+        if repo is None:
+            return
+        if selection.item_kind not in ("STAGING", "COMMIT"):
+            return
+        scope_text = self._view.show_restore_scope_dialog()
+        if scope_text is None:
+            return
+        if not self._view.show_restore_file_confirmation_dialog(""):
+            return
+
+        source, commit_hash = self._restore_source_from_selection(selection)
+        listed_paths = self._listed_paths_for_selection(repo, selection)
+        scope = RestoreScope.LISTED_FCSTD if scope_text == "listed_fcstd" else RestoreScope.ALL_FCSTD
+        request = RestoreDocumentsRequest(
+            repo=repo,
+            source=source,
+            scope=scope,
+            commit_hash=commit_hash,
+            paths=listed_paths,
+        )
+        self._execute_restore(request)
+
+    def _restore_source_from_selection(self, selection: HistorySelection) -> tuple[RestoreSource, str | None]:
+        if selection.item_kind == "COMMIT":
+            return RestoreSource.COMMIT, selection.commit_hash
+        return RestoreSource.INDEX, None
+
+    def _listed_paths_for_selection(self, repo: GitRepository, selection: HistorySelection) -> list[str]:
+        if selection.item_kind == "COMMIT" and selection.commit_hash:
+            result = self._get_committed_file_paths.execute(repo, selection.commit_hash)
+            return result.data if result.is_success and result.data else []
+        result = self._get_staged_file_paths.execute(repo)
+        return result.data if result.is_success and result.data else []
+
+    def _execute_restore(self, request: RestoreDocumentsRequest) -> None:
+        result = self._restore_documents.execute(request)
+        self.clear_property_diff()
+        if not result.is_success:
+            self._view.show_error_message(translate("History", "Restore"), result.message or "Restore failed")
+            return
+        self._view.show_info_message(translate("History", "Restore"), translate("History", "Restoration complete."))
+        current = self._current_history_selection
+        if current is not None and current.item_kind == "WORKING_TREE":
+            self._on_working_tree_selected()
+
     def present_diffs(
         self,
         diff_results: list[DiffResult],
@@ -862,6 +954,7 @@ class DiffPresenter:
         current = self._current_history_selection
         is_working_tree = current is not None and current.item_kind == "WORKING_TREE"
         is_staging = current is not None and current.item_kind == "STAGING"
+        is_commit = current is not None and current.item_kind == "COMMIT"
 
         if is_working_tree:
             any_staggable = any(p.stage_button_enabled for p in presentations)
@@ -869,6 +962,8 @@ class DiffPresenter:
             self._view.set_stage_all_button_enabled(any_staggable)
             self._view.set_remove_all_button_visible(False)
             self._view.set_remove_all_button_enabled(False)
+            self._view.set_restore_all_button_visible(False)
+            self._view.set_restore_all_button_enabled(False)
             return
 
         if is_staging:
@@ -876,12 +971,25 @@ class DiffPresenter:
             self._view.set_stage_all_button_enabled(False)
             self._view.set_remove_all_button_visible(True)
             self._view.set_remove_all_button_enabled(bool(presentations))
+            self._view.set_restore_all_button_visible(bool(presentations))
+            self._view.set_restore_all_button_enabled(bool(presentations))
+            return
+
+        if is_commit:
+            self._view.set_stage_all_button_visible(False)
+            self._view.set_stage_all_button_enabled(False)
+            self._view.set_remove_all_button_visible(False)
+            self._view.set_remove_all_button_enabled(False)
+            self._view.set_restore_all_button_visible(bool(presentations))
+            self._view.set_restore_all_button_enabled(bool(presentations))
             return
 
         self._view.set_stage_all_button_visible(False)
         self._view.set_stage_all_button_enabled(False)
         self._view.set_remove_all_button_visible(False)
         self._view.set_remove_all_button_enabled(False)
+        self._view.set_restore_all_button_visible(False)
+        self._view.set_restore_all_button_enabled(False)
 
     def _show_summary(self, diff_results: list[DiffResult]) -> None:
         """Show the summary of changed documents."""

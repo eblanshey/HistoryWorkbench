@@ -32,6 +32,40 @@ def _history_row_text(panel, row: int) -> str:  # type: ignore[no-untyped-def]
     return item.text()
 
 
+class _FakeMenuAction:
+    """Reusable fake QMenu action for context-menu tests."""
+
+    def setToolTip(self, _value: str) -> None:
+        return
+
+    def setStatusTip(self, _value: str) -> None:
+        return
+
+
+def _build_fake_menu_class() -> type:
+    """Return fake QMenu class tracking creation and exec calls."""
+
+    class _FakeMenu:
+        created = False
+        exec_called = False
+
+        def __init__(self, *_args, **_kwargs) -> None:
+            _FakeMenu.created = True
+            self._action = _FakeMenuAction()
+
+        def setToolTipsVisible(self, _visible: bool) -> None:
+            return
+
+        def addAction(self, _text: str) -> _FakeMenuAction:
+            return self._action
+
+        def exec(self, *_args, **_kwargs) -> _FakeMenuAction:
+            _FakeMenu.exec_called = True
+            return self._action
+
+    return _FakeMenu
+
+
 @pytest.fixture(scope="module")
 def widget() -> object:
     """Create a HistoryPanelWidget instance for testing.
@@ -406,30 +440,7 @@ class TestReviewedContextMenu:
         rect = widget.history_list.visualItemRect(staging_item)
         pos = rect.center()
 
-        class _FakeAction:
-            def setToolTip(self, _value: str) -> None:
-                return
-
-            def setStatusTip(self, _value: str) -> None:
-                return
-
-        class _FakeMenu:
-            created = False
-            exec_called = False
-
-            def __init__(self, *_args, **_kwargs) -> None:
-                _FakeMenu.created = True
-                self._action = _FakeAction()
-
-            def setToolTipsVisible(self, _visible: bool) -> None:
-                return
-
-            def addAction(self, _text: str) -> _FakeAction:
-                return self._action
-
-            def exec(self, *_args, **_kwargs) -> _FakeAction:
-                _FakeMenu.exec_called = True
-                return self._action
+        _FakeMenu = _build_fake_menu_class()
 
         with patch("freecad.history_wb.ui.views.history_panel_widget.QtWidgets.QMenu", _FakeMenu):
             widget._on_history_list_context_menu_requested(pos)
@@ -438,8 +449,9 @@ class TestReviewedContextMenu:
         assert _FakeMenu.exec_called is True
         assert called["count"] == 1
 
-    def test_context_menu_not_shown_for_commit_rows(self, widget) -> None:  # type: ignore[no-untyped-def]
+    def test_commit_context_menu_triggers_restore_callback(self, widget) -> None:  # type: ignore[no-untyped-def]
         from freecad.history_wb.domain.git.models import GitCommit
+        from freecad.history_wb.ui.views.models import HistorySelection
 
         widget.show_commits(
             [
@@ -451,14 +463,21 @@ class TestReviewedContextMenu:
                 )
             ]
         )
-        row_indexes = [2]
-        with patch("freecad.history_wb.ui.views.history_panel_widget.QtWidgets.QMenu.exec") as menu_exec:
-            for row in row_indexes:
-                item = widget.history_list.item(row)
-                pos = widget.history_list.visualItemRect(item).center()
-                widget._on_history_list_context_menu_requested(pos)
+        received: list[HistorySelection] = []
+        widget.set_restore_all_from_history_context_callback(lambda selection: received.append(selection))
 
-        menu_exec.assert_not_called()
+        _FakeMenu = _build_fake_menu_class()
+
+        item = widget.history_list.item(2)
+        pos = widget.history_list.visualItemRect(item).center()
+        with patch("freecad.history_wb.ui.views.history_panel_widget.QtWidgets.QMenu", _FakeMenu):
+            widget._on_history_list_context_menu_requested(pos)
+
+        assert _FakeMenu.created is True
+        assert _FakeMenu.exec_called is True
+        assert len(received) == 1
+        assert received[0].item_kind == "COMMIT"
+        assert received[0].commit_hash == "abc1234"
 
         # Verify there are 3 items total (Working Tree, Staging, and the commit)
         assert widget.history_list.count() == 3
@@ -475,26 +494,7 @@ class TestReviewedContextMenu:
         rect = widget.history_list.visualItemRect(working_tree_item)
         pos = rect.center()
 
-        class _FakeAction:
-            pass
-
-        class _FakeMenu:
-            created = False
-            exec_called = False
-
-            def __init__(self, *_args, **_kwargs) -> None:
-                _FakeMenu.created = True
-                self._action = _FakeAction()
-
-            def setToolTipsVisible(self, _visible: bool) -> None:
-                return
-
-            def addAction(self, _text: str) -> _FakeAction:
-                return self._action
-
-            def exec(self, *_args, **_kwargs) -> _FakeAction:
-                _FakeMenu.exec_called = True
-                return self._action
+        _FakeMenu = _build_fake_menu_class()
 
         with patch("freecad.history_wb.ui.views.history_panel_widget.QtWidgets.QMenu", _FakeMenu):
             widget._on_history_list_context_menu_requested(pos)

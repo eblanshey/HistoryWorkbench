@@ -40,6 +40,7 @@ from ..actions.initialize_git_repository import InitializeGitRepositoryAction
 from ..actions.open_all_documents_in_repository import OpenAllDocumentsInRepositoryAction
 from ..actions.open_visual_diff import OpenVisualDiffAction
 from ..actions.recompute_all_open_documents import RecomputeAllOpenDocumentsAction
+from ..actions.restore_documents import RestoreDocumentsAction
 from ..actions.save_diff_settings import SaveDiffSettingsAction
 from ..actions.save_git_identity import SaveGitIdentityAction
 from ..actions.stage_documents import StageDocumentsAction
@@ -87,6 +88,7 @@ class ApplicationContainer:
     get_diff_settings_action: GetDiffSettingsAction
     save_diff_settings_action: SaveDiffSettingsAction
     open_visual_feature_diff_action: OpenVisualDiffAction
+    restore_documents_action: RestoreDocumentsAction
 
     # Settings repository for runtime precision and user preferences
     settings_repo: SettingsRepository
@@ -213,6 +215,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         file_manager=file_manager,
         freecad_port=freecad_port,
     )
+    restore_documents_action = RestoreDocumentsAction(git_service=git_service, freecad_port=freecad_port)
 
     return ApplicationContainer(
         _freecad_port=freecad_port,
@@ -234,6 +237,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         get_diff_settings_action=get_diff_settings_action,
         save_diff_settings_action=save_diff_settings_action,
         open_visual_feature_diff_action=open_visual_feature_diff_action,
+        restore_documents_action=restore_documents_action,
         settings_repo=settings_repo,
         git_port=git_port,
         git_service=git_service,

@@ -10,8 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from freecad.history_wb.application.actions.result_models import Result
-from freecad.history_wb.domain.git.models import GitIdentity
-from freecad.history_wb.domain.git.models import GitCommit, GitRepository
+from freecad.history_wb.domain.git.models import GitCommit, GitIdentity, GitRepository
 from freecad.history_wb.ui.presenters.git_repository_presenter import GitConfigDialogResult, GitRepositoryPresenter
 
 

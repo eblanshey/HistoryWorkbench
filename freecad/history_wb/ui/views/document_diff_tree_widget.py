@@ -21,10 +21,12 @@ TREE_ITEM_ICON_SIZE = 16
 STAGE_BUTTON_WIDTH = 90
 STAGE_ALL_BUTTON_WIDTH = 140
 REMOVE_BUTTON_WIDTH = 90
+RESTORE_BUTTON_WIDTH = 90
 REMOVE_REVIEWED_TOOLTIP = translate(
     "History",
-    "Remove document(s) from Reviewed. The current file(s) stay unchanged "
-    "and will not be saved in the next iteration until reviewed again.",
+    "Remove document(s) from Reviewed.\n"
+    "The current file(s) stay unchanged.\n"
+    "They will not be saved in the next iteration until reviewed again.",
 )
 
 
@@ -36,6 +38,8 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self._on_add_button_callback: Callable[[str], None] | None = None
         self._on_stage_all_callback: Callable[[], None] | None = None
         self._on_remove_all_callback: Callable[[], None] | None = None
+        self._on_restore_button_callback: Callable[[str], None] | None = None
+        self._on_restore_all_callback: Callable[[], None] | None = None
         self._on_remove_from_reviewed_button_callback: Callable[[str], None] | None = None
         self._on_node_selection_callback: Callable[[str, str], None] | None = None
         self._current_selection: HistorySelection | None = None
@@ -68,10 +72,28 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self._stage_all_button.clicked.connect(self._on_stage_all_clicked)
         summary_layout.addWidget(self._stage_all_button)
 
+        self._restore_all_button = QtWidgets.QToolButton()
+        self._restore_all_button.setText(translate("History", "Restore All"))
+        self._restore_all_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._restore_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
+        self._restore_all_button.setFixedHeight(TREE_ITEM_HEIGHT)
+        self._restore_all_button.setToolTip(
+            translate(
+                "History",
+                "Choose which files to restore from the selected iteration.\n"
+                "Current files on disk can be overwritten or removed.\n"
+                "Saved history is not affected.",
+            )
+        )
+        self._restore_all_button.hide()
+        self._restore_all_button.clicked.connect(self._on_restore_all_clicked)
+        summary_layout.addWidget(self._restore_all_button)
+
         self._remove_all_button = QtWidgets.QToolButton()
         self._remove_all_button.setText(translate("History", "- Remove All"))
         self._remove_all_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._remove_all_button.setFixedSize(STAGE_ALL_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
+        self._remove_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
+        self._remove_all_button.setFixedHeight(TREE_ITEM_HEIGHT)
         self._remove_all_button.setToolTip(REMOVE_REVIEWED_TOOLTIP)
         self._remove_all_button.hide()
         self._remove_all_button.clicked.connect(self._on_remove_all_clicked)
@@ -155,6 +177,22 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         """Set callback used by summary-bar Remove All button."""
         self._on_remove_all_callback = callback
 
+    def set_restore_button_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for per-file Restore button."""
+        self._on_restore_button_callback = callback
+
+    def set_restore_all_button_callback(self, callback: Callable[[], None]) -> None:
+        """Set callback for summary-bar Restore All button."""
+        self._on_restore_all_callback = callback
+
+    def set_restore_all_button_visible(self, visible: bool) -> None:
+        """Show or hide Restore All button."""
+        self._restore_all_button.setVisible(visible)
+
+    def set_restore_all_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable Restore All button."""
+        self._restore_all_button.setEnabled(enabled)
+
     def show_doc_diff(self, nodes: list[NodePresentation], git_path: str = "") -> None:
         """Display the diff tree with color-coded nodes.
 
@@ -221,6 +259,8 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         layout.addStretch()
 
         self._add_status_indicators(layout, diff.indicators)
+        if self._is_staging_selected() or self._is_commit_selected():
+            self._add_restore_button(layout, diff, top_level_text)
         if self._is_working_tree_selected():
             self._add_stage_button(layout, diff)
         if self._is_staging_selected():
@@ -261,6 +301,25 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         if diff.git_path:
             self._remove_from_reviewed_buttons[diff.git_path] = remove_button
 
+    def _is_commit_selected(self) -> bool:
+        return self._current_selection is not None and self._current_selection.item_kind == "COMMIT"
+
+    def _add_restore_button(self, layout: QtWidgets.QHBoxLayout, diff: DiffTreePresentation, file_name: str) -> None:
+        restore_button = QtWidgets.QToolButton()
+        restore_button.setText(translate("History", "Restore"))
+        restore_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        restore_button.setFixedSize(RESTORE_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
+        tooltip = translate(
+            "History",
+            "Restore the selected file.\n"
+            "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
+            "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
+            "Saved history is not affected.",
+        ).replace("%1", file_name)
+        restore_button.setToolTip(tooltip)
+        restore_button.clicked.connect(lambda checked, gp=diff.git_path: self._on_restore_button_clicked(gp))
+        layout.addWidget(restore_button)
+
     def clear_doc_diffs(self) -> None:
         """Clear document diff tree and related controls."""
         self._tree_widget.clear()
@@ -269,6 +328,8 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self.set_stage_all_button_enabled(False)
         self.set_remove_all_button_visible(False)
         self.set_remove_all_button_enabled(False)
+        self.set_restore_all_button_visible(False)
+        self.set_restore_all_button_enabled(False)
         self._stage_buttons.clear()
         self._remove_from_reviewed_buttons.clear()
 
@@ -442,6 +503,14 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         """Handle Remove button click by invoking callback."""
         if self._on_remove_from_reviewed_button_callback is not None:
             self._on_remove_from_reviewed_button_callback(git_path)
+
+    def _on_restore_button_clicked(self, git_path: str) -> None:
+        if self._on_restore_button_callback is not None:
+            self._on_restore_button_callback(git_path)
+
+    def _on_restore_all_clicked(self) -> None:
+        if self._on_restore_all_callback is not None:
+            self._on_restore_all_callback()
 
     def _on_tree_item_clicked(self, item: QtWidgets.QTreeWidgetItem, column: int) -> None:
         """Extract git_path from root and node_path from clicked item, then invoke callback.

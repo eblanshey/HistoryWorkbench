@@ -377,3 +377,37 @@ class TestCanWriteGlobalIdentity:
         result = service.can_write_global_identity()
 
         assert result is can_write
+
+
+class TestRestoreMethods:
+    """Tests for GitService restore-related delegation."""
+
+    def test_restore_paths_from_ref_delegates_repo_ref_and_paths(self) -> None:
+        fake_port = FakeGitPort()
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.restore_paths_from_ref(repo=repo, commit="abc123", paths=["a.FCStd", "b.FCStd"])
+
+        assert result is True
+        assert fake_port.get_last_restore_call() == ("/repo", "abc123", ["a.FCStd", "b.FCStd"])
+
+    def test_get_all_fcstd_paths_delegates_to_port(self) -> None:
+        fake_port = FakeGitPort()
+        fake_port.set_all_fcstd_paths("/repo", "abc123", ["a.FCStd", "b.FCStd"])
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.get_all_fcstd_paths(repo=repo, commit="abc123")
+
+        assert result == ["a.FCStd", "b.FCStd"]
+
+    def test_get_current_saved_fcstd_paths_delegates_to_port(self) -> None:
+        fake_port = FakeGitPort()
+        fake_port.set_current_saved_fcstd_paths("/repo", ["a.FCStd", "hist.FCStd"])
+        service = GitService(git_port=fake_port)
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.get_current_saved_fcstd_paths(repo=repo)
+
+        assert result == ["a.FCStd", "hist.FCStd"]

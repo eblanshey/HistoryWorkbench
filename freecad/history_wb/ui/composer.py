@@ -50,7 +50,10 @@ def compose_and_register_ui(container: ApplicationContainer) -> DiffPanelView:
         stage_documents_action=container.stage_documents_action,
         unstage_documents_action=container.unstage_documents_action,
         get_dirty_documents_action=container.get_dirty_documents_action,
+        get_staged_file_paths_action=container.get_staged_file_paths_action,
+        get_committed_file_paths_action=container.get_committed_file_paths_action,
         open_visual_feature_diff_action=container.open_visual_feature_diff_action,
+        restore_documents_action=container.restore_documents_action,
         settings_repo=container.settings_repo,
     )
     ui_registry.register_diff_presenter(diff_presenter)

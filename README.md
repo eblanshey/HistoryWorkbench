@@ -39,6 +39,7 @@ It helps answer questions like:
 - **Detailed property review:** Inspect exact changes to dimensions, placements, expressions, constraints, quantities, links, and other editable properties.
 - **Review workflow:** Review model changes incrementally and save the result as a new iteration when ready.
 - **Project history timeline:** Move between in-progress work, reviewed changes, and saved iterations from one history panel.
+- **Safe restore workflow:** Restore individual files or batches from **Reviewed** or any saved iteration back onto disk without rewriting project history.
 - **Multi-document support:** Review and iterate on multiple related documents at once, such as assemblies spread across several `.FCStd` files.
 - **Noise control:** Hide generated object types or properties, tune floating-point precision, and keep comparisons focused on meaningful CAD changes.
 - **Light and dark theme support:** Keep comparison highlights readable in both light and dark FreeCAD themes.
@@ -103,10 +104,28 @@ Use History Workbench as a review loop after normal CAD work.
 8. **Verify reviewed work:** Click the **Reviewed** iteration item in the history list to confirm exactly what will be saved in the next iteration.
 9.  **Save an iteration:** Click <img src="freecad/history_wb/resources/icons/Commit.svg" width="16" alt="" /> **Save Iteration**, enter a description of the changes, and confirm.
 
-To preserve project history, previous iterations cannot be altered once they are saved.
-
 > [!CAUTION]
 > Tree comparisons focus on structured FreeCAD object and property data, but may not capture every CAD model change yet. Use 3D comparisons as an additional review step before saving an iteration.
+
+### Restoring Files from Reviewed or Saved Iterations
+
+Use restore when you want to bring one file, or many files, back to a prior saved state on disk.
+
+1. Select **Reviewed** or a specific saved iteration in the history list.
+2. Restore one file with the per-file **Restore** button, or restore many files with **Restore All**.
+3. For **Restore All**, choose a scope:
+   - **Listed FreeCAD files:** Restore only the FreeCAD files changed in the selected iteration.
+   - **All FreeCAD files:** Restore all previously saved FreeCAD files to how they were in this iteration. Any previously saved FreeCAD files that did not exist in that iteration are removed. New files not yet saved to history are kept.
+4. Confirm the warning dialog.
+
+Restore behavior:
+
+- Restore changes files on disk only; saved iteration history is unchanged.
+- Open project documents are closed before restore and reopened after restore.
+- Unsaved in-memory changes in those project documents are lost.
+- New FreeCAD files not yet saved in history are left unchanged during **All FreeCAD files** restore.
+
+To preserve project history, previous iterations cannot be altered once they are saved.
 
 ## Commands
 

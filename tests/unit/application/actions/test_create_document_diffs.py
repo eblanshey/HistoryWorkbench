@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Unit tests for CreateDocumentDiffsAction orchestration and status classification.
-"""Unit tests for CreateDocumentDiffsAction."""
+# File responsibility: Unit tests for CreateDocumentDiffsAction orchestration with split state/issues model.
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,12 +7,15 @@ from datetime import datetime
 from freecad.history_wb.application.actions.create_document_diffs import CreateDocumentDiffsAction
 from freecad.history_wb.application.actions.result_models import (
     CreateDocumentDiffsRequest,
+    DiffIssues,
     DocumentDiffMode,
-    DocumentDiffStatus,
+    GeneralDiffIssue,
     Result,
+    SnapshotIssue,
     SnapshotLoadResult,
     SnapshotLoadStatus,
 )
+from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.domain.git.models import GitRepository
 from freecad.history_wb.domain.snapshots.models import Snapshot
 
@@ -34,8 +36,7 @@ class _FakeCommitSnapshotAction:
         self._mapping = mapping
 
     def execute(self, repo: GitRepository, commit: str | None, fcstd_git_path: str) -> Result:  # noqa: ARG002
-        load = self._mapping[(commit, fcstd_git_path)]
-        return Result.success(load)
+        return Result.success(self._mapping[(commit, fcstd_git_path)])
 
 
 class _FakeDiffAction:
@@ -47,31 +48,11 @@ class _FakeDiffAction:
     def __init__(self, changed_paths: set[str], fail_paths: set[str] | None = None) -> None:
         self._changed_paths = changed_paths
         self._fail_paths = fail_paths or set()
-        self.calls: list[tuple[Snapshot | None, Snapshot]] = []
 
     def execute(self, old: Snapshot | None, new: Snapshot) -> Result:  # noqa: ARG002
-        self.calls.append((old, new))
         if new.git_path in self._fail_paths:
             return Result.failure("simulated diff failure")
         return Result.success(self._Diff(new_snapshot=new, has_changes=new.git_path in self._changed_paths))
-
-
-class _FakeCommittedPathsAction:
-    def __init__(self, mapping: dict[str, list[str]]) -> None:
-        self._mapping = mapping
-        self.calls: list[str] = []
-
-    def execute(self, repo: GitRepository, commit: str) -> Result:  # noqa: ARG002
-        self.calls.append(commit)
-        return Result.success(self._mapping.get(commit, []))
-
-
-class _FakeStagedPathsAction:
-    def __init__(self, paths: list[str]) -> None:
-        self._paths = paths
-
-    def execute(self, repo: GitRepository) -> Result:  # noqa: ARG002
-        return Result.success(self._paths)
 
 
 class _FakeWorkingSnapshotAction:
@@ -82,9 +63,39 @@ class _FakeWorkingSnapshotAction:
         return Result.success(self._snapshots_by_doc[document.name])
 
 
+class _FakeGitService:
+    def __init__(
+        self,
+        committed: dict[str, list[str]] | None = None,
+        staged: list[str] | None = None,
+        dirty: list[str] | None = None,
+    ) -> None:
+        self._committed = committed or {}
+        self._staged = staged or []
+        self._dirty = dirty or []
+
+    def get_committed_files(self, repo: GitRepository, commit: str) -> list[str]:  # noqa: ARG002
+        return self._committed.get(commit, [])
+
+    def get_staged_files(self, repo: GitRepository) -> list[str]:  # noqa: ARG002
+        return self._staged
+
+    def get_dirty_files(self, repo: GitRepository) -> list[str]:  # noqa: ARG002
+        return self._dirty
+
+
+class _FakeFreeCadPort:
+    def __init__(self, modified_doc_names: set[str] | None = None) -> None:
+        self._modified = modified_doc_names or set()
+
+    def is_document_modified(self, doc: object) -> bool:
+        return getattr(doc, "name", "") in self._modified
+
+
 @dataclass
 class _Doc:
     name: str
+    FileName: str
 
 
 def _build_action(
@@ -93,386 +104,295 @@ def _build_action(
     changed_paths: set[str] | None = None,
     committed_paths: dict[str, list[str]] | None = None,
     staged_paths: list[str] | None = None,
+    dirty_paths: list[str] | None = None,
     working_snapshots: dict[str, Snapshot] | None = None,
     fail_diff_paths: set[str] | None = None,
+    modified_doc_names: set[str] | None = None,
 ) -> CreateDocumentDiffsAction:
-    committed_paths_action = _FakeCommittedPathsAction(committed_paths or {})
-    diff_action = _FakeDiffAction(changed_paths or set(), fail_paths=fail_diff_paths)
     return CreateDocumentDiffsAction(
         create_working_snapshot_action=_FakeWorkingSnapshotAction(working_snapshots or {}),
         create_commit_snapshot_action=_FakeCommitSnapshotAction(snapshot_mapping),
-        create_diff_action=diff_action,
-        get_staged_file_paths_action=_FakeStagedPathsAction(staged_paths or []),
-        get_committed_file_paths_action=committed_paths_action,
+        create_diff_action=_FakeDiffAction(changed_paths or set(), fail_paths=fail_diff_paths),
+        git_service=_FakeGitService(committed_paths, staged_paths, dirty_paths),
+        freecad_port=_FakeFreeCadPort(modified_doc_names),
     )
 
 
-def test_commit_mode_covers_new_file_old_missing_invalid_and_diff_states() -> None:
+def test_commit_mode_git_changed_no_parametric_diff_sets_general_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
-    paths = ["new.FCStd", "old-missing.FCStd", "old-invalid.FCStd", "modified.FCStd", "same.FCStd"]
     snapshot_mapping = {
-        ("c1", "new.FCStd"): SnapshotLoadResult(_snapshot("new.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "new.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        ("c1", "old-missing.FCStd"): SnapshotLoadResult(
-            _snapshot("old-missing.FCStd", "new"), SnapshotLoadStatus.FOUND
-        ),
-        ("c1^", "old-missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-        ("c1", "old-invalid.FCStd"): SnapshotLoadResult(
-            _snapshot("old-invalid.FCStd", "new"), SnapshotLoadStatus.FOUND
-        ),
-        ("c1^", "old-invalid.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.INVALID_SNAPSHOT),
-        ("c1", "modified.FCStd"): SnapshotLoadResult(_snapshot("modified.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "modified.FCStd"): SnapshotLoadResult(_snapshot("modified.FCStd", "old"), SnapshotLoadStatus.FOUND),
-        ("c1", "same.FCStd"): SnapshotLoadResult(_snapshot("same.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "same.FCStd"): SnapshotLoadResult(_snapshot("same.FCStd", "old"), SnapshotLoadStatus.FOUND),
+        ("c1", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "new"), SnapshotLoadStatus.FOUND),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
+    }
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["a.FCStd"]})
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert doc.issues.general == [GeneralDiffIssue.GIT_CHANGED_NO_PARAMETRIC_DIFF]
+    assert doc.snapshot_diff is not None
+
+
+def test_added_file_with_new_snapshot_missing_returns_added_plus_issue() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    snapshot_mapping = {
+        ("c1", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
+    }
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["a.FCStd"]})
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.ADDED
+    assert doc.issues.new_snapshot == SnapshotIssue.MISSING
+
+
+def test_deleted_file_with_old_snapshot_missing_returns_deleted_plus_issue() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    snapshot_mapping = {
+        ("c1", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
+    }
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["a.FCStd"]})
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.DELETED
+    assert doc.issues.old_snapshot == SnapshotIssue.MISSING
+
+
+def test_both_snapshot_missing_surfaces_both_side_issues() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    snapshot_mapping = {
+        ("c1", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
+    }
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["a.FCStd"]})
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert doc.issues.old_snapshot == SnapshotIssue.MISSING
+    assert doc.issues.new_snapshot == SnapshotIssue.MISSING
+
+
+def test_working_tree_dirty_not_open_returns_missing_new_snapshot_issue() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    action = _build_action(snapshot_mapping={}, dirty_paths=["closed.FCStd"])
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=[]))
+
+    doc = result.data[0]
+    assert doc.git_path == "closed.FCStd"
+    assert doc.document_state == DiffState.MODIFIED
+    assert doc.issues == DiffIssues(new_snapshot=SnapshotIssue.MISSING)
+
+
+def test_working_tree_open_modified_doc_included_even_when_git_clean() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
+    snapshot_mapping = {
+        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
     }
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
-        changed_paths={"new.FCStd", "modified.FCStd"},
-        committed_paths={"c1": paths},
+        working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        changed_paths={"a.FCStd"},
+        modified_doc_names={"a"},
+    )
+
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
+    )
+
+    assert len(result.data) == 1
+    assert result.data[0].git_path == "a.FCStd"
+
+
+def test_existing_git_changed_with_parametric_changes_returns_modified_without_file_changed_only_issue() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    snapshot_mapping = {
+        ("c1", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "new"), SnapshotLoadStatus.FOUND),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
+    }
+    action = _build_action(
+        snapshot_mapping=snapshot_mapping,
+        committed_paths={"c1": ["a.FCStd"]},
+        changed_paths={"a.FCStd"},
     )
 
     result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert GeneralDiffIssue.GIT_CHANGED_NO_PARAMETRIC_DIFF not in doc.issues.general
+
+
+def test_existing_git_unchanged_with_parametric_changes_returns_modified_without_file_changed_only_issue() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
+    snapshot_mapping = {
+        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
+    }
+    action = _build_action(
+        snapshot_mapping=snapshot_mapping,
+        working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        changed_paths={"a.FCStd"},
+        modified_doc_names={"a"},
+    )
+
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
+    )
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert GeneralDiffIssue.GIT_CHANGED_NO_PARAMETRIC_DIFF not in doc.issues.general
+
+
+def test_both_documents_missing_returns_unchanged_without_snapshot_issues() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    snapshot_mapping = {
+        ("c1", "ghost.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
+        ("c1^", "ghost.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
+    }
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["ghost.FCStd"]})
+
+    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
+
+    doc = result.data[0]
+    assert doc.document_state == DiffState.UNCHANGED
+    assert doc.issues.old_snapshot is None
+    assert doc.issues.new_snapshot is None
+    assert doc.issues.general == []
+
+
+def test_working_tree_skips_clean_and_unmodified_open_documents() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
+    action = _build_action(snapshot_mapping={}, working_snapshots={"a": _snapshot("a.FCStd", "new")})
+
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
+    )
+
+    assert result.data == []
+
+
+def test_working_tree_diff_candidate_paths_union_dirty_and_open_modified() -> None:
+    repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="open", FileName="/repo/open.FCStd")]
+    snapshot_mapping = {
+        (None, "open.FCStd"): SnapshotLoadResult(_snapshot("open.FCStd", "old"), SnapshotLoadStatus.FOUND),
+    }
+    action = _build_action(
+        snapshot_mapping=snapshot_mapping,
+        dirty_paths=["closed.FCStd"],
+        working_snapshots={"open": _snapshot("open.FCStd", "new")},
+        modified_doc_names={"open"},
+    )
+
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
+    )
 
     by_path = {item.git_path: item for item in result.data}
-    assert by_path["new.FCStd"].status == DocumentDiffStatus.NEW_FILE
-    assert by_path["new.FCStd"].snapshot_diff is not None
-    assert by_path["old-missing.FCStd"].status == DocumentDiffStatus.OLD_SNAPSHOT_MISSING
-    assert by_path["old-missing.FCStd"].snapshot_diff is None
-    assert by_path["old-invalid.FCStd"].status == DocumentDiffStatus.INVALID_SNAPSHOT
-    assert by_path["old-invalid.FCStd"].snapshot_diff is None
-    assert by_path["modified.FCStd"].status == DocumentDiffStatus.MODIFIED
-    assert by_path["modified.FCStd"].snapshot_diff is not None
-    assert by_path["same.FCStd"].status == DocumentDiffStatus.UNCHANGED
+    assert set(by_path.keys()) == {"closed.FCStd", "open.FCStd"}
+    assert by_path["closed.FCStd"].issues.new_snapshot == SnapshotIssue.MISSING
+    assert by_path["open.FCStd"].snapshot_diff is not None
 
 
-def test_commit_mode_when_commit_snapshot_missing_or_invalid_returns_document_status_only() -> None:
+def test_diff_computation_failure_on_git_modified_keeps_state_and_sets_general_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
     snapshot_mapping = {
-        ("c1", "missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-        ("c1^", "missing.FCStd"): SnapshotLoadResult(_snapshot("missing.FCStd", "old"), SnapshotLoadStatus.FOUND),
-        ("c1", "invalid.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.INVALID_SNAPSHOT),
-        ("c1^", "invalid.FCStd"): SnapshotLoadResult(_snapshot("invalid.FCStd", "old"), SnapshotLoadStatus.FOUND),
+        ("c1", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "new"), SnapshotLoadStatus.FOUND),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
     }
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
-        committed_paths={"c1": ["missing.FCStd", "invalid.FCStd"]},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
-    by_path = {item.git_path: item for item in result.data}
-    assert by_path["missing.FCStd"].status == DocumentDiffStatus.SNAPSHOT_MISSING
-    assert by_path["missing.FCStd"].snapshot_diff is None
-    assert by_path["invalid.FCStd"].status == DocumentDiffStatus.INVALID_SNAPSHOT
-    assert by_path["invalid.FCStd"].snapshot_diff is None
-
-
-def test_staging_mode_covers_index_missing_head_missing_and_head_snapshot_missing() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    staged_paths = ["index-missing.FCStd", "head-missing.FCStd", "head-snapshot-missing.FCStd"]
-    snapshot_mapping = {
-        (None, "index-missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-        ("HEAD", "index-missing.FCStd"): SnapshotLoadResult(
-            _snapshot("index-missing.FCStd", "head"), SnapshotLoadStatus.FOUND
-        ),
-        (None, "head-missing.FCStd"): SnapshotLoadResult(
-            _snapshot("head-missing.FCStd", "index"), SnapshotLoadStatus.FOUND
-        ),
-        ("HEAD", "head-missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        (None, "head-snapshot-missing.FCStd"): SnapshotLoadResult(
-            _snapshot("head-snapshot-missing.FCStd", "index"), SnapshotLoadStatus.FOUND
-        ),
-        ("HEAD", "head-snapshot-missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping, staged_paths=staged_paths, changed_paths={"head-missing.FCStd"}
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
-    by_path = {item.git_path: item for item in result.data}
-
-    assert by_path["index-missing.FCStd"].status == DocumentDiffStatus.SNAPSHOT_MISSING
-    assert by_path["head-missing.FCStd"].status == DocumentDiffStatus.NEW_FILE
-    assert by_path["head-missing.FCStd"].snapshot_diff is not None
-    assert by_path["head-snapshot-missing.FCStd"].status == DocumentDiffStatus.OLD_SNAPSHOT_MISSING
-    assert by_path["head-snapshot-missing.FCStd"].snapshot_diff is None
-
-
-def test_working_tree_mode_covers_new_file_and_old_snapshot_missing() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="new"), _Doc(name="missing")]
-    working_snapshots = {
-        "new": _snapshot("new.FCStd", "working"),
-        "missing": _snapshot("missing.FCStd", "working"),
-    }
-    snapshot_mapping = {
-        (None, "new.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        (None, "missing.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping, working_snapshots=working_snapshots, changed_paths={"new.FCStd"}
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, documents=docs))
-    by_path = {item.git_path: item for item in result.data}
-
-    assert by_path["new.FCStd"].status == DocumentDiffStatus.NEW_FILE
-    assert by_path["new.FCStd"].snapshot_diff is not None
-    assert by_path["missing.FCStd"].status == DocumentDiffStatus.OLD_SNAPSHOT_MISSING
-    assert by_path["missing.FCStd"].snapshot_diff is None
-
-
-def test_commit_mode_deleted_file_returns_deleted_status_with_diff() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    snapshot_mapping = {
-        ("c1", "deleted.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        ("c1^", "deleted.FCStd"): SnapshotLoadResult(_snapshot("deleted.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        committed_paths={"c1": ["deleted.FCStd"]},
-        changed_paths={"deleted.FCStd"},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
-    assert result.data is not None
-    assert result.data[0].status == DocumentDiffStatus.DELETED_FILE
-    assert result.data[0].snapshot_diff is not None
-
-
-def test_staging_mode_deleted_file_returns_deleted_status_with_diff() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    snapshot_mapping = {
-        (None, "deleted.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        ("HEAD", "deleted.FCStd"): SnapshotLoadResult(_snapshot("deleted.FCStd", "head"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        staged_paths=["deleted.FCStd"],
-        changed_paths={"deleted.FCStd"},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
-    assert result.data is not None
-    assert result.data[0].status == DocumentDiffStatus.DELETED_FILE
-    assert result.data[0].snapshot_diff is not None
-
-
-def test_deleted_file_with_old_snapshot_missing_returns_deleted_missing_old_snapshot_status_only() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    snapshot_mapping = {
-        ("c1", "deleted.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-        ("c1^", "deleted.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
-    }
-    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["deleted.FCStd"]})
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
-    assert result.data is not None
-    assert result.data[0].status == DocumentDiffStatus.DELETED_FILE_OLD_SNAPSHOT_MISSING
-    assert result.data[0].snapshot_diff is None
-
-
-def test_staging_mode_sets_modified_and_unchanged_from_diff_result() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    staged_paths = ["modified.FCStd", "same.FCStd"]
-    snapshot_mapping = {
-        (None, "modified.FCStd"): SnapshotLoadResult(_snapshot("modified.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "modified.FCStd"): SnapshotLoadResult(_snapshot("modified.FCStd", "head"), SnapshotLoadStatus.FOUND),
-        (None, "same.FCStd"): SnapshotLoadResult(_snapshot("same.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "same.FCStd"): SnapshotLoadResult(_snapshot("same.FCStd", "head"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        staged_paths=staged_paths,
-        changed_paths={"modified.FCStd"},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
-    by_path = {item.git_path: item for item in result.data}
-
-    assert by_path["modified.FCStd"].status == DocumentDiffStatus.MODIFIED
-    assert by_path["modified.FCStd"].snapshot_diff is not None
-    assert by_path["same.FCStd"].status == DocumentDiffStatus.UNCHANGED
-    assert by_path["same.FCStd"].snapshot_diff is not None
-
-
-def test_working_tree_mode_sets_modified_and_unchanged_from_diff_result() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="modified"), _Doc(name="same")]
-    working_snapshots = {
-        "modified": _snapshot("modified.FCStd", "working"),
-        "same": _snapshot("same.FCStd", "working"),
-    }
-    snapshot_mapping = {
-        (None, "modified.FCStd"): SnapshotLoadResult(_snapshot("modified.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        (None, "same.FCStd"): SnapshotLoadResult(_snapshot("same.FCStd", "index"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        working_snapshots=working_snapshots,
-        changed_paths={"modified.FCStd"},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, documents=docs))
-    by_path = {item.git_path: item for item in result.data}
-
-    assert by_path["modified.FCStd"].status == DocumentDiffStatus.MODIFIED
-    assert by_path["modified.FCStd"].snapshot_diff is not None
-    assert by_path["same.FCStd"].status == DocumentDiffStatus.UNCHANGED
-    assert by_path["same.FCStd"].snapshot_diff is not None
-
-
-def test_commit_mode_new_file_keeps_status_when_diff_fails() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    snapshot_mapping = {
-        ("c1", "new.FCStd"): SnapshotLoadResult(_snapshot("new.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "new.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        committed_paths={"c1": ["new.FCStd"]},
-        fail_diff_paths={"new.FCStd"},
-    )
-
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
-    assert result.data is not None
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "new.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.NEW_FILE
-    assert result.data[0].snapshot_diff is None
-
-
-def test_commit_mode_scopes_to_selected_commit_paths_only() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    snapshot_mapping = {
-        ("c1", "selected.FCStd"): SnapshotLoadResult(_snapshot("selected.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "selected.FCStd"): SnapshotLoadResult(_snapshot("selected.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        committed_paths={"c1": ["selected.FCStd"], "c1^": ["unrelated.FCStd"]},
+        committed_paths={"c1": ["a.FCStd"]},
+        fail_diff_paths={"a.FCStd"},
     )
 
     result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
 
-    assert result.data is not None
-    assert [item.git_path for item in result.data] == ["selected.FCStd"]
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert doc.issues.general == [GeneralDiffIssue.DIFF_COMPUTATION_FAILED]
 
 
-def test_staging_mode_new_file_keeps_status_when_diff_fails() -> None:
+def test_diff_computation_failure_on_in_memory_only_keeps_modified_and_sets_general_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
     snapshot_mapping = {
-        (None, "new.FCStd"): SnapshotLoadResult(_snapshot("new.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "new.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING),
+        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
     }
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
-        staged_paths=["new.FCStd"],
-        fail_diff_paths={"new.FCStd"},
+        working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        modified_doc_names={"a"},
+        fail_diff_paths={"a.FCStd"},
     )
 
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
-    assert result.data is not None
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "new.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.NEW_FILE
-    assert result.data[0].snapshot_diff is None
-
-
-def test_working_tree_mode_new_file_keeps_status_when_diff_fails() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="new")]
-    working_snapshots = {"new": _snapshot("new.FCStd", "working")}
-    snapshot_mapping = {(None, "new.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.DOCUMENT_MISSING)}
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        working_snapshots=working_snapshots,
-        fail_diff_paths={"new.FCStd"},
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
     )
 
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, documents=docs))
-    assert result.data is not None
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "new.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.NEW_FILE
-    assert result.data[0].snapshot_diff is None
+    doc = result.data[0]
+    assert doc.document_state == DiffState.MODIFIED
+    assert doc.issues.general == [GeneralDiffIssue.DIFF_COMPUTATION_FAILED]
 
 
-def test_commit_mode_returns_diff_computation_failed_when_existing_file_diff_fails() -> None:
+def test_old_invalid_and_new_missing_issues_both_surface() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
     snapshot_mapping = {
-        ("c1", "broken.FCStd"): SnapshotLoadResult(_snapshot("broken.FCStd", "new"), SnapshotLoadStatus.FOUND),
-        ("c1^", "broken.FCStd"): SnapshotLoadResult(_snapshot("broken.FCStd", "old"), SnapshotLoadStatus.FOUND),
+        ("c1", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.SNAPSHOT_MISSING),
+        ("c1^", "a.FCStd"): SnapshotLoadResult(None, SnapshotLoadStatus.INVALID_SNAPSHOT),
     }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        committed_paths={"c1": ["broken.FCStd"]},
-        fail_diff_paths={"broken.FCStd"},
-    )
+    action = _build_action(snapshot_mapping=snapshot_mapping, committed_paths={"c1": ["a.FCStd"]})
 
     result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.COMMIT, repo=repo, commit_hash="c1"))
 
-    assert result.data is not None
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "broken.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.DIFF_COMPUTATION_FAILED
-    assert result.data[0].snapshot_diff is None
+    doc = result.data[0]
+    assert doc.issues.old_snapshot == SnapshotIssue.INVALID
+    assert doc.issues.new_snapshot == SnapshotIssue.MISSING
 
 
-def test_staging_mode_returns_diff_computation_failed_when_existing_file_diff_fails() -> None:
+def test_working_tree_open_modified_git_clean_no_parametric_changes_stays_unchanged() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
+    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
     snapshot_mapping = {
-        (None, "broken.FCStd"): SnapshotLoadResult(_snapshot("broken.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "broken.FCStd"): SnapshotLoadResult(_snapshot("broken.FCStd", "head"), SnapshotLoadStatus.FOUND),
+        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
     }
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
-        staged_paths=["broken.FCStd"],
-        fail_diff_paths={"broken.FCStd"},
+        working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        modified_doc_names={"a"},
     )
 
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
-
-    assert result.data is not None
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "broken.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.DIFF_COMPUTATION_FAILED
-    assert result.data[0].snapshot_diff is None
-
-
-def test_working_tree_mode_returns_diff_computation_failed_when_existing_file_diff_fails() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="broken")]
-    working_snapshots = {"broken": _snapshot("broken.FCStd", "working")}
-    snapshot_mapping = {
-        (None, "broken.FCStd"): SnapshotLoadResult(_snapshot("broken.FCStd", "index"), SnapshotLoadStatus.FOUND)
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        working_snapshots=working_snapshots,
-        fail_diff_paths={"broken.FCStd"},
+    result = action.execute(
+        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
     )
 
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, documents=docs))
-
-    assert result.data is not None
     assert len(result.data) == 1
-    assert result.data[0].git_path == "broken.FCStd"
-    assert result.data[0].status == DocumentDiffStatus.DIFF_COMPUTATION_FAILED
-    assert result.data[0].snapshot_diff is None
+    assert result.data[0].document_state == DiffState.UNCHANGED
+    assert result.data[0].issues.general == []
 
 
-def test_execute_sorts_results_by_git_path_for_deterministic_order() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    staged_paths = ["z.FCStd", "a.FCStd"]
-    snapshot_mapping = {
-        (None, "z.FCStd"): SnapshotLoadResult(_snapshot("z.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "z.FCStd"): SnapshotLoadResult(_snapshot("z.FCStd", "head"), SnapshotLoadStatus.FOUND),
-        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "index"), SnapshotLoadStatus.FOUND),
-        ("HEAD", "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "head"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(snapshot_mapping=snapshot_mapping, staged_paths=staged_paths)
+def test_diff_issues_blocker_helper() -> None:
+    issues = DiffIssues(old_snapshot=SnapshotIssue.MISSING)
+    assert issues.is_diff_blocker_for(DiffState.DELETED) is True
+    assert issues.is_diff_blocker_for(DiffState.ADDED) is False
 
-    result = action.execute(CreateDocumentDiffsRequest(mode=DocumentDiffMode.STAGING, repo=repo))
 
-    assert [item.git_path for item in result.data] == ["a.FCStd", "z.FCStd"]
+def test_diff_issues_blocker_all_state_combinations() -> None:
+    assert DiffIssues(new_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.ADDED) is True
+    assert DiffIssues(old_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.ADDED) is False
+    assert DiffIssues(old_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.DELETED) is True
+    assert DiffIssues(new_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.DELETED) is False
+    assert DiffIssues(old_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.MODIFIED) is True
+    assert DiffIssues(new_snapshot=SnapshotIssue.MISSING).is_diff_blocker_for(DiffState.UNCHANGED) is True

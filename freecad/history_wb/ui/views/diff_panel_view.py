@@ -257,6 +257,18 @@ class DiffPanelView(QtWidgets.QWidget):
         """Set callback for visual diff click with (git_path, node_path)."""
         self._document_diff_tree.set_visual_diff_callback(callback)
 
+    def set_open_document_for_comparison_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for open-document indicator click with git_path."""
+        self._document_diff_tree.set_open_document_for_comparison_callback(callback)
+
+    def focus_window(self) -> None:
+        """Bring the top-level history panel window to foreground."""
+        window = self.window()
+        window.show()
+        window.raise_()
+        window.activateWindow()
+        window.setFocus()
+
     # DiffView protocol methods
     def show_doc_diff(self, nodes: list[NodePresentation], git_path: str = "") -> None:
         """Display the diff tree with color-coded nodes.

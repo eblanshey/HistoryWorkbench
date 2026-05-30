@@ -141,6 +141,12 @@ class DiffView(Protocol):
     def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
         """Set callback for visual diff click with (git_path, node_path)."""
 
+    def set_open_document_for_comparison_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for document-open indicator click with git_path."""
+
+    def focus_window(self) -> None:
+        """Bring history panel window to foreground and focus it."""
+
     def collapse_tree_item(self, git_path: str) -> None:
         """Collapse the root tree item for the given git_path.
 

@@ -246,6 +246,37 @@ class TestGetStagedFiles:
         assert result == []
 
 
+class _FakeDirtyPort(FakeGitPort):
+    def __init__(self, dirty_paths: list[str]) -> None:
+        super().__init__()
+        self._dirty_paths = dirty_paths
+
+    def get_dirty_paths(self, git_root: str) -> list[str]:
+        if git_root != "/repo":
+            return []
+        return self._dirty_paths
+
+
+class TestGetDirtyFiles:
+    """Tests for GitService.get_dirty_files() delegation."""
+
+    def test_returns_dirty_paths_from_port(self) -> None:
+        service = GitService(git_port=_FakeDirtyPort(["a.FCStd", "nested/b.FCStd"]))
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.get_dirty_files(repo=repo)
+
+        assert result == ["a.FCStd", "nested/b.FCStd"]
+
+    def test_returns_empty_when_port_reports_no_dirty_paths(self) -> None:
+        service = GitService(git_port=_FakeDirtyPort([]))
+        repo = GitRepository(name="repo", absolute_path="/repo")
+
+        result = service.get_dirty_files(repo=repo)
+
+        assert result == []
+
+
 class TestGetFileContents:
     """Tests for GitService.get_file_contents() delegation."""
 

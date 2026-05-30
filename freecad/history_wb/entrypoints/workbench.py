@@ -188,6 +188,7 @@ if Gui is not None:
             try:
                 from .._container import _container
                 from ..ui.composer import compose_and_register_ui
+                from ..ui.registry import ui_registry
 
                 # Get MDI area
                 main_window = getMainWindow()
@@ -208,6 +209,10 @@ if Gui is not None:
                 self._subwindow.resize(900, 600)
                 self._subwindow.show()
 
+                diff_presenter = ui_registry.diff_presenter
+                if diff_presenter is not None:
+                    diff_presenter.set_focus_history_window_callback(self._focus_diff_panel_deferred)
+
                 # Connect window close cleanup
                 self._subwindow.destroyed.connect(self._on_subwindow_closed)
 
@@ -218,3 +223,17 @@ if Gui is not None:
             """Called when the diff panel subwindow is closed."""
             Log.info("Diff panel closed.")
             self._subwindow = None  # Reset reference so new one will be created on next activation
+
+        def _focus_diff_panel_deferred(self) -> None:
+            """Queue focus on diff subwindow after FreeCAD activation events settle."""
+
+            def _focus() -> None:
+                subwindow = self._subwindow
+                if subwindow is None:
+                    return
+                subwindow.show()
+                subwindow.raise_()
+                subwindow.activateWindow()
+                subwindow.setFocus(QtCore.Qt.FocusReason.OtherFocusReason)
+
+            QtCore.QTimer.singleShot(75, _focus)

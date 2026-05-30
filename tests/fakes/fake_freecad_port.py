@@ -120,6 +120,12 @@ class FakeFreeCadPort(FreeCadPort):
         doc.save()
         return True
 
+    def is_document_modified(self, doc: DocumentLike) -> bool:
+        """Return True when fake modified name set contains document name."""
+        self._call_log.append("is_document_modified")
+        modified_names = getattr(self, "_modified_doc_names", set())
+        return getattr(doc, "Name", "") in modified_names
+
     def try_recompute_active_document(self) -> None:
         """Log the call (not actually recomputing)."""
         self._call_log.append("try_recompute_active_document")

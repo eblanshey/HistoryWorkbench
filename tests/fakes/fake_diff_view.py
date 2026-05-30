@@ -32,6 +32,7 @@ class FakeDiffView:
         self._mark_all_reviewed_from_in_progress_callback: Callable[[], None] | None = None
         self._remove_all_button_callback: Callable[[], None] | None = None
         self._visual_diff_callback: Callable[[str, str], None] | None = None
+        self._open_document_for_comparison_callback: Callable[[str], None] | None = None
         self._restore_button_callback: Callable[[str], None] | None = None
         self._restore_all_button_callback: Callable[[], None] | None = None
         self._restore_all_from_history_context_callback: Callable[[HistorySelection], None] | None = None
@@ -129,6 +130,11 @@ class FakeDiffView:
         self._record_call("set_visual_diff_callback", callback=callback)
         self._visual_diff_callback = callback
 
+    def set_open_document_for_comparison_callback(self, callback: Callable[[str], None]) -> None:
+        """Capture open-document callback registration."""
+        self._record_call("set_open_document_for_comparison_callback", callback=callback)
+        self._open_document_for_comparison_callback = callback
+
     def trigger_visual_diff_callback(self, git_path: str, node_path: str) -> None:
         """Trigger visual diff callback for tests."""
         if self._visual_diff_callback is not None:
@@ -145,6 +151,11 @@ class FakeDiffView:
         """
         if self._add_button_callback is not None:
             self._add_button_callback(git_path)
+
+    def trigger_open_document_for_comparison_callback(self, git_path: str) -> None:
+        """Trigger registered open-document callback for tests."""
+        if self._open_document_for_comparison_callback is not None:
+            self._open_document_for_comparison_callback(git_path)
 
     def _record_call(self, method: str, **kwargs: Any) -> dict[str, Any]:
         """Record a method call for later verification."""
@@ -186,6 +197,10 @@ class FakeDiffView:
     def show_error_message(self, title: str, message: str) -> None:
         """Capture error message display call."""
         self._record_call("show_error_message", title=title, message=message)
+
+    def focus_window(self) -> None:
+        """Capture focus-window request."""
+        self._record_call("focus_window")
 
     def show_save_iteration_dialog(self) -> str | None:
         """Capture save iteration dialog call and return configured result."""

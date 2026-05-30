@@ -12,15 +12,15 @@ import pytest
 from freecad.history_wb.infrastructure.git.git_port_adapter import GitPortAdapter
 
 
-def test_get_dirty_paths_returns_modified_and_untracked():
-    """Given modified and untracked files in git status output, returns their paths."""
+def test_get_dirty_paths_returns_only_fcstd_modified_and_untracked():
+    """Given mixed dirty files, returns FCStd paths only."""
     # Git porcelain format: "<index_status><wt_status> <path>"
     # " M" = modified in working tree (not yet staged)
     # "??" = untracked file
     mock_result = subprocess.CompletedProcess(
         args=["git", "status", "--porcelain"],
         returncode=0,
-        stdout=" M src/file.py\n?? new.txt\n",
+        stdout=" M doc.FCStd\n?? new.FCStd\n M src/file.py\n?? new.txt\n",
         stderr="",
     )
 
@@ -28,7 +28,7 @@ def test_get_dirty_paths_returns_modified_and_untracked():
         adapter = GitPortAdapter()
         result = adapter.get_dirty_paths("/path/to/repo")
 
-        assert set(result) == {"src/file.py", "new.txt"}
+        assert set(result) == {"doc.FCStd", "new.FCStd"}
 
 
 def test_get_dirty_paths_empty_for_clean_repo():
@@ -119,7 +119,7 @@ def test_get_dirty_paths_handles_filenames_with_spaces():
     mock_result = subprocess.CompletedProcess(
         args=["git", "status", "--porcelain"],
         returncode=0,
-        stdout=" M path/with spaces/file.txt\n?? new file.txt\n",
+        stdout=" M path/with spaces/file.FCStd\n?? new file.FCStd\n",
         stderr="",
     )
 
@@ -127,7 +127,7 @@ def test_get_dirty_paths_handles_filenames_with_spaces():
         adapter = GitPortAdapter()
         result = adapter.get_dirty_paths("/path/to/repo")
 
-        assert set(result) == {"path/with spaces/file.txt", "new file.txt"}
+        assert set(result) == {"path/with spaces/file.FCStd", "new file.FCStd"}
 
 
 def test_get_dirty_paths_handles_git_quoted_paths_with_spaces():
@@ -135,7 +135,7 @@ def test_get_dirty_paths_handles_git_quoted_paths_with_spaces():
     mock_result = subprocess.CompletedProcess(
         args=["git", "status", "--porcelain"],
         returncode=0,
-        stdout=' M "path/with spaces/file.txt"\n?? "new file.txt"\n',
+        stdout=' M "path/with spaces/file.FCStd"\n?? "new file.FCStd"\n',
         stderr="",
     )
 
@@ -143,7 +143,7 @@ def test_get_dirty_paths_handles_git_quoted_paths_with_spaces():
         adapter = GitPortAdapter()
         result = adapter.get_dirty_paths("/path/to/repo")
 
-        assert set(result) == {"path/with spaces/file.txt", "new file.txt"}
+        assert set(result) == {"path/with spaces/file.FCStd", "new file.FCStd"}
 
 
 def test_get_dirty_paths_handles_mixed_status_codes():
@@ -151,7 +151,7 @@ def test_get_dirty_paths_handles_mixed_status_codes():
     mock_result = subprocess.CompletedProcess(
         args=["git", "status", "--porcelain"],
         returncode=0,
-        stdout="MM modified_twice.py\nM  staged_only.py\n M unstaged_modified.py\n?? untracked.txt\n",
+        stdout="MM modified_twice.FCStd\nM  staged_only.FCStd\n M unstaged_modified.FCStd\n?? untracked.FCStd\n",
         stderr="",
     )
 
@@ -164,7 +164,7 @@ def test_get_dirty_paths_handles_mixed_status_codes():
         # - M : staged only, no WT changes (NOT dirty)
         # -  M: modified in WT but not staged (dirty)
         # - ??: untracked (dirty)
-        assert set(result) == {"modified_twice.py", "unstaged_modified.py", "untracked.txt"}
+        assert set(result) == {"modified_twice.FCStd", "unstaged_modified.FCStd", "untracked.FCStd"}
 
 
 def test_get_dirty_paths_handles_z_paths_with_newlines():
@@ -188,7 +188,7 @@ def test_get_dirty_paths_preserves_z_path_spaces():
     mock_result = subprocess.CompletedProcess(
         args=["git", "status", "--porcelain", "-z"],
         returncode=0,
-        stdout=" M  leading and trailing .FCStd \x00",
+        stdout=" M  leading and trailing.FCStd \x00",
         stderr="",
     )
 
@@ -196,4 +196,4 @@ def test_get_dirty_paths_preserves_z_path_spaces():
         adapter = GitPortAdapter()
         result = adapter.get_dirty_paths("/path/to/repo")
 
-        assert result == [" leading and trailing .FCStd "]
+        assert result == []

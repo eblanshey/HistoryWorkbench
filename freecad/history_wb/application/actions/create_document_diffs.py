@@ -1,23 +1,27 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# File responsibility: Application action orchestrating document-level diff statuses by mode.
+# File responsibility: Application action orchestrating document-level diff results by mode.
 """Application action for document-level diff orchestration."""
 
 from datetime import datetime
 
+from ...domain.diff.models import DiffState
+from ...domain.freecad_ports import DocumentLike, FreeCadPort
+from ...domain.git.git_service import GitService
 from ...domain.git.models import GitRepository
+from ...domain.git.paths import relative_git_path
 from ...domain.snapshots.models import Snapshot
 from ...utils import Log
 from .create_diff import CreateDiffAction
 from .create_document_snapshot_commit import CreateDocumentSnapshotForCommitAction
 from .create_document_snapshot_working import CreateDocumentSnapshotForWorkingTreeAction
-from .get_committed_file_paths import GetCommittedFilePathsAction
-from .get_staged_file_paths import GetStagedFilePathsAction
 from .result_models import (
     CreateDocumentDiffsRequest,
+    DiffIssues,
     DocumentDiffMode,
     DocumentDiffResult,
-    DocumentDiffStatus,
+    GeneralDiffIssue,
     Result,
+    SnapshotIssue,
     SnapshotLoadResult,
     SnapshotLoadStatus,
 )
@@ -27,46 +31,21 @@ __all__ = ["CreateDocumentDiffsAction"]
 
 
 class CreateDocumentDiffsAction:
-    """Compute document-level diffs for commit/staging/working-tree modes.
-
-    Document status mapping used by orchestration:
-    - NEW_FILE:
-      new side has FCStd + snapshot; old side FCStd is missing.
-      Diff tree is computed as empty-old -> new snapshot.
-    - DELETED_FILE:
-      old side has snapshot; new side FCStd is missing.
-      Diff tree is computed as old snapshot -> empty-new.
-    - DELETED_FILE_OLD_SNAPSHOT_MISSING:
-      new side FCStd is missing and old side snapshot YAML is missing.
-      Status-only result with deleted document state; tree cannot be generated.
-    - OLD_SNAPSHOT_MISSING:
-      old side FCStd exists but old snapshot YAML is missing.
-      Status-only result, no document-row added/deleted highlight.
-    - SNAPSHOT_MISSING:
-      selected/new side FCStd exists but selected/new snapshot YAML is missing,
-      or selected/new side has no usable comparison data.
-    - INVALID_SNAPSHOT:
-      selected side or old side snapshot YAML exists but is invalid.
-    - MODIFIED / UNCHANGED:
-      both sides have valid snapshots and diff computes successfully.
-    - DIFF_COMPUTATION_FAILED:
-      both sides available for normal diff, but diff engine failed.
-      (new/deleted statuses are preserved on diff failure for those cases.)
-    """
+    """Compute document-level diffs for commit/staging/working-tree modes."""
 
     def __init__(
         self,
         create_working_snapshot_action: CreateDocumentSnapshotForWorkingTreeAction,
         create_commit_snapshot_action: CreateDocumentSnapshotForCommitAction,
         create_diff_action: CreateDiffAction,
-        get_staged_file_paths_action: GetStagedFilePathsAction,
-        get_committed_file_paths_action: GetCommittedFilePathsAction,
+        git_service: GitService,
+        freecad_port: FreeCadPort,
     ) -> None:
         self._create_working_snapshot = create_working_snapshot_action
         self._create_commit_snapshot = create_commit_snapshot_action
         self._create_diff = create_diff_action
-        self._get_staged_file_paths = get_staged_file_paths_action
-        self._get_committed_file_paths = get_committed_file_paths_action
+        self._git_service = git_service
+        self._freecad_port = freecad_port
 
     def execute(self, request: CreateDocumentDiffsRequest) -> Result:
         """Execute orchestration and return document-level diff results."""
@@ -86,48 +65,35 @@ class CreateDocumentDiffsAction:
         if not commit_hash:
             return []
 
-        commit_result = self._get_committed_file_paths.execute(request.repo, commit_hash)
-        commit_paths = set(commit_result.data) if commit_result.is_success and commit_result.data else set()
-
-        results: list[DocumentDiffResult] = []
-        for git_path in commit_paths:
-            commit_load = self._load_snapshot(request.repo, commit_hash, git_path)
-            parent_load = self._load_snapshot(request.repo, commit_hash + "^", git_path)
-            results.append(
-                self._build_document_diff_result(
-                    git_path,
-                    new_load=commit_load,
-                    old_load=parent_load,
-                    mode="commit",
-                )
-            )
-
-        return results
+        commit_paths = set(self._git_service.get_committed_files(request.repo, commit_hash))
+        return self._compute_for_paths(request.repo, commit_paths, commit_hash, f"{commit_hash}^")
 
     def _compute_staged_diffs(self, request: CreateDocumentDiffsRequest) -> list[DocumentDiffResult]:
-        staged = self._get_staged_file_paths.execute(request.repo)
-        staged_paths = staged.data if staged.is_success and staged.data else []
-
-        results: list[DocumentDiffResult] = []
-        for git_path in staged_paths:
-            index_load = self._load_snapshot(request.repo, None, git_path)
-            head_load = self._load_snapshot(request.repo, "HEAD", git_path)
-            results.append(
-                self._build_document_diff_result(
-                    git_path,
-                    new_load=index_load,
-                    old_load=head_load,
-                    mode="staged",
-                )
-            )
-
-        return results
+        staged_paths = set(self._git_service.get_staged_files(request.repo))
+        return self._compute_for_paths(request.repo, staged_paths, None, "HEAD")
 
     def _compute_working_tree_diffs(self, request: CreateDocumentDiffsRequest) -> list[DocumentDiffResult]:
-        docs = request.documents or []
+        """
+        Working tree diffs are computed against dirty git path and opened eligible documents. This supports
+        scenarios where a user made changes but hasn't saved the document yet.
+        To simplify this in the future we can make saving documents a requirement to view diffs.
+        """
+        eligible_docs = request.eligible_docs or []
+        dirty_paths, open_modified_paths = self._working_tree_candidate_paths(request.repo, eligible_docs)
+        diff_candidate_paths = dirty_paths | open_modified_paths
+        if not diff_candidate_paths:
+            return []
+
+        eligible_docs_by_path = self._documents_by_git_path(request.repo, eligible_docs)
+
         results: list[DocumentDiffResult] = []
-        for doc in docs:
-            working = self._create_working_snapshot.execute(request.repo, doc)
+        for git_path in sorted(diff_candidate_paths):
+            document = eligible_docs_by_path.get(git_path)
+            if document is None:
+                results.append(self._result_for_dirty_path_not_open(git_path, dirty_paths))
+                continue
+
+            working = self._create_working_snapshot.execute(request.repo, document)
             if not working.is_success or working.data is None:
                 Log.warning(f"Failed to create working snapshot: {working.message}")
                 continue
@@ -140,26 +106,92 @@ class CreateDocumentDiffsAction:
                     working_snapshot.git_path,
                     new_load=working_load,
                     old_load=old_load,
+                    git_changed_paths=dirty_paths,
+                    open_modified_paths=open_modified_paths,
                     mode="working-tree",
                 )
             )
 
         return results
 
+    def _documents_by_git_path(self, repo: GitRepository, documents: list[DocumentLike]) -> dict[str, DocumentLike]:
+        """Build map of open eligible documents keyed by git path."""
+        docs_by_path: dict[str, DocumentLike] = {}
+        for document in documents:
+            doc_path = getattr(document, "FileName", "")
+            if not doc_path:
+                continue
+            try:
+                docs_by_path[relative_git_path(doc_path, repo.absolute_path)] = document
+            except ValueError:
+                continue
+        return docs_by_path
+
+    def _result_for_dirty_path_not_open(
+        self,
+        git_path: str,
+        dirty_paths: set[str],
+    ) -> DocumentDiffResult:
+        """Return status-only result when git dirty path has no open doc."""
+        if git_path not in dirty_paths:
+            raise RuntimeError(f"Unexpected non-dirty path without open document: {git_path}")
+        return DocumentDiffResult(
+            git_path=git_path,
+            document_state=DiffState.MODIFIED,
+            issues=DiffIssues(new_snapshot=SnapshotIssue.MISSING),
+        )
+
+    def _working_tree_candidate_paths(
+        self,
+        repo: GitRepository,
+        eligible_docs: list[DocumentLike],
+    ) -> tuple[set[str], set[str]]:
+        """Return working tree dirty paths and open modified paths."""
+        dirty_paths = set(self._git_service.get_dirty_files(repo))
+        open_modified_paths: set[str] = set()
+        for doc in eligible_docs:
+            doc_path = getattr(doc, "FileName", "")
+            if not doc_path:
+                continue
+            if not self._freecad_port.is_document_modified(doc):
+                continue
+            try:
+                open_modified_paths.add(relative_git_path(doc_path, repo.absolute_path))
+            except ValueError:
+                continue
+        return dirty_paths, open_modified_paths
+
+    def _compute_for_paths(
+        self,
+        repo: GitRepository,
+        git_paths: set[str],
+        new_ref: str | None,
+        old_ref: str | None,
+    ) -> list[DocumentDiffResult]:
+        results: list[DocumentDiffResult] = []
+        for git_path in git_paths:
+            new_load = self._load_snapshot(repo, new_ref, git_path)
+            old_load = self._load_snapshot(repo, old_ref, git_path)
+            results.append(
+                self._build_document_diff_result(
+                    git_path,
+                    new_load=new_load,
+                    old_load=old_load,
+                    git_changed_paths=git_paths,
+                    open_modified_paths=set(),
+                    mode="historical",
+                )
+            )
+        return results
+
     def _load_snapshot(self, repo: GitRepository, commit: str | None, git_path: str) -> SnapshotLoadResult:
+        """Load one snapshot result from commit snapshot action."""
         load_result = self._create_commit_snapshot.execute(repo, commit, git_path)
         if not load_result.is_success or load_result.data is None:
-            return SnapshotLoadResult(snapshot=None, status=SnapshotLoadStatus.INVALID_SNAPSHOT)
-        if isinstance(load_result.data, Snapshot):
-            return SnapshotLoadResult(snapshot=load_result.data, status=SnapshotLoadStatus.FOUND)
+            raise RuntimeError(f"Snapshot load failed for {git_path} @ {commit}: {load_result.message}")
+        if not isinstance(load_result.data, SnapshotLoadResult):
+            raise RuntimeError(f"Unexpected snapshot load payload type for {git_path} @ {commit}")
         return load_result.data
-
-    def _classify_missing_old_snapshot(self, status: SnapshotLoadStatus) -> DocumentDiffStatus:
-        if status == SnapshotLoadStatus.DOCUMENT_MISSING:
-            return DocumentDiffStatus.NEW_FILE
-        if status == SnapshotLoadStatus.INVALID_SNAPSHOT:
-            return DocumentDiffStatus.INVALID_SNAPSHOT
-        return DocumentDiffStatus.OLD_SNAPSHOT_MISSING
 
     def _empty_snapshot_for(self, source: Snapshot) -> Snapshot:
         """Build empty snapshot matching source identity for add/delete diffing."""
@@ -172,126 +204,145 @@ class CreateDocumentDiffsAction:
             git_path=source.git_path,
         )
 
-    def _compute_status_only_result(self, git_path: str, status: DocumentDiffStatus) -> DocumentDiffResult:
-        """Create status-only document result without diff tree."""
-        return DocumentDiffResult(git_path=git_path, status=status)
+    def _document_exists(self, load: SnapshotLoadResult) -> bool:
+        """Return whether FCStd exists on selected side."""
+        return load.status != SnapshotLoadStatus.DOCUMENT_MISSING
+
+    def _document_state_for_loads(
+        self,
+        old_load: SnapshotLoadResult,
+        new_load: SnapshotLoadResult,
+        file_has_changed: bool,
+    ) -> DiffState:
+        """Compute git-like document state from side existence and git change."""
+        old_exists = self._document_exists(old_load)
+        new_exists = self._document_exists(new_load)
+        if not old_exists and new_exists:
+            return DiffState.ADDED
+        if old_exists and not new_exists:
+            return DiffState.DELETED
+        if not old_exists and not new_exists:
+            Log.warning("Both old/new document missing while building document diff result")
+            return DiffState.UNCHANGED
+        return DiffState.MODIFIED if file_has_changed else DiffState.UNCHANGED
+
+    def _snapshot_issue_for_load(self, load: SnapshotLoadResult) -> SnapshotIssue | None:
+        """Map one side load status into side issue."""
+        if load.status == SnapshotLoadStatus.SNAPSHOT_MISSING:
+            return SnapshotIssue.MISSING
+        if load.status == SnapshotLoadStatus.INVALID_SNAPSHOT:
+            return SnapshotIssue.INVALID
+        return None
+
+    def _issues_for_loads(self, old_load: SnapshotLoadResult, new_load: SnapshotLoadResult) -> DiffIssues:
+        """Collect side issues from both load results without short-circuit."""
+        return DiffIssues(
+            old_snapshot=self._snapshot_issue_for_load(old_load),
+            new_snapshot=self._snapshot_issue_for_load(new_load),
+        )
+
+    def _snapshots_for_diff(
+        self,
+        document_state: DiffState,
+        old_load: SnapshotLoadResult,
+        new_load: SnapshotLoadResult,
+    ) -> tuple[Snapshot, Snapshot]:
+        """Select snapshots for diff according to document state."""
+        if document_state == DiffState.ADDED:
+            new_snapshot = new_load.snapshot
+            if new_snapshot is None:
+                raise RuntimeError("Missing new snapshot for added file")
+            return self._empty_snapshot_for(new_snapshot), new_snapshot
+        if document_state == DiffState.DELETED:
+            old_snapshot = old_load.snapshot
+            if old_snapshot is None:
+                raise RuntimeError("Missing old snapshot for deleted file")
+            return old_snapshot, self._empty_snapshot_for(old_snapshot)
+
+        old_snapshot = old_load.snapshot
+        new_snapshot = new_load.snapshot
+        if old_snapshot is None or new_snapshot is None:
+            raise RuntimeError("Missing snapshots for modified/unchanged file")
+        return old_snapshot, new_snapshot
 
     def _compute_diff_result(
         self,
-        *,
         git_path: str,
         old_snapshot: Snapshot,
         new_snapshot: Snapshot,
-        status_on_diff_failure: DocumentDiffStatus,
+        document_state: DiffState,
+        issues: DiffIssues,
+        git_file_changed: bool,
         mode: str,
     ) -> DocumentDiffResult:
-        """Compute tree diff and map success/failure to document result.
-
-        Diff-result mapping:
-        - NEW_FILE: return NEW_FILE with added-node tree diff.
-        - DELETED_FILE: return DELETED_FILE with deleted-node tree diff.
-        - DIFF_COMPUTATION_FAILED: used for normal old->new comparisons only.
-
-        Failure mapping:
-        - new/deleted document comparisons preserve NEW_FILE/DELETED_FILE even
-          when diff computation fails, so document-level state is not lost.
-        - regular comparisons map failures to DIFF_COMPUTATION_FAILED.
-        """
+        """Compute tree diff and finalize result state/issues."""
         diff = self._create_diff.execute(old_snapshot, new_snapshot)
         if not diff.is_success or diff.data is None:
             Log.warning(f"Failed to compute {mode} diff for {git_path}: {diff.message}")
-            return DocumentDiffResult(git_path=git_path, status=status_on_diff_failure)
+            issues.general.append(GeneralDiffIssue.DIFF_COMPUTATION_FAILED)
+            return DocumentDiffResult(git_path=git_path, document_state=document_state, issues=issues)
 
-        if status_on_diff_failure in (DocumentDiffStatus.NEW_FILE, DocumentDiffStatus.DELETED_FILE):
-            return DocumentDiffResult(git_path=git_path, status=status_on_diff_failure, snapshot_diff=diff.data)
-
-        status = DocumentDiffStatus.MODIFIED if diff.data.has_changes else DocumentDiffStatus.UNCHANGED
-        return DocumentDiffResult(git_path=git_path, status=status, snapshot_diff=diff.data)
-
-    def _result_for_missing_new_snapshot(
-        self,
-        *,
-        git_path: str,
-        new_load: SnapshotLoadResult,
-        old_load: SnapshotLoadResult,
-        mode: str,
-    ) -> DocumentDiffResult | None:
-        """Handle outcomes when selected/new side snapshot missing or document deleted."""
-        status = new_load.status
-
-        if status == SnapshotLoadStatus.FOUND:
-            return None
-        if status == SnapshotLoadStatus.SNAPSHOT_MISSING:
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.SNAPSHOT_MISSING)
-        if status == SnapshotLoadStatus.INVALID_SNAPSHOT:
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.INVALID_SNAPSHOT)
-        if status != SnapshotLoadStatus.DOCUMENT_MISSING:
-            Log.warning(f"Unhandled new snapshot load status for {git_path}: {status.name}")
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.INVALID_SNAPSHOT)
-
-        # Handle DOCUMENT_MISSING status
-        if old_load.snapshot is not None:
-            empty_new_snapshot = self._empty_snapshot_for(old_load.snapshot)
-            return self._compute_diff_result(
+        if document_state in (DiffState.ADDED, DiffState.DELETED):
+            return DocumentDiffResult(
                 git_path=git_path,
-                old_snapshot=old_load.snapshot,
-                new_snapshot=empty_new_snapshot,
-                status_on_diff_failure=DocumentDiffStatus.DELETED_FILE,
-                mode=f"deleted-file {mode}",
+                document_state=document_state,
+                issues=issues,
+                snapshot_diff=diff.data,
             )
-        if old_load.status == SnapshotLoadStatus.SNAPSHOT_MISSING:
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.DELETED_FILE_OLD_SNAPSHOT_MISSING)
-        if old_load.status == SnapshotLoadStatus.INVALID_SNAPSHOT:
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.INVALID_SNAPSHOT)
-        return self._compute_status_only_result(git_path, DocumentDiffStatus.SNAPSHOT_MISSING)
+
+        if diff.data.has_changes:
+            return DocumentDiffResult(
+                git_path=git_path,
+                document_state=DiffState.MODIFIED,
+                issues=issues,
+                snapshot_diff=diff.data,
+            )
+
+        if git_file_changed:
+            issues.general.append(GeneralDiffIssue.GIT_CHANGED_NO_PARAMETRIC_DIFF)
+            return DocumentDiffResult(
+                git_path=git_path,
+                document_state=DiffState.MODIFIED,
+                issues=issues,
+                snapshot_diff=diff.data,
+            )
+
+        return DocumentDiffResult(
+            git_path=git_path,
+            document_state=DiffState.UNCHANGED,
+            issues=issues,
+            snapshot_diff=diff.data,
+        )
 
     def _build_document_diff_result(
         self,
         git_path: str,
         new_load: SnapshotLoadResult,
         old_load: SnapshotLoadResult,
+        git_changed_paths: set[str],
+        open_modified_paths: set[str],
         mode: str,
     ) -> DocumentDiffResult:
-        """Build one document-level diff result from snapshot load outcomes.
+        """Build one document-level result from state, issues, and optional diff."""
+        git_file_changed = git_path in git_changed_paths
+        open_modified = git_path in open_modified_paths
+        has_any_change = git_file_changed or open_modified
+        document_state = self._document_state_for_loads(old_load, new_load, has_any_change)
+        issues = self._issues_for_loads(old_load, new_load)
 
-        Case handling:
-        - new DOCUMENT_MISSING + old snapshot present -> DELETED_FILE (+ deleted-node tree)
-        - new DOCUMENT_MISSING + old SNAPSHOT_MISSING -> DELETED_FILE_OLD_SNAPSHOT_MISSING (status-only)
-        - new SNAPSHOT_MISSING -> SNAPSHOT_MISSING (status-only)
-        - old DOCUMENT_MISSING + new snapshot present -> NEW_FILE (+ added-node tree)
-        - old SNAPSHOT_MISSING -> OLD_SNAPSHOT_MISSING (status-only)
-        """
-        missing_new_result = self._result_for_missing_new_snapshot(
-            git_path=git_path,
-            new_load=new_load,
-            old_load=old_load,
-            mode=mode,
-        )
-        if missing_new_result is not None:
-            return missing_new_result
+        if not self._document_exists(old_load) and not self._document_exists(new_load):
+            return DocumentDiffResult(git_path=git_path, document_state=document_state, issues=issues)
 
-        new_snapshot = new_load.snapshot
-        if new_snapshot is None:
-            # Defensive guard for inconsistent loader output: status FOUND but missing snapshot payload.
-            return self._compute_status_only_result(git_path, DocumentDiffStatus.INVALID_SNAPSHOT)
+        if issues.is_diff_blocker_for(document_state):
+            return DocumentDiffResult(git_path=git_path, document_state=document_state, issues=issues)
 
-        if old_load.snapshot is None:
-            old_status = self._classify_missing_old_snapshot(old_load.status)
-            if old_status != DocumentDiffStatus.NEW_FILE:
-                return self._compute_status_only_result(git_path, old_status)
-            empty_old_snapshot = self._empty_snapshot_for(new_snapshot)
-            return self._compute_diff_result(
-                git_path=git_path,
-                old_snapshot=empty_old_snapshot,
-                new_snapshot=new_snapshot,
-                status_on_diff_failure=DocumentDiffStatus.NEW_FILE,
-                mode=f"new-file {mode}",
-            )
-
+        old_snapshot, new_snapshot = self._snapshots_for_diff(document_state, old_load, new_load)
         return self._compute_diff_result(
             git_path=git_path,
-            old_snapshot=old_load.snapshot,
+            old_snapshot=old_snapshot,
             new_snapshot=new_snapshot,
-            status_on_diff_failure=DocumentDiffStatus.DIFF_COMPUTATION_FAILED,
+            document_state=document_state,
+            issues=issues,
+            git_file_changed=git_file_changed,
             mode=mode,
         )

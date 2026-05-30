@@ -70,7 +70,8 @@ class FreeCadPortAdapter:
     def save_document(self, doc: DocumentLike) -> None:
         doc.save()
 
-    def _get_gui_doc_modified(self, doc: DocumentLike) -> bool:
+    def is_document_modified(self, doc: DocumentLike) -> bool:
+        """Return GUI modified flag for document without saving."""
         doc_name = getattr(doc, "Name", "")
         if not doc_name:
             return False
@@ -89,7 +90,7 @@ class FreeCadPortAdapter:
             return False
 
     def save_document_if_modified(self, doc: DocumentLike) -> bool:
-        if not self._get_gui_doc_modified(doc):
+        if not self.is_document_modified(doc):
             return False
         doc.save()
         return True

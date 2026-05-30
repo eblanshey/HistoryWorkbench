@@ -761,3 +761,38 @@ class TestSetStageButtonEnabled:
 
         widget.set_stage_button_enabled("parts/A.FCStd", False)
         assert not stage_button.isEnabled()
+
+
+class TestOpenDocumentIndicator:
+    """Tests for working-tree open-document indicator interaction."""
+
+    def test_open_document_indicator_click_invokes_callback(self, widget) -> None:  # type: ignore[no-untyped-def]
+        from freecad.history_wb.ui.presenters.presentation_models import (
+            DiffTreePresentation,
+            WorkingTreeDocumentClosedIndicator,
+        )
+        from freecad.history_wb.ui.views.models import HistorySelection
+
+        captured: list[str] = []
+        widget.set_open_document_for_comparison_callback(lambda git_path: captured.append(git_path))
+        widget.set_current_history_selection(HistorySelection(item_kind="WORKING_TREE", commit_hash=None))
+
+        widget.show_doc_diffs(
+            [
+                DiffTreePresentation(
+                    nodes=[],
+                    git_path="parts/A.FCStd",
+                    indicators=[WorkingTreeDocumentClosedIndicator()],
+                )
+            ]
+        )
+
+        root_item = widget.tree_widget.topLevelItem(0)
+        assert root_item is not None
+        row_widget = widget.tree_widget.itemWidget(root_item, 0)
+        assert row_widget is not None
+        buttons = row_widget.findChildren(QtWidgets.QAbstractButton)
+        assert len(buttons) >= 1
+        buttons[0].click()
+
+        assert captured == ["parts/A.FCStd"]

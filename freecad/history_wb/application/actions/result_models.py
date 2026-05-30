@@ -1,10 +1,11 @@
 """File responsibility: Action and document-diff result models for application orchestration."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any
 
 from ...domain.diff import DiffResult
+from ...domain.diff.models import DiffState
 from ...domain.freecad_ports import DocumentLike
 from ...domain.git.models import GitRepository
 from ...domain.snapshots import Snapshot
@@ -17,7 +18,9 @@ __all__ = [
     "SnapshotSummary",
     "SnapshotLoadStatus",
     "SnapshotLoadResult",
-    "DocumentDiffStatus",
+    "SnapshotIssue",
+    "GeneralDiffIssue",
+    "DiffIssues",
     "DocumentDiffResult",
     "DocumentDiffMode",
     "CreateDocumentDiffsRequest",
@@ -41,18 +44,39 @@ class SnapshotLoadResult:
     status: SnapshotLoadStatus
 
 
-class DocumentDiffStatus(Enum):
-    """Document-level diff status across file/snapshot states."""
+class SnapshotIssue(Enum):
+    """Side-specific snapshot loading issue."""
 
-    MODIFIED = auto()
-    UNCHANGED = auto()
-    NEW_FILE = auto()
-    DELETED_FILE = auto()
-    DELETED_FILE_OLD_SNAPSHOT_MISSING = auto()
-    OLD_SNAPSHOT_MISSING = auto()
-    SNAPSHOT_MISSING = auto()
-    INVALID_SNAPSHOT = auto()
+    MISSING = auto()
+    INVALID = auto()
+
+
+class GeneralDiffIssue(Enum):
+    """General non-side-specific document diff issue."""
+
     DIFF_COMPUTATION_FAILED = auto()
+    GIT_CHANGED_NO_PARAMETRIC_DIFF = auto()
+
+
+@dataclass
+class DiffIssues:
+    """Categorized issues from snapshot loading and diff computation."""
+
+    old_snapshot: SnapshotIssue | None = None
+    new_snapshot: SnapshotIssue | None = None
+    general: list[GeneralDiffIssue] = field(default_factory=list)
+
+    def has_any(self) -> bool:
+        """Return True when any issue exists on either side or general bucket."""
+        return self.old_snapshot is not None or self.new_snapshot is not None or bool(self.general)
+
+    def is_diff_blocker_for(self, document_state: DiffState) -> bool:
+        """Return True when snapshot issues prevent diff computation for state."""
+        if document_state == DiffState.ADDED:
+            return self.new_snapshot is not None
+        if document_state == DiffState.DELETED:
+            return self.old_snapshot is not None
+        return self.old_snapshot is not None or self.new_snapshot is not None
 
 
 @dataclass(frozen=True)
@@ -60,7 +84,8 @@ class DocumentDiffResult:
     """Application-level diff result for one FCStd document."""
 
     git_path: str
-    status: DocumentDiffStatus
+    document_state: DiffState
+    issues: DiffIssues = field(default_factory=DiffIssues)
     snapshot_diff: DiffResult | None = None
 
 
@@ -74,12 +99,21 @@ class DocumentDiffMode(Enum):
 
 @dataclass(frozen=True)
 class CreateDocumentDiffsRequest:
-    """Inputs for computing document-level diff results."""
+    """Inputs for computing document-level diff results.
+
+    Field semantics:
+    - mode: Diff source selection.
+    - repo: Repository context.
+    - commit_hash: Required only for COMMIT mode. Ignored in STAGING/WORKING_TREE.
+    - eligible_docs: Required only for WORKING_TREE mode.
+      - None/[] means no open eligible documents.
+      - COMMIT/STAGING ignore this field.
+    """
 
     mode: DocumentDiffMode
     repo: GitRepository
     commit_hash: str | None = None
-    documents: list[DocumentLike] | None = None
+    eligible_docs: list[DocumentLike] | None = None
 
 
 @dataclass

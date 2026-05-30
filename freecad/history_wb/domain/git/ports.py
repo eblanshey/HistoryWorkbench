@@ -108,7 +108,7 @@ class GitPort(Protocol):
         ...
 
     def get_dirty_paths(self, git_root: str) -> list[str]:
-        """Get list of dirty file paths (modified or untracked).
+        """Get list of dirty FCStd file paths (modified or untracked).
 
         This method runs `git status --porcelain` and filters for files that are
         modified in the working tree or untracked. These are the only files that
@@ -118,8 +118,8 @@ class GitPort(Protocol):
             git_root: Absolute path to git repository root.
 
         Returns:
-            List of relative paths (from git root) that are modified or untracked.
-            Empty list if repo is clean or not a git repo.
+            List of relative .FCStd paths (from git root) that are modified
+            or untracked. Empty list if no dirty FCStd files or not a git repo.
         """
         ...
 

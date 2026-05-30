@@ -334,8 +334,8 @@ class GitPortAdapter(GitPort):
             git_root: Absolute path to git repository root.
 
         Returns:
-            List of relative paths (from git root) that are modified or untracked.
-            Empty list if repo is clean or not a git repo.
+            List of relative .FCStd paths (from git root) that are modified
+            or untracked. Empty list if repo is clean or not a git repo.
         """
         try:
             status_entries = self._get_status_entries(git_root)
@@ -343,6 +343,7 @@ class GitPortAdapter(GitPort):
                 str(entry["rel_path"])
                 for entry in status_entries
                 if self._is_dirty_status(str(entry["wt_status"]), str(entry["rel_path"]))
+                and str(entry["rel_path"]).endswith(".FCStd")
             ]
         except subprocess.TimeoutExpired:
             Log.warning("Git status command timed out")

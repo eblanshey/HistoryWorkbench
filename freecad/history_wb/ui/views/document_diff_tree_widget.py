@@ -6,7 +6,12 @@ from ...domain.diff.models import DiffState
 from ...qt import QtCore, QtGui, QtWidgets
 from ...resources import get_icon_path
 from ...utils import translate
-from ..presenters.presentation_models import DiffTreePresentation, DocumentStatusIndicator, NodePresentation
+from ..presenters.presentation_models import (
+    DiffTreePresentation,
+    DocumentStatusIndicator,
+    NodePresentation,
+    WorkingTreeDocumentClosedIndicator,
+)
 from .diff_theme import DIFF_STATE_ROLE, DiffItemDelegate, background_for_state, foreground_for_background
 from .models import HistorySelection
 
@@ -44,6 +49,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self._on_node_selection_callback: Callable[[str, str], None] | None = None
         self._current_selection: HistorySelection | None = None
         self._on_visual_diff_callback: Callable[[str, str], None] | None = None
+        self._on_open_document_for_comparison_callback: Callable[[str], None] | None = None
         self._stage_buttons: dict[str, QtWidgets.QToolButton] = {}
         self._remove_from_reviewed_buttons: dict[str, QtWidgets.QToolButton] = {}
         self._diff_item_delegate: DiffItemDelegate | None = None
@@ -127,6 +133,10 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
     def set_visual_diff_callback(self, callback: Callable[[str, str], None]) -> None:
         """Set callback for visual diff click with (git_path, node_path)."""
         self._on_visual_diff_callback = callback
+
+    def set_open_document_for_comparison_callback(self, callback: Callable[[str], None]) -> None:
+        """Set callback for open-document indicator click with git_path."""
+        self._on_open_document_for_comparison_callback = callback
 
     def set_add_button_callback(self, callback: Callable[[str], None]) -> None:
         """Set the callback for when the '+ Reviewed' button is clicked.
@@ -260,7 +270,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         layout.addWidget(QtWidgets.QLabel(top_level_text))
         layout.addStretch()
 
-        self._add_status_indicators(layout, diff.indicators)
+        self._add_status_indicators(layout, diff.indicators, diff.git_path)
         if self._is_staging_selected() or self._is_commit_selected():
             self._add_restore_button(layout, diff, top_level_text)
         if self._is_working_tree_selected():
@@ -339,6 +349,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self,
         layout: QtWidgets.QHBoxLayout,
         indicators: list[DocumentStatusIndicator],
+        git_path: str,
     ) -> None:
         """Add status indicators with tooltip to the layout.
 
@@ -350,10 +361,36 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
             return
 
         for indicator in indicators:
+            if isinstance(indicator, WorkingTreeDocumentClosedIndicator):
+                self._add_open_document_indicator_button(layout, indicator, git_path)
+                continue
             icon_label = QtWidgets.QLabel()
             icon_label.setPixmap(indicator.icon.pixmap(16, 16))
             icon_label.setToolTip(translate("History", indicator.tooltip))
             layout.addWidget(icon_label)
+
+    def _add_open_document_indicator_button(
+        self,
+        layout: QtWidgets.QHBoxLayout,
+        indicator: WorkingTreeDocumentClosedIndicator,
+        git_path: str,
+    ) -> None:
+        """Add clickable status icon that opens missing working-tree document."""
+        button = QtWidgets.QPushButton()
+        button.setIcon(indicator.icon)
+        button.setText(translate("History", "Open"))
+        button.setIconSize(QtCore.QSize(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE))
+        button.setToolTip(translate("History", indicator.tooltip))
+        button.setFixedHeight(TREE_ITEM_HEIGHT)
+        button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        button.setStyleSheet("QPushButton { padding: 0px 4px; margin: 0px; border-radius: 2px; }")
+        button.clicked.connect(lambda checked=False, gp=git_path: self._on_open_document_for_comparison_clicked(gp))
+        layout.addWidget(button)
+
+    def _on_open_document_for_comparison_clicked(self, git_path: str) -> None:
+        """Invoke callback for open-document indicator click."""
+        if self._on_open_document_for_comparison_callback is not None:
+            self._on_open_document_for_comparison_callback(git_path)
 
     def _on_add_button_clicked(self, git_path: str) -> None:
         """Handle '+ Reviewed' button click by invoking the callback.

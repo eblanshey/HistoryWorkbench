@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+
+  <!-- Pencil rotated 45°, spanning full height -->
+  <g transform="translate(32,32) rotate(-45)">
+    <!-- Eraser cap -->
+    <rect x="-8" y="-32" width="16" height="8" rx="3" fill="#ffd180"/>
+    <!-- Eraser divider -->
+    <line x1="-8" y1="-24" x2="8" y2="-24" stroke="#e06000" stroke-width="2"/>
+    <!-- Pencil body -->
+    <rect x="-8" y="-24" width="16" height="42" rx="2" fill="#ff9800"/>
+    <!-- Pencil tip (wood) -->
+    <polygon points="-8,18 8,18 0,32" fill="#f5cfa0"/>
+    <!-- Pencil tip (graphite) -->
+    <polygon points="-3,27 3,27 0,32" fill="#555"/>
+  </g>
+
+</svg>

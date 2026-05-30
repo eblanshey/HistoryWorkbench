@@ -31,6 +31,7 @@ def _mock_container() -> MagicMock:
     mock.unstage_documents_action = MagicMock()
     mock.get_dirty_documents_action = MagicMock()
     mock.open_visual_feature_diff_action = MagicMock()
+    mock.open_document_action = MagicMock()
     mock.get_staged_file_paths_action = MagicMock()
     mock.get_committed_file_paths_action = MagicMock()
     mock.commit_staging_action = MagicMock()
@@ -117,6 +118,7 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         assert diff_kwargs["get_staged_file_paths_action"] is mock_container.get_staged_file_paths_action
         assert diff_kwargs["get_committed_file_paths_action"] is mock_container.get_committed_file_paths_action
         assert diff_kwargs["open_visual_feature_diff_action"] is mock_container.open_visual_feature_diff_action
+        assert diff_kwargs["open_document_action"] is mock_container.open_document_action
         assert diff_kwargs["restore_documents_action"] is mock_container.restore_documents_action
 
         # GitRepositoryPresenter receives correct actions from container

@@ -59,3 +59,21 @@ class TestFreeCadPortAdapterSaveIfModified:
 
         assert result is False
         doc.save.assert_not_called()
+
+    def test_is_document_modified_checks_gui_flag_without_saving(self) -> None:
+        doc = MagicMock()
+        doc.Name = "Doc"
+
+        gui_doc = MagicMock()
+        type(gui_doc).Modified = PropertyMock(return_value=True)
+
+        gui = MagicMock()
+        gui.getDocument.return_value = gui_doc
+
+        ctx = FreeCadContext(app=MagicMock(), gui=gui)  # type: ignore[arg-type]
+        adapter = FreeCadPortAdapter(ctx)
+
+        result = adapter.is_document_modified(doc)
+
+        assert result is True
+        doc.save.assert_not_called()

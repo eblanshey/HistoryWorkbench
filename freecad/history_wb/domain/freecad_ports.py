@@ -152,6 +152,10 @@ class FreeCadPort(Protocol):
         """Persist an open document only when GUI marks it modified."""
         ...
 
+    def is_document_modified(self, doc: DocumentLike) -> bool:
+        """Return True when GUI marks document modified."""
+        ...
+
     def try_recompute_active_document(self) -> None:
         """Recompute the active document if one exists."""
         ...

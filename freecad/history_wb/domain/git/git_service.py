@@ -146,6 +146,17 @@ class GitService:
         """
         return self._git_port.get_staged_paths(repo.absolute_path)
 
+    def get_dirty_files(self, repo: GitRepository) -> list[str]:
+        """Get list of dirty FCStd file paths.
+
+        Args:
+            repo: GitRepository to check.
+
+        Returns:
+            List of relative paths (from git root) of dirty FCStd files.
+        """
+        return self._git_port.get_dirty_paths(repo.absolute_path)
+
     def get_file_contents(self, repo: GitRepository, commit: str | None, git_path: str) -> str | None:
         """Get file contents from git at a specific commit or index.
 

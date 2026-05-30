@@ -40,63 +40,63 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="394"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="406"/>
         <source>Configure Author</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="398"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="410"/>
         <source>Enter the name and email you&apos;d like to use for your git identity, which is used for authoring project iterations.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="415"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="427"/>
         <source>Configure globally for all projects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="426"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="438"/>
         <source>Name:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="427"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="439"/>
         <source>Email:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="432"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="444"/>
         <source>Global configuration option disabled because global config file not writable.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="484"/>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="76"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="496"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="82"/>
         <source>Restore All</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="488"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="500"/>
         <source>Which files would you like to restore?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="493"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="505"/>
         <source>Restore only the FreeCAD files changed in the selected iteration. Other files on disk are left unchanged.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="502"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="514"/>
         <source>Restore all previously saved FreeCAD files to how they were in this iteration. Any previously saved FreeCAD files that did not exist in this iteration are removed. New files not yet saved to history are kept.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="491"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="503"/>
         <source>Listed FreeCAD files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="463"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="475"/>
         <source>This operation will overwrite the current files on disk with the selected saved copies.
 
 Open FreeCAD documents will be closed and reopened to ensure links are updated.
@@ -107,23 +107,23 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="500"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="512"/>
         <source>All FreeCAD files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="370"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="442"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="382"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="454"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../entrypoints/commands.py" line="276"/>
         <location filename="../../entrypoints/commands.py" line="414"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="371"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="443"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="470"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="540"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="383"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="455"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="482"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="552"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
@@ -169,18 +169,18 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="355"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="367"/>
         <location filename="../../ui/views/history_panel_widget.py" line="169"/>
         <source>Save Iteration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="359"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="371"/>
         <source>Enter iteration notes:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/diff_panel_view.py" line="363"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="375"/>
         <source>Enter iteration notes (subject and optional body)...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -283,22 +283,37 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/presentation_models.py" line="42"/>
-        <source>Cannot find old snapshot. Tree comparison cannot be generated.</source>
+        <location filename="../../ui/presenters/presentation_models.py" line="45"/>
+        <source>Cannot find previous snapshot. Tree comparison cannot be generated.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/presentation_models.py" line="59"/>
-        <source>The selected iteration does not have a snapshot for this document</source>
+        <location filename="../../ui/presenters/presentation_models.py" line="62"/>
+        <source>No snapshot available for this document. Tree comparison cannot be generated.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/presentation_models.py" line="75"/>
-        <source>The older snapshot is invalid, so a tree comparison cannot be generated.</source>
+        <location filename="../../ui/presenters/presentation_models.py" line="78"/>
+        <source>Click to open the document and generate a comparison.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/presentation_models.py" line="89"/>
+        <location filename="../../ui/presenters/presentation_models.py" line="92"/>
+        <source>The old snapshot is invalid, so a tree comparison cannot be generated.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/presenters/presentation_models.py" line="108"/>
+        <source>The selected snapshot is invalid, so a tree comparison cannot be generated.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/presenters/presentation_models.py" line="135"/>
+        <source>File changed on disk but no parametric changes detected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/presenters/presentation_models.py" line="122"/>
         <source>Diff computation failed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -308,52 +323,52 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="68"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="74"/>
         <source>+ Mark All Reviewed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="93"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="99"/>
         <source>- Remove All</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="25"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="30"/>
         <source>Remove document(s) from Reviewed.
 The current file(s) stay unchanged.
 They will not be saved in the next iteration until reviewed again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="81"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="87"/>
         <source>Choose which files to restore from the selected iteration.
 Current files on disk can be overwritten or removed.
 Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="103"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="109"/>
         <source>Tree</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="208"/>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="235"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="218"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="245"/>
         <source>Unnamed Document</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="283"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="293"/>
         <source>+ Reviewed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="295"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="305"/>
         <source>- Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="314"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="324"/>
         <source>Restore the selected file.
 This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.
 THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.
@@ -361,28 +376,33 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="328"/>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="505"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="338"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="542"/>
         <source>No changes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="448"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="381"/>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="485"/>
         <source>Open 3D comparison</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="508"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="545"/>
         <source>Modified:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="509"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="546"/>
         <source>Deleted:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="510"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="547"/>
         <source>Added:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -527,22 +547,22 @@ Saved history is not affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="205"/>
+        <location filename="../../entrypoints/workbench.py" line="206"/>
         <source>History</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/diff_presenter.py" line="832"/>
-        <location filename="../../ui/presenters/diff_presenter.py" line="834"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="462"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="469"/>
-        <location filename="../../ui/views/diff_panel_view.py" line="536"/>
-        <location filename="../../ui/views/document_diff_tree_widget.py" line="311"/>
+        <location filename="../../ui/presenters/diff_presenter.py" line="824"/>
+        <location filename="../../ui/presenters/diff_presenter.py" line="826"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="474"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="481"/>
+        <location filename="../../ui/views/diff_panel_view.py" line="548"/>
+        <location filename="../../ui/views/document_diff_tree_widget.py" line="321"/>
         <source>Restore</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/presenters/diff_presenter.py" line="834"/>
+        <location filename="../../ui/presenters/diff_presenter.py" line="826"/>
         <source>Restoration complete.</source>
         <translation type="unfinished"></translation>
     </message>

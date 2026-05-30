@@ -17,9 +17,12 @@ __all__ = [
     "SnapshotPresentation",
     "DocumentStatusIndicator",
     "OldSnapshotMissingIndicator",
-    "SnapshotMissingIndicator",
-    "InvalidSnapshotIndicator",
+    "NewSnapshotMissingIndicator",
+    "WorkingTreeDocumentClosedIndicator",
+    "OldInvalidSnapshotIndicator",
+    "NewInvalidSnapshotIndicator",
     "DiffComputationFailedIndicator",
+    "FileChangedOnlyIndicator",
 ]
 
 
@@ -41,7 +44,7 @@ class OldSnapshotMissingIndicator(DocumentStatusIndicator):
                 str,
                 QtCore.QT_TRANSLATE_NOOP(
                     "History",
-                    "Cannot find old snapshot. Tree comparison cannot be generated.",
+                    "Cannot find previous snapshot. Tree comparison cannot be generated.",
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusOldSnapshotMissing.svg"))),
@@ -49,7 +52,7 @@ class OldSnapshotMissingIndicator(DocumentStatusIndicator):
 
 
 @dataclass(frozen=True)
-class SnapshotMissingIndicator(DocumentStatusIndicator):
+class NewSnapshotMissingIndicator(DocumentStatusIndicator):
     """Indicator for current/target snapshot missing."""
 
     def __init__(self) -> None:
@@ -57,7 +60,7 @@ class SnapshotMissingIndicator(DocumentStatusIndicator):
             tooltip=cast(
                 str,
                 QtCore.QT_TRANSLATE_NOOP(
-                    "History", "The selected iteration does not have a snapshot for this document"
+                    "History", "No snapshot available for this document. Tree comparison cannot be generated."
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusSnapshotMissing.svg"))),
@@ -65,15 +68,45 @@ class SnapshotMissingIndicator(DocumentStatusIndicator):
 
 
 @dataclass(frozen=True)
-class InvalidSnapshotIndicator(DocumentStatusIndicator):
-    """Indicator for invalid/corrupt snapshot payload."""
+class WorkingTreeDocumentClosedIndicator(DocumentStatusIndicator):
+    """Indicator for working-tree document path that is not open in FreeCAD."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            tooltip=cast(
+                str,
+                QtCore.QT_TRANSLATE_NOOP("History", "Click to open the document and generate a comparison."),
+            ),
+            icon=QtGui.QIcon(str(get_icon_path("OpenDocument.svg"))),
+        )
+
+
+@dataclass(frozen=True)
+class OldInvalidSnapshotIndicator(DocumentStatusIndicator):
+    """Indicator for invalid old-side snapshot payload."""
 
     def __init__(self) -> None:
         super().__init__(
             tooltip=cast(
                 str,
                 QtCore.QT_TRANSLATE_NOOP(
-                    "History", "The older snapshot is invalid, so a tree comparison cannot be generated."
+                    "History", "The old snapshot is invalid, so a tree comparison cannot be generated."
+                ),
+            ),
+            icon=QtGui.QIcon(str(get_icon_path("DocumentStatusInvalidSnapshot.svg"))),
+        )
+
+
+@dataclass(frozen=True)
+class NewInvalidSnapshotIndicator(DocumentStatusIndicator):
+    """Indicator for invalid new-side snapshot payload."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            tooltip=cast(
+                str,
+                QtCore.QT_TRANSLATE_NOOP(
+                    "History", "The selected snapshot is invalid, so a tree comparison cannot be generated."
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusInvalidSnapshot.svg"))),
@@ -88,6 +121,20 @@ class DiffComputationFailedIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(str, QtCore.QT_TRANSLATE_NOOP("History", "Diff computation failed")),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusDiffFailed.svg"))),
+        )
+
+
+@dataclass(frozen=True)
+class FileChangedOnlyIndicator(DocumentStatusIndicator):
+    """Indicator for git-changed file without parametric diff changes."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            tooltip=cast(
+                str,
+                QtCore.QT_TRANSLATE_NOOP("History", "File changed on disk but no parametric changes detected."),
+            ),
+            icon=QtGui.QIcon(str(get_icon_path("FileChangedOnDisk.svg"))),
         )
 
 

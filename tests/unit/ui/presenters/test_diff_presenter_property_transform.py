@@ -9,7 +9,6 @@ import pytest
 
 from freecad.history_wb.application.actions.create_document_diffs import CreateDocumentDiffsAction
 from freecad.history_wb.application.actions.get_committed_file_paths import GetCommittedFilePathsAction
-from freecad.history_wb.application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from freecad.history_wb.application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from freecad.history_wb.application.actions.get_staged_file_paths import GetStagedFilePathsAction
 from freecad.history_wb.application.actions.open_document import OpenDocumentAction
@@ -42,7 +41,6 @@ def _make_presenter() -> tuple[FakeDiffView, DiffPresenter]:
         create_document_diffs_action=MagicMock(spec=CreateDocumentDiffsAction),
         stage_documents_action=MagicMock(spec=StageDocumentsAction),
         unstage_documents_action=MagicMock(spec=UnstageDocumentsAction),
-        get_dirty_documents_action=MagicMock(spec=GetDirtyDocumentsAction),
         get_staged_file_paths_action=MagicMock(spec=GetStagedFilePathsAction),
         get_committed_file_paths_action=MagicMock(spec=GetCommittedFilePathsAction),
         open_visual_feature_diff_action=MagicMock(spec=OpenVisualDiffAction),

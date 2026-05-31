@@ -29,7 +29,6 @@ def _mock_container() -> MagicMock:
     mock.create_document_diffs_action = MagicMock()
     mock.stage_documents_action = MagicMock()
     mock.unstage_documents_action = MagicMock()
-    mock.get_dirty_documents_action = MagicMock()
     mock.open_visual_feature_diff_action = MagicMock()
     mock.open_document_action = MagicMock()
     mock.get_staged_file_paths_action = MagicMock()
@@ -114,7 +113,6 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         assert diff_kwargs["create_document_diffs_action"] is mock_container.create_document_diffs_action
         assert diff_kwargs["stage_documents_action"] is mock_container.stage_documents_action
         assert diff_kwargs["unstage_documents_action"] is mock_container.unstage_documents_action
-        assert diff_kwargs["get_dirty_documents_action"] is mock_container.get_dirty_documents_action
         assert diff_kwargs["get_staged_file_paths_action"] is mock_container.get_staged_file_paths_action
         assert diff_kwargs["get_committed_file_paths_action"] is mock_container.get_committed_file_paths_action
         assert diff_kwargs["open_visual_feature_diff_action"] is mock_container.open_visual_feature_diff_action

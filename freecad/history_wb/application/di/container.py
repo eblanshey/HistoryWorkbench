@@ -31,7 +31,6 @@ from ..actions.find_active_git_repository import FindActiveGitRepositoryAction
 from ..actions.get_commits import GetCommitsAction
 from ..actions.get_committed_file_paths import GetCommittedFilePathsAction
 from ..actions.get_diff_settings import GetDiffSettingsAction
-from ..actions.get_dirty_documents import GetDirtyDocumentsAction
 from ..actions.get_git_identity import GetGitIdentityAction
 from ..actions.get_git_repository_init_candidates import GetGitRepositoryInitCandidatesAction
 from ..actions.get_gitignore_content import GetGitIgnoreContentAction
@@ -81,7 +80,6 @@ class ApplicationContainer:
     create_document_diffs_action: CreateDocumentDiffsAction
     stage_documents_action: StageDocumentsAction
     unstage_documents_action: UnstageDocumentsAction
-    get_dirty_documents_action: GetDirtyDocumentsAction
     get_staged_file_paths_action: GetStagedFilePathsAction
     get_committed_file_paths_action: GetCommittedFilePathsAction
     commit_staging_action: CommitStagingAction
@@ -209,7 +207,6 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
     create_diff_action = CreateDiffAction(diff_engine=diff_engine)
     stage_documents_action = StageDocumentsAction(git_service=git_service, freecad_port=freecad_port)
     unstage_documents_action = UnstageDocumentsAction(git_service=git_service)
-    get_dirty_documents_action = GetDirtyDocumentsAction(git_service=git_service)
     get_staged_file_paths_action = GetStagedFilePathsAction(git_service=git_service)
     get_committed_file_paths_action = GetCommittedFilePathsAction(git_service=git_service)
     create_document_diffs_action = CreateDocumentDiffsAction(
@@ -217,7 +214,6 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         create_commit_snapshot_action=create_commit_snapshot_action,
         create_diff_action=create_diff_action,
         git_service=git_service,
-        freecad_port=freecad_port,
     )
     commit_staging_action = CommitStagingAction(git_service=git_service)
     get_git_identity_action = GetGitIdentityAction(git_service=git_service)
@@ -244,7 +240,6 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         create_document_diffs_action=create_document_diffs_action,
         stage_documents_action=stage_documents_action,
         unstage_documents_action=unstage_documents_action,
-        get_dirty_documents_action=get_dirty_documents_action,
         get_staged_file_paths_action=get_staged_file_paths_action,
         get_committed_file_paths_action=get_committed_file_paths_action,
         commit_staging_action=commit_staging_action,

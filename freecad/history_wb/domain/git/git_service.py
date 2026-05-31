@@ -7,10 +7,9 @@
 # dependencies.
 """Git domain service."""
 
-from ...utils import Log
 from ..freecad_ports import DocumentLike
 from .models import DirtyFile, GitCommit, GitIdentity, GitRepository
-from .paths import git_path_name, relative_git_path
+from .paths import git_path_name
 from .ports import GitPort
 
 
@@ -83,37 +82,6 @@ class GitService:
             if doc_path and self._git_port.is_path_in_repository(repo.absolute_path, doc_path):
                 eligible.append(doc)
         return eligible
-
-    def get_dirty_documents(self, repo: GitRepository, documents: list[DocumentLike]) -> list[str]:
-        """Get git paths of documents that have git changes.
-
-        This method checks which of the provided documents have been modified
-        or are untracked in the git repository.
-
-        Args:
-            repo: GitRepository to check against.
-            documents: List of DocumentLike objects to check.
-
-        Returns:
-            List of git paths (relative from repo root) that are dirty.
-        """
-        try:
-            dirty_paths = {dirty_file.git_path for dirty_file in self._git_port.get_dirty_files(repo.absolute_path)}
-
-            # Filter to only documents we care about
-            dirty_doc_paths = []
-            for doc in documents:
-                doc_path = getattr(doc, "FileName", "")
-                if doc_path and self._git_port.is_path_in_repository(repo.absolute_path, doc_path):
-                    # Get relative path from git root
-                    rel_path = relative_git_path(doc_path, repo.absolute_path)
-                    if rel_path in dirty_paths:
-                        dirty_doc_paths.append(rel_path)
-
-            return dirty_doc_paths
-        except (OSError, ValueError) as e:
-            Log.warning(f"Error getting dirty documents: {e}")
-            return []
 
     def stage_files(self, repo: GitRepository, paths: list[str]) -> bool:
         """Stage files in the git repository.

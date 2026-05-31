@@ -5,7 +5,7 @@
 from datetime import datetime
 
 from ...domain.diff.models import DiffState
-from ...domain.freecad_ports import DocumentLike, FreeCadPort
+from ...domain.freecad_ports import DocumentLike
 from ...domain.git.git_service import GitService
 from ...domain.git.models import GitRepository
 from ...domain.git.paths import relative_git_path
@@ -39,13 +39,11 @@ class CreateDocumentDiffsAction:
         create_commit_snapshot_action: CreateDocumentSnapshotForCommitAction,
         create_diff_action: CreateDiffAction,
         git_service: GitService,
-        freecad_port: FreeCadPort,
     ) -> None:
         self._create_working_snapshot = create_working_snapshot_action
         self._create_commit_snapshot = create_commit_snapshot_action
         self._create_diff = create_diff_action
         self._git_service = git_service
-        self._freecad_port = freecad_port
 
     def execute(self, request: CreateDocumentDiffsRequest) -> Result:
         """Execute orchestration and return document-level diff results."""
@@ -73,23 +71,16 @@ class CreateDocumentDiffsAction:
         return self._compute_for_paths(request.repo, staged_paths, None, "HEAD")
 
     def _compute_working_tree_diffs(self, request: CreateDocumentDiffsRequest) -> list[DocumentDiffResult]:
-        """
-        Working tree diffs are computed against dirty git path and opened eligible documents. This supports
-        scenarios where a user made changes but hasn't saved the document yet.
-        To simplify this in the future we can make saving documents a requirement to view diffs.
-        """
+        """Compute working-tree diffs for git-dirty files only."""
         eligible_docs = request.eligible_docs or []
-        dirty_paths, open_modified_paths = self._working_tree_candidate_paths(request.repo, eligible_docs)
-
-        diff_candidate_paths = dirty_paths | open_modified_paths
-
-        if not diff_candidate_paths:
+        dirty_paths = {dirty_file.git_path for dirty_file in self._git_service.get_dirty_files(request.repo)}
+        if not dirty_paths:
             return []
 
         eligible_docs_by_path = self._documents_by_git_path(request.repo, eligible_docs)
 
         results: list[DocumentDiffResult] = []
-        for git_path in sorted(diff_candidate_paths):
+        for git_path in sorted(dirty_paths):
             document = eligible_docs_by_path.get(git_path)
             if document is None:
                 results.append(self._result_for_dirty_path_not_open(git_path, dirty_paths))
@@ -109,7 +100,7 @@ class CreateDocumentDiffsAction:
                     new_load=working_load,
                     old_load=old_load,
                     git_changed_paths=dirty_paths,
-                    open_modified_paths=open_modified_paths,
+                    open_modified_paths=set(),
                     mode="working-tree",
                 )
             )
@@ -142,26 +133,6 @@ class CreateDocumentDiffsAction:
             document_state=DiffState.MODIFIED,
             issues=DiffIssues(new_snapshot=SnapshotIssue.MISSING),
         )
-
-    def _working_tree_candidate_paths(
-        self,
-        repo: GitRepository,
-        eligible_docs: list[DocumentLike],
-    ) -> tuple[set[str], set[str]]:
-        """Return working tree dirty paths and open modified paths."""
-        dirty_paths = {dirty_file.git_path for dirty_file in self._git_service.get_dirty_files(repo)}
-        open_modified_paths: set[str] = set()
-        for doc in eligible_docs:
-            doc_path = getattr(doc, "FileName", "")
-            if not doc_path:
-                continue
-            if not self._freecad_port.is_document_modified(doc):
-                continue
-            try:
-                open_modified_paths.add(relative_git_path(doc_path, repo.absolute_path))
-            except ValueError:
-                continue
-        return dirty_paths, open_modified_paths
 
     def _compute_for_paths(
         self,

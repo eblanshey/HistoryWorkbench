@@ -84,14 +84,6 @@ class _FakeGitService:
         return self._dirty
 
 
-class _FakeFreeCadPort:
-    def __init__(self, modified_doc_names: set[str] | None = None) -> None:
-        self._modified = modified_doc_names or set()
-
-    def is_document_modified(self, doc: object) -> bool:
-        return getattr(doc, "name", "") in self._modified
-
-
 @dataclass
 class _Doc:
     name: str
@@ -107,7 +99,6 @@ def _build_action(
     dirty_paths: list[str] | None = None,
     working_snapshots: dict[str, Snapshot] | None = None,
     fail_diff_paths: set[str] | None = None,
-    modified_doc_names: set[str] | None = None,
 ) -> CreateDocumentDiffsAction:
     return CreateDocumentDiffsAction(
         create_working_snapshot_action=_FakeWorkingSnapshotAction(working_snapshots or {}),
@@ -118,7 +109,6 @@ def _build_action(
             staged_paths,
             [DirtyFile(git_path=path, status=DirtyFileStatus.MODIFIED) for path in (dirty_paths or [])],
         ),
-        freecad_port=_FakeFreeCadPort(modified_doc_names),
     )
 
 
@@ -196,27 +186,6 @@ def test_working_tree_dirty_not_open_returns_missing_new_snapshot_issue() -> Non
     assert doc.issues == DiffIssues(new_snapshot=SnapshotIssue.MISSING)
 
 
-def test_working_tree_open_modified_doc_included_even_when_git_clean() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
-    snapshot_mapping = {
-        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        working_snapshots={"a": _snapshot("a.FCStd", "new")},
-        changed_paths={"a.FCStd"},
-        modified_doc_names={"a"},
-    )
-
-    result = action.execute(
-        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
-    )
-
-    assert len(result.data) == 1
-    assert result.data[0].git_path == "a.FCStd"
-
-
 def test_existing_git_changed_with_parametric_changes_returns_modified_without_file_changed_only_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
     snapshot_mapping = {
@@ -239,14 +208,12 @@ def test_existing_git_changed_with_parametric_changes_returns_modified_without_f
 def test_existing_git_unchanged_with_parametric_changes_returns_modified_without_file_changed_only_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
     docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
-    snapshot_mapping = {
-        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
+    snapshot_mapping = {(None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND)}
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
         working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        dirty_paths=["a.FCStd"],
         changed_paths={"a.FCStd"},
-        modified_doc_names={"a"},
     )
 
     result = action.execute(
@@ -287,29 +254,6 @@ def test_working_tree_skips_clean_and_unmodified_open_documents() -> None:
     assert result.data == []
 
 
-def test_working_tree_diff_candidate_paths_union_dirty_and_open_modified() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="open", FileName="/repo/open.FCStd")]
-    snapshot_mapping = {
-        (None, "open.FCStd"): SnapshotLoadResult(_snapshot("open.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        dirty_paths=["closed.FCStd"],
-        working_snapshots={"open": _snapshot("open.FCStd", "new")},
-        modified_doc_names={"open"},
-    )
-
-    result = action.execute(
-        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
-    )
-
-    by_path = {item.git_path: item for item in result.data}
-    assert set(by_path.keys()) == {"closed.FCStd", "open.FCStd"}
-    assert by_path["closed.FCStd"].issues.new_snapshot == SnapshotIssue.MISSING
-    assert by_path["open.FCStd"].snapshot_diff is not None
-
-
 def test_diff_computation_failure_on_git_modified_keeps_state_and_sets_general_issue() -> None:
     repo = GitRepository(name="r", absolute_path="/repo")
     snapshot_mapping = {
@@ -338,7 +282,7 @@ def test_diff_computation_failure_on_in_memory_only_keeps_modified_and_sets_gene
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
         working_snapshots={"a": _snapshot("a.FCStd", "new")},
-        modified_doc_names={"a"},
+        dirty_paths=["a.FCStd"],
         fail_diff_paths={"a.FCStd"},
     )
 
@@ -366,27 +310,6 @@ def test_old_invalid_and_new_missing_issues_both_surface() -> None:
     assert doc.issues.new_snapshot == SnapshotIssue.MISSING
 
 
-def test_working_tree_open_modified_git_clean_no_parametric_changes_stays_unchanged() -> None:
-    repo = GitRepository(name="r", absolute_path="/repo")
-    docs = [_Doc(name="a", FileName="/repo/a.FCStd")]
-    snapshot_mapping = {
-        (None, "a.FCStd"): SnapshotLoadResult(_snapshot("a.FCStd", "old"), SnapshotLoadStatus.FOUND),
-    }
-    action = _build_action(
-        snapshot_mapping=snapshot_mapping,
-        working_snapshots={"a": _snapshot("a.FCStd", "new")},
-        modified_doc_names={"a"},
-    )
-
-    result = action.execute(
-        CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=docs)
-    )
-
-    assert len(result.data) == 1
-    assert result.data[0].document_state == DiffState.UNCHANGED
-    assert result.data[0].issues.general == []
-
-
 def test_diff_issues_blocker_helper() -> None:
     issues = DiffIssues(old_snapshot=SnapshotIssue.MISSING)
     assert issues.is_diff_blocker_for(DiffState.DELETED) is True
@@ -402,8 +325,8 @@ def test_working_tree_missing_old_snapshot_still_computes_diff() -> None:
     action = _build_action(
         snapshot_mapping=snapshot_mapping,
         working_snapshots={"a": _snapshot("a.FCStd", "new")},
+        dirty_paths=["a.FCStd"],
         changed_paths={"a.FCStd"},
-        modified_doc_names={"a"},
     )
 
     result = action.execute(

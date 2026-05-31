@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 
 from ...application.actions.create_document_diffs import CreateDocumentDiffsAction
 from ...application.actions.get_committed_file_paths import GetCommittedFilePathsAction
-from ...application.actions.get_dirty_documents import GetDirtyDocumentsAction
 from ...application.actions.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from ...application.actions.get_staged_file_paths import GetStagedFilePathsAction
 from ...application.actions.open_document import OpenDocumentAction
@@ -396,7 +395,6 @@ class DiffPresenter:
         create_document_diffs_action: CreateDocumentDiffsAction,
         stage_documents_action: StageDocumentsAction,
         unstage_documents_action: UnstageDocumentsAction,
-        get_dirty_documents_action: GetDirtyDocumentsAction,
         get_staged_file_paths_action: GetStagedFilePathsAction,
         get_committed_file_paths_action: GetCommittedFilePathsAction,
         open_visual_feature_diff_action: OpenVisualDiffAction,
@@ -412,7 +410,6 @@ class DiffPresenter:
             get_eligible_docs_action: Action to get eligible open documents
             create_document_diffs_action: Action to orchestrate document diffs by mode
             stage_documents_action: Action to stage documents to git
-            get_dirty_documents_action: Action to get dirty documents
             settings_repo: Settings repository for runtime precision (optional, uses default if None)
         """
         from ...domain.config import FLOAT_PRECISION as DEFAULT_FLOAT_PRECISION
@@ -423,7 +420,6 @@ class DiffPresenter:
         self._create_document_diffs = create_document_diffs_action
         self._stage_documents = stage_documents_action
         self._unstage_documents = unstage_documents_action
-        self._get_dirty_documents = get_dirty_documents_action
         self._open_visual_feature_diff = open_visual_feature_diff_action
         self._open_document = open_document_action
         self._restore_documents = restore_documents_action

@@ -449,7 +449,6 @@ class DiffPresenter:
         self._view.set_restore_all_button_callback(self.on_restore_all_clicked)
         self._view.set_restore_all_from_history_context_callback(self.on_restore_all_from_history_context)
         self._view.set_open_document_for_comparison_callback(self.on_open_document_for_comparison_clicked)
-        self._view.set_force_diff_callback(self.force_working_tree_diffs)
 
     def on_open_document_for_comparison_clicked(self, git_path: str) -> None:
         """Open missing working-tree document in FreeCAD, then recompute Current Files diff."""
@@ -548,40 +547,15 @@ class DiffPresenter:
         return docs_result.data
 
     def _compute_working_tree_diffs(
-        self, repo: GitRepository, eligible_docs: list[DocumentLike], force_all: bool = False
+        self, repo: GitRepository, eligible_docs: list[DocumentLike]
     ) -> list[DocumentDiffResult]:
         """Compute diffs for working tree mode."""
         doc_diff_results_result = self._create_document_diffs.execute(
-            CreateDocumentDiffsRequest(
-                mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=eligible_docs, force_all=force_all
-            )
+            CreateDocumentDiffsRequest(mode=DocumentDiffMode.WORKING_TREE, repo=repo, eligible_docs=eligible_docs)
         )
         if doc_diff_results_result.is_success and doc_diff_results_result.data:
             return doc_diff_results_result.data
         return []
-
-    def force_working_tree_diffs(self) -> None:
-        """Force diff computation for all eligible documents, including unchanged ones."""
-        repo = self._ui_state.git_repository
-        if repo is None:
-            return
-
-        eligible_docs = self._get_eligible_documents(repo)
-        if not eligible_docs:
-            return
-
-        document_results = self._compute_working_tree_diffs(repo, eligible_docs, force_all=True)
-        self._store_results(document_results)
-
-        if document_results:
-            self.present_diffs(document_results)
-        else:
-            self.clear_doc_diff()
-
-        self._view.show_info_message(
-            translate("History", "Force Refresh"),
-            translate("History", "Force refreshed comparisons for all open files."),
-        )
 
     def _store_results(self, document_results: list[DocumentDiffResult]) -> None:
         """Store action results and diff payloads for later use."""

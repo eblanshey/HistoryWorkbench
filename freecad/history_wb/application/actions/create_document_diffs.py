@@ -81,11 +81,7 @@ class CreateDocumentDiffsAction:
         eligible_docs = request.eligible_docs or []
         dirty_paths, open_modified_paths = self._working_tree_candidate_paths(request.repo, eligible_docs)
 
-        if request.force_all:
-            eligible_paths = set(self._documents_by_git_path(request.repo, eligible_docs).keys())
-            diff_candidate_paths = dirty_paths | open_modified_paths | eligible_paths
-        else:
-            diff_candidate_paths = dirty_paths | open_modified_paths
+        diff_candidate_paths = dirty_paths | open_modified_paths
 
         if not diff_candidate_paths:
             return []

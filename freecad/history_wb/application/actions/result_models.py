@@ -116,16 +116,12 @@ class CreateDocumentDiffsRequest:
     - eligible_docs: Required only for WORKING_TREE mode.
       - None/[] means no open eligible documents.
       - COMMIT/STAGING ignore this field.
-    - force_all: When True in WORKING_TREE mode, include all eligible docs as
-      diff candidates regardless of git change status. Used for explicit force
-      refresh to discover documents missing baseline snapshots.
     """
 
     mode: DocumentDiffMode
     repo: GitRepository
     commit_hash: str | None = None
     eligible_docs: list[DocumentLike] | None = None
-    force_all: bool = False
 
 
 @dataclass

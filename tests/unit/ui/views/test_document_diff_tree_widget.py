@@ -193,6 +193,43 @@ class TestShowDocDiffsWithStageButtons:
         row_widget = widget.tree_widget.itemWidget(root_item, 0)
         assert row_widget is not None
         assert "background-color" in row_widget.styleSheet()
+        assert "QWidget#diffRowContainer" in row_widget.styleSheet()
+        assert "QWidget { background-color" not in row_widget.styleSheet()
+
+    def test_document_row_action_buttons_keep_button_background(self, widget) -> None:  # type: ignore[no-untyped-def]
+        from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation
+        from freecad.history_wb.ui.views.models import HistorySelection
+
+        widget.clear_doc_diffs()
+        widget.set_current_history_selection(HistorySelection(item_kind="WORKING_TREE", commit_hash=None))
+        widget.show_doc_diffs(
+            [
+                DiffTreePresentation(
+                    nodes=[],
+                    git_path="parts/A.FCStd",
+                    indicators=[],
+                    document_state=DiffState.MODIFIED,
+                    stage_button_enabled=False,
+                )
+            ]
+        )
+
+        root_item = widget.tree_widget.topLevelItem(0)
+        assert root_item is not None
+        row_widget = widget.tree_widget.itemWidget(root_item, 0)
+        assert row_widget is not None
+        assert row_widget.objectName() == "diffRowContainer"
+
+        label = row_widget.findChild(QtWidgets.QLabel)
+        assert label is not None
+        assert label.objectName() == "diffRowLabel"
+        assert "background-color" not in label.styleSheet()
+
+        buttons = row_widget.findChildren(QtWidgets.QToolButton)
+        assert len(buttons) == 1
+        assert buttons[0].text() == "+ Reviewed"
+        assert buttons[0].styleSheet() != ""
+        assert "background-color" not in buttons[0].styleSheet()
 
     def test_visual_diff_row_widget_keeps_diff_state_styling(self, widget) -> None:  # type: ignore[no-untyped-def]
         from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation

@@ -27,6 +27,11 @@ STAGE_BUTTON_WIDTH = 90
 STAGE_ALL_BUTTON_WIDTH = 140
 REMOVE_BUTTON_WIDTH = 90
 RESTORE_BUTTON_WIDTH = 90
+DIFF_ROW_CONTAINER_OBJECT_NAME = "diffRowContainer"
+DIFF_ROW_LABEL_OBJECT_NAME = "diffRowLabel"
+ROW_ACTION_BUTTON_STYLE = (
+    "QToolButton { padding: 0px 4px; margin: 0px; border-radius: 2px; }"
+)
 REMOVE_REVIEWED_TOOLTIP = translate(
     "History",
     "Remove document(s) from Reviewed.\n"
@@ -264,10 +269,13 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
     def _create_doc_row_widget(self, diff: DiffTreePresentation, top_level_text: str) -> QtWidgets.QWidget:
         """Create top-level row widget for one document diff."""
         container = QtWidgets.QWidget()
+        container.setObjectName(DIFF_ROW_CONTAINER_OBJECT_NAME)
         layout = QtWidgets.QHBoxLayout(container)
         layout.setContentsMargins(4, 2, 4, 2)
 
-        layout.addWidget(QtWidgets.QLabel(top_level_text))
+        label = QtWidgets.QLabel(top_level_text)
+        label.setObjectName(DIFF_ROW_LABEL_OBJECT_NAME)
+        layout.addWidget(label)
         layout.addStretch()
 
         self._add_status_indicators(layout, diff.indicators, diff.git_path)
@@ -292,6 +300,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         add_button = QtWidgets.QToolButton()
         add_button.setText(translate("History", "+ Reviewed"))
         add_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        add_button.setStyleSheet(ROW_ACTION_BUTTON_STYLE)
         add_button.setEnabled(diff.stage_button_enabled)
         add_button.setFixedSize(STAGE_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
         add_button.clicked.connect(lambda checked, gp=diff.git_path: self._on_add_button_clicked(gp))
@@ -304,6 +313,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         remove_button = QtWidgets.QToolButton()
         remove_button.setText(translate("History", "- Remove"))
         remove_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        remove_button.setStyleSheet(ROW_ACTION_BUTTON_STYLE)
         remove_button.setFixedSize(REMOVE_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
         remove_button.setToolTip(REMOVE_REVIEWED_TOOLTIP)
         remove_button.clicked.connect(
@@ -320,6 +330,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         restore_button = QtWidgets.QToolButton()
         restore_button.setText(translate("History", "Restore"))
         restore_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        restore_button.setStyleSheet(ROW_ACTION_BUTTON_STYLE)
         restore_button.setFixedSize(RESTORE_BUTTON_WIDTH, TREE_ITEM_HEIGHT)
         tooltip = translate(
             "History",
@@ -467,11 +478,13 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         if not node.visual_diff_enabled:
             return None
         container = QtWidgets.QWidget()
+        container.setObjectName(DIFF_ROW_CONTAINER_OBJECT_NAME)
         container.setFixedHeight(TREE_ITEM_HEIGHT)
         layout = QtWidgets.QHBoxLayout(container)
         layout.setContentsMargins(4, 0, 4, 0)
         layout.setSpacing(4)
         label = QtWidgets.QLabel(text)
+        label.setObjectName(DIFF_ROW_LABEL_OBJECT_NAME)
         label.setFixedHeight(TREE_ITEM_HEIGHT)
         label.setToolTip(node.type_id)
         layout.addWidget(label)
@@ -519,16 +532,17 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
 
     def _apply_diff_state_to_widget(self, widget: QtWidgets.QWidget, state: DiffState) -> None:
         """Apply diff state colors to custom row widgets."""
-        if state == DiffState.UNCHANGED:
-            widget.setStyleSheet("")
-            return
-
         background = background_for_state(state, self._tree_widget.palette())
         if background is None:
             widget.setStyleSheet("")
             return
+
         foreground = foreground_for_background(background, self._tree_widget.palette())
-        widget.setStyleSheet(f"QWidget {{background-color: {background.name()};color: {foreground.name()};}}")
+        widget_style = (
+            f"QWidget#{DIFF_ROW_CONTAINER_OBJECT_NAME} {{ background-color: {background.name()}; }} "
+            f"QLabel#{DIFF_ROW_LABEL_OBJECT_NAME} {{ color: {foreground.name()}; }}"
+        )
+        widget.setStyleSheet(widget_style)
 
     def show_summary(self, modified_docs: int, deleted_docs: int, added_docs: int) -> None:
         """Display per-status document counts.

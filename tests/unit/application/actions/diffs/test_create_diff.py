@@ -3,18 +3,11 @@
 """Unit tests for CreateDiffAction."""
 
 from datetime import datetime
-from typing import Protocol
 
 from freecad.history_wb.application.actions.diffs.create_diff import CreateDiffAction
 from freecad.history_wb.domain.diff.models import DiffResult
 from freecad.history_wb.domain.snapshots.models import Snapshot
 from freecad.history_wb.domain.tree.property import Property
-
-
-class DiffEngineProtocol(Protocol):
-    """Protocol for DiffEngine to enable duck-typing in tests."""
-
-    def compute_diff(self, old: Snapshot | None, new: Snapshot) -> DiffResult: ...  # noqa: E704
 
 
 class FakeDiffEngine:

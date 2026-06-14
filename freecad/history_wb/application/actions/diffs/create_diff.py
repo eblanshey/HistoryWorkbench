@@ -1,29 +1,18 @@
 """File responsibility: Application action for computing diff between snapshots."""
 
-from typing import TYPE_CHECKING, Protocol
-
+from ....domain.diff.engine import DiffEngine
 from ....domain.snapshots.models import Snapshot
 from ....utils import Log
 from ..result_models import Result
 
 
-if TYPE_CHECKING:
-    from ....domain.diff.models import DiffResult
-
-
-__all__ = ["CreateDiffAction", "DiffEngineProtocol"]
-
-
-class DiffEngineProtocol(Protocol):
-    """Protocol for DiffEngine to enable duck-typing and dependency injection."""
-
-    def compute_diff(self, old: Snapshot | None, new: Snapshot) -> "DiffResult": ...  # noqa: E704
+__all__ = ["CreateDiffAction"]
 
 
 class CreateDiffAction:
     """Compute diff between two snapshots using DiffEngine."""
 
-    def __init__(self, diff_engine: DiffEngineProtocol) -> None:
+    def __init__(self, diff_engine: DiffEngine) -> None:
         self._diff_engine = diff_engine
 
     def execute(self, old_snapshot: Snapshot | None, new_snapshot: Snapshot) -> Result:

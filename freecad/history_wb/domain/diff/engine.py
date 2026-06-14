@@ -7,28 +7,12 @@
 # configuration at runtime.
 """Diff computation engine."""
 
-from typing import Protocol
-
 from ...utils import Log
 from ..config import EXCLUDED_PROPERTIES, EXCLUDED_PROPERTIES_BY_TYPE, EXCLUDED_TYPES, FLOAT_PRECISION
 from ..settings import SettingsRepository
 from ..snapshots import Snapshot
 from .comparator import TreeComparator
 from .models import DiffResult
-
-
-class TreeComparatorProtocol(Protocol):
-    """Protocol for TreeComparator to enable dependency injection."""
-
-    def compare_snapshots(
-        self,
-        old_snapshot: Snapshot,
-        new_snapshot: Snapshot,
-        excluded_properties: list[str],
-        excluded_types: list[str],
-        excluded_properties_by_type: dict[str, list[str]] | None = None,
-        precision: int = 2,
-    ) -> DiffResult: ...
 
 
 class DiffEngine:
@@ -49,7 +33,7 @@ class DiffEngine:
     def __init__(
         self,
         settings_repo: SettingsRepository | None = None,
-        tree_comparator: TreeComparatorProtocol | None = None,
+        tree_comparator: TreeComparator | None = None,
     ) -> None:
         """Initialize the diff engine.
 

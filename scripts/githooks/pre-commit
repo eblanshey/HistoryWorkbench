@@ -5,4 +5,24 @@ set -eu
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-task translations:verify-clean
+if command -v lupdate >/dev/null 2>&1 && command -v lrelease >/dev/null 2>&1; then
+    exec task translations:verify-clean
+fi
+
+if command -v direnv >/dev/null 2>&1; then
+    exec direnv exec "$repo_root" sh -c '
+        if command -v lupdate >/dev/null 2>&1 && command -v lrelease >/dev/null 2>&1; then
+            exec task translations:verify-clean
+        fi
+
+        printf "%s\n" \
+            "Cannot verify translations: lupdate and lrelease are not available in PATH." \
+            "Install Qt Linguist tools or configure an allowed direnv environment containing them." >&2
+        exit 1
+    '
+fi
+
+printf '%s\n' \
+    "Cannot verify translations: lupdate and lrelease are not available in PATH." \
+    "Install Qt Linguist tools or configure an allowed direnv environment containing them." >&2
+exit 1

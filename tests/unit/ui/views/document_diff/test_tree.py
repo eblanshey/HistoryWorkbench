@@ -155,6 +155,24 @@ def test_visual_diff_button_selects_item_and_emits_both_signals(tree, simple_doc
     assert visual_diff == [("parts/A.FCStd", "Body/Pad")]
 
 
+def test_visual_diff_row_widget_owns_visible_text(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
+    """Visual-diff rows avoid duplicate delegate and row-widget labels."""
+    tree.show_doc_diffs([_diff(nodes=[_node(visual_diff_enabled=True)])], simple_document_row_factory)
+
+    widget = _tree_widget(tree)
+    root_item = widget.topLevelItem(0)
+    assert root_item is not None
+    child_item = root_item.child(0)
+    assert child_item is not None
+    row_widget = widget.itemWidget(child_item, 0)
+    assert row_widget is not None
+    label = row_widget.findChild(QtWidgets.QLabel)
+    assert label is not None
+
+    assert child_item.text(0) == ""
+    assert label.text() == "Pad"
+
+
 def test_visual_diff_button_only_for_enabled_nodes(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
     """Visual diff widgets appear only for enabled nodes."""
     tree.show_doc_diffs(

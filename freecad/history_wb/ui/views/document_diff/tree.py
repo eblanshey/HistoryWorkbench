@@ -124,6 +124,10 @@ class DocumentDiffTree(QtWidgets.QWidget):
         if node.visual_diff_enabled:
             text = item.text(0)
             row_widget = NodeDiffRowWidget(text, node.type_id, git_path, node.path, self._tree_widget)
+
+            # Row widget owns visible text; retaining item text lets delegate paint a duplicate label behind it.
+            item.setText(0, "")
+
             row_widget.visual_diff_requested.connect(
                 lambda emitted_git_path, emitted_node_path, item=item: self._on_node_visual_diff_requested(
                     item,

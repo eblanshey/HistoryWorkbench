@@ -70,6 +70,7 @@ class DiffIssues:
         """Return True when any issue exists on either side or general bucket."""
         return self.old_snapshot is not None or self.new_snapshot is not None or bool(self.general)
 
+
 @dataclass(frozen=True)
 class DocumentDiffResult:
     """Application-level diff result for one FCStd document."""

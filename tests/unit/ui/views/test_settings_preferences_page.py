@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from freecad.history_wb.application.actions.result_models import Result
 from freecad.history_wb.domain.config import EXCLUDED_TYPES
@@ -61,6 +64,14 @@ def _ensure_qapplication() -> None:
 
 
 class TestDiffSettingsPreferencesPage:
+    @pytest.fixture(autouse=True)
+    def _fake_container(self):
+        """Provide a container so the git-terminology toggle read/write resolves."""
+        container = MagicMock()
+        container.settings_repo.git_terminology_enabled.return_value = False
+        with patch("freecad.history_wb._container.get_container", return_value=container):
+            yield container
+
     def test_preference_page_loads_current_mode_and_values_into_controls(self) -> None:
         _ensure_qapplication()
 

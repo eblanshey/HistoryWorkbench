@@ -59,6 +59,19 @@ class SettingsRepository(Protocol):
         """
         ...
 
+    def git_terminology_enabled(self) -> bool:
+        """Return whether the git-native terminology display toggle is on.
+
+        Controls whether the UI relabels CAD-friendly vocabulary (Iteration,
+        Project, Reviewed, ...) with the underlying git terms (Commit,
+        Repository, Staged, ...). Independent of diff computation.
+        """
+        ...
+
+    def set_git_terminology_enabled(self, enabled: bool) -> None:
+        """Persist the git-native terminology display toggle."""
+        ...
+
 
 class SettingsPersistenceRepository(Protocol):
     """Interface for raw diff settings persistence state access."""

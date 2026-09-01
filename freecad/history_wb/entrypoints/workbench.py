@@ -14,7 +14,7 @@ from typing import cast
 
 from ..qt import QtCore, QtGui, QtWidgets
 from ..resources import ICONPATH
-from ..utils import Log, set_logger, translate
+from ..utils import Log, set_logger, term, translate
 
 
 _PREFERENCES_REGISTRY_ATTR = "_history_wb_preference_pages"
@@ -57,7 +57,13 @@ if Gui is not None:
         def __init__(self):
             super().__init__()
             self.MenuText = cast(str, QtCore.QT_TRANSLATE_NOOP("Workbench", "History"))
-            self.ToolTip = cast(str, QtCore.QT_TRANSLATE_NOOP("Workbench", "Track project iterations and history"))
+            self.ToolTip = cast(
+                str,
+                term(
+                    QtCore.QT_TRANSLATE_NOOP("Workbench", "Track project iterations and history"),
+                    QtCore.QT_TRANSLATE_NOOP("Workbench", "Track repository commits and history"),
+                ),
+            )
             self._subwindow = None  # Store reference to MDI subwindow
 
         def GetClassName(self) -> str:
@@ -232,6 +238,7 @@ if Gui is not None:
 
             # Clear panel-scoped presenters; application state survives for command access
             from ..ui.registry import ui_registry
+
             ui_registry.clear_presenters()
 
         def _focus_diff_panel_deferred(self) -> None:

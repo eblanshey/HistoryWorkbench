@@ -62,18 +62,14 @@ class UIRegistry:
             RuntimeError: If not initialized
         """
         if self._workbench_command_presenter is None:
-            raise RuntimeError(
-                "Workbench command presenter not initialized. Workbench must be activated first."
-            )
+            raise RuntimeError("Workbench command presenter not initialized. Workbench must be activated first.")
         return self._workbench_command_presenter
 
     def register_application_state(self, state: "ApplicationState") -> None:
         """Register application state."""
         self._application_state = state
 
-    def register_workbench_command_presenter(
-        self, presenter: "WorkbenchCommandPresenter"
-    ) -> None:
+    def register_workbench_command_presenter(self, presenter: "WorkbenchCommandPresenter") -> None:
         """Register workbench command presenter."""
         self._workbench_command_presenter = presenter
 

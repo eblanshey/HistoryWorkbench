@@ -6,9 +6,12 @@ and translation helper for FreeCAD UI text.
 """
 
 import traceback
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 from .qt import QtCore
+
+
+_Term = TypeVar("_Term")
 
 
 class LoggerProtocol(Protocol):
@@ -215,6 +218,42 @@ def translate(context: str, text: str) -> str:
         return text
 
 
+def git_terminology_enabled() -> bool:
+    """Return whether the git-native terminology display toggle is on.
+
+    Resolves through the application container's cached settings repository.
+    Command labels are built at workbench Initialize, before the container
+    exists; in that case the toggle is read directly from FreeCAD preferences.
+    """
+    from ._container import get_container
+
+    try:
+        return get_container().settings_repo.git_terminology_enabled()
+    except RuntimeError:
+        # Container not built yet (e.g. command registration at Initialize).
+        from .infrastructure.freecad.settings_repo import read_git_terminology_enabled
+
+        return read_git_terminology_enabled()
+
+
+def set_git_terminology_enabled(enabled: bool) -> None:
+    """Persist the git-native terminology display toggle."""
+    from ._container import get_container
+
+    get_container().settings_repo.set_git_terminology_enabled(enabled)
+
+
+def term(cad: _Term, git: _Term) -> _Term:
+    """Pick the git-native phrase when the terminology toggle is on, else CAD.
+
+    Both arguments must be passed as the result of ``translate(...)`` or
+    ``QT_TRANSLATE_NOOP(...)`` literals so translation extraction (lupdate)
+    still records both variants. Generic so it preserves ``str`` from
+    ``translate()`` and the ``object`` returned by ``QT_TRANSLATE_NOOP``.
+    """
+    return git if git_terminology_enabled() else cad
+
+
 __all__ = [
     "LoggerProtocol",
     "StdoutLogger",
@@ -224,4 +263,7 @@ __all__ = [
     "format_float",
     "float_values_equal",
     "translate",
+    "git_terminology_enabled",
+    "set_git_terminology_enabled",
+    "term",
 ]

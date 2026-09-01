@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from ....domain.git.models import GitRepositoryInitCandidate
 from ....qt import QtWidgets
-from ....utils import translate
+from ....utils import term, translate
 from ..widgets.buttons import make_dialog_button_box
 
 
@@ -22,15 +22,22 @@ class GitConfigDialogResult:
 def show_save_iteration_dialog(parent: QtWidgets.QWidget) -> str | None:
     """Show Save Iteration dialog and return notes when accepted."""
     dialog = QtWidgets.QDialog(parent)
-    dialog.setWindowTitle(translate("History", "Save Iteration"))
+    dialog.setWindowTitle(term(translate("History", "Save Iteration"), translate("History", "Commit")))
     dialog.setSizeGripEnabled(True)
 
     layout = QtWidgets.QVBoxLayout(dialog)
-    label = QtWidgets.QLabel(translate("History", "Enter iteration notes:"))
+    label = QtWidgets.QLabel(
+        term(translate("History", "Enter iteration notes:"), translate("History", "Enter commit notes:"))
+    )
     layout.addWidget(label)
 
     text_edit = QtWidgets.QPlainTextEdit(dialog)
-    text_edit.setPlaceholderText(translate("History", "Enter iteration notes (subject and optional body)..."))
+    text_edit.setPlaceholderText(
+        term(
+            translate("History", "Enter iteration notes (subject and optional body)..."),
+            translate("History", "Enter commit notes (subject and optional body)..."),
+        )
+    )
     text_edit.setTabStopDistance(40)
     text_edit.setMinimumHeight(100)
     text_edit.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -65,10 +72,17 @@ def show_configure_author_dialog(
     layout = QtWidgets.QVBoxLayout(dialog)
     layout.addWidget(
         QtWidgets.QLabel(
-            translate(
-                "History",
-                "Enter the name and email you'd like to use for your git identity, "
-                "which is used for authoring project iterations.",
+            term(
+                translate(
+                    "History",
+                    "Enter the name and email you'd like to use for your git identity, "
+                    "which is used for authoring project iterations.",
+                ),
+                translate(
+                    "History",
+                    "Enter the name and email you'd like to use for your git identity, "
+                    "which is used for authoring repository commits.",
+                ),
             ),
             dialog,
         )
@@ -84,7 +98,10 @@ def show_configure_author_dialog(
     name_edit = QtWidgets.QLineEdit(dialog)
     email_edit = QtWidgets.QLineEdit(dialog)
     remember_checkbox = QtWidgets.QCheckBox(
-        translate("History", "Configure globally for all projects"),
+        term(
+            translate("History", "Configure globally for all projects"),
+            translate("History", "Configure globally for all repositories"),
+        ),
         dialog,
     )
 
@@ -176,9 +193,17 @@ def show_restore_scope_dialog(parent: QtWidgets.QWidget) -> str | None:
     layout.addWidget(title_label)
     listed = QtWidgets.QRadioButton(translate("History", "Listed FreeCAD files"))
     listed_desc = QtWidgets.QLabel(
-        translate(
-            "History",
-            "Restore only the FreeCAD files changed in the selected iteration. Other files on disk are left unchanged.",
+        term(
+            translate(
+                "History",
+                "Restore only the FreeCAD files changed in the selected iteration. "
+                "Other files on disk are left unchanged.",
+            ),
+            translate(
+                "History",
+                "Restore only the FreeCAD files changed in the selected commit. "
+                "Other files on disk are left unchanged.",
+            ),
         )
     )
     listed_desc.setWordWrap(True)
@@ -245,15 +270,24 @@ def show_init_repository_dialog(
 ) -> str | None:
     """Show repository initialization dialog and return selected directory."""
     dialog = QtWidgets.QDialog(parent)
-    dialog.setWindowTitle(translate("History", "Initialize Project"))
+    dialog.setWindowTitle(
+        term(translate("History", "Initialize Project"), translate("History", "Initialize Repository"))
+    )
     dialog.setSizeGripEnabled(True)
     layout = QtWidgets.QVBoxLayout(dialog)
     layout.addWidget(
         QtWidgets.QLabel(
-            translate(
-                "History",
-                "Choose a directory to initialize based on currently open documents. "
-                "The selected directory will be the root of your project:",
+            term(
+                translate(
+                    "History",
+                    "Choose a directory to initialize based on currently open documents. "
+                    "The selected directory will be the root of your project:",
+                ),
+                translate(
+                    "History",
+                    "Choose a directory to initialize based on currently open documents. "
+                    "The selected directory will be the root of your repository:",
+                ),
             )
         )
     )
@@ -272,7 +306,10 @@ def show_init_repository_dialog(
 
         if not candidate.is_available:
             reason_label = QtWidgets.QLabel(
-                translate("History", "Already inside project"),
+                term(
+                    translate("History", "Already inside project"),
+                    translate("History", "Already inside repository"),
+                ),
                 dialog,
             )
             reason_label.setEnabled(False)
@@ -284,7 +321,10 @@ def show_init_repository_dialog(
     if first_available_button is not None:
         first_available_button.setChecked(True)
     else:
-        no_available_text = translate("History", "All listed directories are already inside projects.")
+        no_available_text = term(
+            translate("History", "All listed directories are already inside projects."),
+            translate("History", "All listed directories are already inside repositories."),
+        )
         layout.addWidget(QtWidgets.QLabel(no_available_text))
 
     button_layout = QtWidgets.QHBoxLayout()
@@ -316,7 +356,7 @@ def show_init_repository_dialog(
 def show_gitignore_editor_dialog(parent: QtWidgets.QWidget, content: str) -> str | None:
     """Show gitignore editor dialog. Returns edited content on accept, None on cancel."""
     dialog = QtWidgets.QDialog(parent)
-    dialog.setWindowTitle(translate("History", "Edit Ignored Files"))
+    dialog.setWindowTitle(term(translate("History", "Edit Ignored Files"), translate("History", "Edit .gitignore")))
     dialog.setMinimumWidth(680)
     dialog.setMinimumHeight(460)
 

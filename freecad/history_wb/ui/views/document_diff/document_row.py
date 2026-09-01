@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import partial
 
 from ....qt import QtCore, QtWidgets
-from ....utils import translate
+from ....utils import term, translate
 from ...presenters.presentation_models import DiffTreePresentation
 from ..history.models import HistorySelection
 from ..widgets.buttons import make_row_action_button
@@ -16,11 +16,19 @@ from .status_indicators import DocumentStatusIndicatorsWidget
 STAGE_BUTTON_WIDTH = 90
 REMOVE_BUTTON_WIDTH = 90
 RESTORE_BUTTON_WIDTH = 90
-REMOVE_REVIEWED_TOOLTIP = translate(
-    "History",
-    "Remove document(s) from Reviewed.\n"
-    "The current file(s) stay unchanged.\n"
-    "They will not be saved in the next iteration until reviewed again.",
+REMOVE_REVIEWED_TOOLTIP = term(
+    translate(
+        "History",
+        "Remove document(s) from Reviewed.\n"
+        "The current file(s) stay unchanged.\n"
+        "They will not be saved in the next iteration until reviewed again.",
+    ),
+    translate(
+        "History",
+        "Remove document(s) from Staged.\n"
+        "The current file(s) stay unchanged.\n"
+        "They will not be saved in the next commit until staged again.",
+    ),
 )
 
 
@@ -98,7 +106,7 @@ class DocumentDiffRowWidget(QtWidgets.QWidget):
     def _add_stage_button(self, layout: QtWidgets.QHBoxLayout) -> None:
         """Add + Reviewed button for one working-tree document row."""
         self._stage_button = make_row_action_button(
-            text=translate("History", "+ Reviewed"),
+            text=term(translate("History", "+ Reviewed"), translate("History", "+ Staged")),
             width=STAGE_BUTTON_WIDTH,
             on_clicked=partial(self.stage_requested.emit, self._diff.git_path),
         )
@@ -117,12 +125,21 @@ class DocumentDiffRowWidget(QtWidgets.QWidget):
 
     def _add_restore_button(self, layout: QtWidgets.QHBoxLayout) -> None:
         """Add Restore button for reviewed or commit-backed document rows."""
-        tooltip = translate(
-            "History",
-            "Restore the selected file.\n"
-            "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
-            "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
-            "Saved history will not be affected.",
+        tooltip = term(
+            translate(
+                "History",
+                "Restore the selected file.\n"
+                "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
+                "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
+                "Saved history will not be affected.",
+            ),
+            translate(
+                "History",
+                "Restore the selected file.\n"
+                "This overwrites %1 on disk with a copy of the file as it was saved in the selected commit.\n"
+                "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
+                "Saved history will not be affected.",
+            ),
         ).replace("%1", self._top_level_text)
         restore_button = make_row_action_button(
             text=translate("History", "Restore"),

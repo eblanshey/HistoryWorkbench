@@ -13,7 +13,7 @@ from ....application.actions.git_config.get_git_identity import GetGitIdentityAc
 from ....application.actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
 from ....application.actions.git_workflow.commit_staging import CommitStagingAction
 from ....domain.git.models import GitRepository
-from ....utils import translate
+from ....utils import term, translate
 from .author_configuration_handler import AuthorConfigurationHandler
 
 
@@ -56,8 +56,11 @@ class CommitIterationHandler:
         staged_result = self._get_staged_file_paths_action.execute(repo)
         if not staged_result.is_success or not staged_result.data:
             self._show_info_message(
-                translate("History", "No Reviewed Files"),
-                translate("History", "There are no reviewed files to save."),
+                term(translate("History", "No Reviewed Files"), translate("History", "No Staged Files")),
+                term(
+                    translate("History", "There are no reviewed files to save."),
+                    translate("History", "There are no staged files to commit."),
+                ),
             )
             return False
 
@@ -76,7 +79,10 @@ class CommitIterationHandler:
         if not trimmed_message:
             self._show_warning_message(
                 translate("History", "Empty Notes"),
-                translate("History", "Iteration notes cannot be empty"),
+                term(
+                    translate("History", "Iteration notes cannot be empty"),
+                    translate("History", "Commit notes cannot be empty"),
+                ),
             )
             return False
 
@@ -85,7 +91,7 @@ class CommitIterationHandler:
             return True
 
         self._show_error_message(
-            translate("History", "Save Iteration Failed"),
+            term(translate("History", "Save Iteration Failed"), translate("History", "Commit Failed")),
             result.message or translate("History", "Git commit failed"),
         )
         return False

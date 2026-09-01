@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
-from ....utils import translate
+from ....utils import term, translate
 from ..widgets.buttons import make_tool_button
 from ..widgets.styles import TREE_ITEM_HEIGHT
 from .summary_state import SummaryButtonState, SummaryCounts
@@ -53,7 +53,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         layout.addLayout(self._summary_layout)
 
         self._stage_all_button = make_tool_button(
-            text=translate("History", "+ Mark All Reviewed"),
+            text=term(translate("History", "+ Mark All Reviewed"), translate("History", "+ Mark All Staged")),
             width=STAGE_ALL_BUTTON_WIDTH,
             height=TREE_ITEM_HEIGHT,
         )
@@ -64,11 +64,19 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
 
         self._restore_all_button = make_tool_button(
             text=translate("History", "Restore All"),
-            tooltip=translate(
-                "History",
-                "Choose which files to restore from the selected iteration.\n"
-                "Current files on disk can be overwritten or removed.\n"
-                "Saved history will not be affected.",
+            tooltip=term(
+                translate(
+                    "History",
+                    "Choose which files to restore from the selected iteration.\n"
+                    "Current files on disk can be overwritten or removed.\n"
+                    "Saved history will not be affected.",
+                ),
+                translate(
+                    "History",
+                    "Choose which files to restore from the selected commit.\n"
+                    "Current files on disk can be overwritten or removed.\n"
+                    "Saved history will not be affected.",
+                ),
             ),
             height=TREE_ITEM_HEIGHT,
         )

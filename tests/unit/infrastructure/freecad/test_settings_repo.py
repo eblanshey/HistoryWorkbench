@@ -11,6 +11,7 @@ from freecad.history_wb.domain.config import (
 )
 from freecad.history_wb.domain.freecad_ports import FreeCadContext
 from freecad.history_wb.infrastructure.freecad.settings_repo import (
+    KEY_GIT_TERMINOLOGY,
     MAX_FLOAT_PRECISION,
     MIN_FLOAT_PRECISION,
     FreeCADSettingsRepository,
@@ -80,6 +81,31 @@ class TestFreeCADSettingsRepository:
         assert settings.excluded_properties == EXCLUDED_PROPERTIES
         assert settings.excluded_properties_by_type == EXCLUDED_PROPERTIES_BY_TYPE
         assert settings.float_precision == FLOAT_PRECISION
+
+    def test_git_terminology_defaults_to_disabled(self) -> None:
+        repo, _ = _make_repo()
+
+        assert repo.git_terminology_enabled() is False
+
+    def test_set_git_terminology_persists_and_reads_back(self) -> None:
+        repo, group = _make_repo()
+
+        repo.set_git_terminology_enabled(True)
+
+        assert group.GetBool(KEY_GIT_TERMINOLOGY, False) is True
+        assert repo.git_terminology_enabled() is True
+
+    def test_git_terminology_is_cached_until_set(self) -> None:
+        repo, group = _make_repo()
+
+        # First read caches the default; a direct param change is not observed.
+        assert repo.git_terminology_enabled() is False
+        group.SetBool(KEY_GIT_TERMINOLOGY, True)
+        assert repo.git_terminology_enabled() is False
+
+        # set refreshes the cache.
+        repo.set_git_terminology_enabled(True)
+        assert repo.git_terminology_enabled() is True
 
     def test_custom_mode_returns_parsed_line_values(self) -> None:
         repo, group = _make_repo()

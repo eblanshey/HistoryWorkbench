@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from ..qt import QtCore
 from ..resources import ICONPATH
-from ..utils import Log, translate
+from ..utils import Log, term, translate
 
 
 if TYPE_CHECKING:
@@ -92,8 +92,14 @@ class _CommitCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Save Iteration"),
-            "ToolTip": QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Save reviewed changes as an iteration"),
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Save Iteration"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Commit"),
+            ),
+            "ToolTip": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Save reviewed changes as an iteration"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryCommit", "Commit the staged changes"),
+            ),
             "Pixmap": os.path.join(ICONPATH, "Commit.svg"),
         }
 
@@ -117,14 +123,27 @@ class _RefreshRepositoryCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP("HistoryRefreshRepository", "Refresh Project"),
-            "ToolTip": QtCore.QT_TRANSLATE_NOOP(
-                "HistoryRefreshRepository",
-                "Refresh the detected project and reload iterations.\n"
-                "Open at least one FreeCAD document "
-                "located within a project before running this command.\n"
-                "How it works: open FreeCAD "
-                "documents are checked one by one until one is found to be located within a project.",
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryRefreshRepository", "Refresh Project"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryRefreshRepository", "Refresh Repository"),
+            ),
+            "ToolTip": term(
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryRefreshRepository",
+                    "Refresh the detected project and reload iterations.\n"
+                    "Open at least one FreeCAD document "
+                    "located within a project before running this command.\n"
+                    "How it works: open FreeCAD "
+                    "documents are checked one by one until one is found to be located within a project.",
+                ),
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryRefreshRepository",
+                    "Refresh the detected repository and reload commits.\n"
+                    "Open at least one FreeCAD document "
+                    "located within a repository before running this command.\n"
+                    "How it works: open FreeCAD "
+                    "documents are checked one by one until one is found to be located within a repository.",
+                ),
             ),
             "Pixmap": os.path.join(ICONPATH, "RefreshRepository.svg"),
         }
@@ -146,10 +165,19 @@ class _InitializeGitRepositoryCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP("HistoryInitializeGitRepository", "Initialize Project"),
-            "ToolTip": QtCore.QT_TRANSLATE_NOOP(
-                "HistoryInitializeGitRepository",
-                "Initialize a new project in the selected directory",
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryInitializeGitRepository", "Initialize Project"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryInitializeGitRepository", "Initialize Repository"),
+            ),
+            "ToolTip": term(
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryInitializeGitRepository",
+                    "Initialize a new project in the selected directory",
+                ),
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryInitializeGitRepository",
+                    "Initialize a new repository in the selected directory",
+                ),
             ),
             "Pixmap": os.path.join(ICONPATH, "CreateGitRepository.svg"),
         }
@@ -173,13 +201,25 @@ class _OpenAllDocumentsInRepositoryCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP(
-                "HistoryOpenAllDocumentsInRepository",
-                "Open All Documents in Project",
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryOpenAllDocumentsInRepository",
+                    "Open All Documents in Project",
+                ),
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryOpenAllDocumentsInRepository",
+                    "Open All Documents in Repository",
+                ),
             ),
-            "ToolTip": QtCore.QT_TRANSLATE_NOOP(
-                "HistoryOpenAllDocumentsInRepository",
-                "Open every .FCStd file found in the project. Useful for generating en masse.",
+            "ToolTip": term(
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryOpenAllDocumentsInRepository",
+                    "Open every .FCStd file found in the project. Useful for generating en masse.",
+                ),
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryOpenAllDocumentsInRepository",
+                    "Open every .FCStd file found in the repository. Useful for generating en masse.",
+                ),
             ),
             "Pixmap": os.path.join(ICONPATH, "OpenAllDocuments.svg"),
         }
@@ -202,8 +242,14 @@ class _OpenAllDocumentsInRepositoryCommand:
         repo = ui_registry.application_state.git_repository
         if repo is None:
             dialog_view.show_warning_message(
-                translate("History", "No Project"),
-                translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                term(
+                    translate("History", "No Project"),
+                    translate("History", "No Repository"),
+                ),
+                term(
+                    translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                    translate("History", "No repository detected. Open a FreeCAD document in a repository first."),
+                ),
             )
             return
 
@@ -216,10 +262,19 @@ class _UpdateGitIgnoreCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP("HistoryUpdateGitIgnore", "Edit Ignored Files"),
-            "ToolTip": QtCore.QT_TRANSLATE_NOOP(
-                "HistoryUpdateGitIgnore",
-                "Edit project ignored files list (.gitignore)",
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryUpdateGitIgnore", "Edit Ignored Files"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryUpdateGitIgnore", "Edit .gitignore"),
+            ),
+            "ToolTip": term(
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryUpdateGitIgnore",
+                    "Edit project ignored files list (.gitignore)",
+                ),
+                QtCore.QT_TRANSLATE_NOOP(
+                    "HistoryUpdateGitIgnore",
+                    "Edit repository ignored files list (.gitignore)",
+                ),
             ),
             "Pixmap": os.path.join(ICONPATH, "GitIgnore.svg"),
         }
@@ -314,7 +369,10 @@ class _CloseDiffWindowsCommand:
     def GetResources(self) -> CommandResources:
         """Return FreeCAD command metadata for UI integration."""
         return {
-            "MenuText": QtCore.QT_TRANSLATE_NOOP("HistoryCloseDiffWindows", "Close Comparison Windows"),
+            "MenuText": term(
+                QtCore.QT_TRANSLATE_NOOP("HistoryCloseDiffWindows", "Close Comparison Windows"),
+                QtCore.QT_TRANSLATE_NOOP("HistoryCloseDiffWindows", "Close Diff Windows"),
+            ),
             "ToolTip": QtCore.QT_TRANSLATE_NOOP(
                 "HistoryCloseDiffWindows",
                 "Close every document starting with 'Diff_' without saving",
@@ -339,7 +397,13 @@ class _CloseDiffWindowsCommand:
 
 
 def register_commands() -> None:
-    """Register the Diff Workbench commands with FreeCAD."""
+    """Register the Diff Workbench commands with FreeCAD.
+
+    Command labels resolve the git-terminology toggle inside GetResources via
+    term(), so no wrapper is needed. FreeCAD queries GetResources at Initialize
+    (before the container exists); term() reads the toggle directly from
+    preferences in that case.
+    """
     import FreeCADGui as Gui  # pylint: disable=import-error
 
     Gui.addCommand("HistoryConfigureAuthorCommand", _ConfigureAuthorCommand())

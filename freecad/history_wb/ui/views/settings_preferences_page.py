@@ -20,7 +20,7 @@ from ...domain.settings.text_codec import (
     serialize_list_lines,
 )
 from ...qt import QtWidgets
-from ...utils import Log, translate
+from ...utils import Log, git_terminology_enabled, set_git_terminology_enabled, translate
 
 
 @dataclass(frozen=True)
@@ -116,6 +116,24 @@ class DiffSettingsPreferencesPage:
         precision_group = QtWidgets.QGroupBox(translate("History", "Numeric comparison"), self.form)
         precision_group.setLayout(precision_layout)
         root_layout.addWidget(precision_group)
+
+        self._git_terminology_checkbox = QtWidgets.QCheckBox(
+            translate("History", "Use git terminology (Commit, Repository, Staged, …)"),
+            self.form,
+        )
+        self._git_terminology_checkbox.setToolTip(
+            translate(
+                "History",
+                "Relabel the interface with the underlying git terms instead of the "
+                "CAD-friendly defaults. Takes full effect after restarting FreeCAD.",
+            )
+        )
+        terminology_layout = QtWidgets.QVBoxLayout()
+        terminology_layout.addWidget(self._git_terminology_checkbox)
+        terminology_group = QtWidgets.QGroupBox(translate("History", "Terminology"), self.form)
+        terminology_group.setLayout(terminology_layout)
+        root_layout.addWidget(terminology_group)
+
         root_layout.addStretch(1)
 
         self._excluded_types_default_radio = self._excluded_types_controls.default_radio
@@ -147,6 +165,7 @@ class DiffSettingsPreferencesPage:
         self._apply_list_state(self._excluded_properties_controls, state.excluded_properties)
         self._apply_by_type_state(self._excluded_by_type_controls, state.excluded_properties_by_type)
         self._float_precision_spin.setValue(state.float_precision)
+        self._git_terminology_checkbox.setChecked(git_terminology_enabled())
         self._is_loading = False
         self._sync_visibility()
 
@@ -173,6 +192,8 @@ class DiffSettingsPreferencesPage:
             Log.error(result.message or "Failed to save diff settings state")
             return
         self._loaded_state = state_to_save
+        # Terminology preference is independent of the diff Settings model.
+        set_git_terminology_enabled(self._git_terminology_checkbox.isChecked())
 
     def _bind_signals(self) -> None:
         self._excluded_types_controls.custom_radio.toggled.connect(

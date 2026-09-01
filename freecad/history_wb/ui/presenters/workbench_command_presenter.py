@@ -28,7 +28,7 @@ from ...application.actions.git_repo.initialize_git_repository import Initialize
 from ...application.actions.git_workflow.commit_staging import CommitStagingAction
 from ...domain.git.models import GitRepository
 from ...qt import QtCore
-from ...utils import Log, translate
+from ...utils import Log, term, translate
 from ..state import ApplicationState
 from ..views.diff_panel.dialog_view import DialogView
 from ..views.diff_panel.dialogs import GitConfigDialogResult
@@ -131,8 +131,11 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         repo = self._application_state.git_repository
         if repo is None:
             self._show_warning_message(
-                translate("History", "No Project"),
-                translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                term(translate("History", "No Project"), translate("History", "No Repository")),
+                term(
+                    translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                    translate("History", "No repository detected. Open a FreeCAD document in a repository first."),
+                ),
             )
             return False
 
@@ -147,8 +150,11 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         repo = self._application_state.git_repository
         if repo is None:
             self._show_warning_message(
-                translate("History", "No Project"),
-                translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                term(translate("History", "No Project"), translate("History", "No Repository")),
+                term(
+                    translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                    translate("History", "No repository detected. Open a FreeCAD document in a repository first."),
+                ),
             )
             return False
 
@@ -167,8 +173,11 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         repo = self._application_state.git_repository
         if repo is None:
             self._show_warning_message(
-                translate("History", "No Project"),
-                translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                term(translate("History", "No Project"), translate("History", "No Repository")),
+                term(
+                    translate("History", "No project detected. Open a FreeCAD document in a project first."),
+                    translate("History", "No repository detected. Open a FreeCAD document in a repository first."),
+                ),
             )
             return
 

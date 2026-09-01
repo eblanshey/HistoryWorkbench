@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
-from ....utils import translate
+from ....utils import term, translate
 from ..widgets.buttons import make_tool_button
 from ..widgets.styles import (
     DIFF_ROW_CONTAINER_OBJECT_NAME,
@@ -54,7 +54,7 @@ class NodeDiffRowWidget(QtWidgets.QWidget):
 
         icon_size = QtCore.QSize(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE)
         button = make_tool_button(
-            tooltip=translate("History", "Open 3D comparison"),
+            tooltip=term(translate("History", "Open 3D comparison"), translate("History", "Open 3D diff")),
             icon=QtGui.QIcon(str(get_icon_path("VisualDiff.svg"))),
             width=TREE_ITEM_HEIGHT,
             height=TREE_ITEM_HEIGHT,
@@ -63,7 +63,5 @@ class NodeDiffRowWidget(QtWidgets.QWidget):
             icon_size=icon_size,
             tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
         )
-        button.clicked.connect(
-            lambda checked=False: self.visual_diff_requested.emit(self._git_path, self._node_path)
-        )
+        button.clicked.connect(lambda checked=False: self.visual_diff_requested.emit(self._git_path, self._node_path))
         layout.addWidget(button)

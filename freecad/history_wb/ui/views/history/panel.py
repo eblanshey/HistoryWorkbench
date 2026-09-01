@@ -1,10 +1,11 @@
 """File responsibility: History panel facade composing repository header and history list."""
+
 from datetime import datetime
 
 from ....application.actions.result_models import SnapshotSummary
 from ....domain.git.models import GitCommit, GitRepository
 from ....qt import QtCore, QtWidgets
-from ....utils import translate
+from ....utils import term, translate
 from .formatters import format_snapshot_timestamp
 from .history_list import HistoryList
 from .history_row import create_commit_history_item, create_no_iterations_history_item, create_special_history_item
@@ -59,7 +60,10 @@ class HistoryPanelWidget(QtWidgets.QWidget):
             self._add_special_items()
 
         if not show_special_items and not commits:
-            no_iterations_text = translate("History", "No iterations to display.")
+            no_iterations_text = term(
+                translate("History", "No iterations to display."),
+                translate("History", "No commits to display."),
+            )
             item, widget = create_no_iterations_history_item(no_iterations_text)
             self._add_list_item(item, widget)
             self._restore_history_selection(previous_selection)
@@ -88,7 +92,9 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         self._repository_header = RepositoryHeader(self)
         self._history_list = HistoryList(self)
 
-        history_placeholder = QtWidgets.QLabel(translate("History", "Iterations"))
+        history_placeholder = QtWidgets.QLabel(
+            term(translate("History", "Iterations"), translate("History", "Commits"))
+        )
         history_placeholder.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -135,13 +141,13 @@ class HistoryPanelWidget(QtWidgets.QWidget):
     def _add_special_items(self) -> None:
         """Insert Current Files Area and Reviewed Area pseudo-rows."""
         working_tree_item, working_tree_widget = create_special_history_item(
-            translate("History", "Current Files Area"),
+            term(translate("History", "Current Files Area"), translate("History", "Working Tree")),
             HistorySelection(item_kind="WORKING_TREE", commit_hash=None),
         )
         self._add_list_item(working_tree_item, working_tree_widget)
 
         staging_item, staging_widget = create_special_history_item(
-            translate("History", "Reviewed Area"),
+            term(translate("History", "Reviewed Area"), translate("History", "Staging Area")),
             HistorySelection(item_kind="STAGING", commit_hash=None),
         )
         self._add_list_item(staging_item, staging_widget)

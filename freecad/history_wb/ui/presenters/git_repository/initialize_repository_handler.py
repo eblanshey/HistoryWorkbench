@@ -7,7 +7,7 @@ from ....application.actions.git_repo.get_git_repository_init_candidates import 
     GetGitRepositoryInitCandidatesAction,
 )
 from ....application.actions.git_repo.initialize_git_repository import InitializeGitRepositoryAction
-from ....utils import Log, translate
+from ....utils import Log, term, translate
 from ...state import ApplicationState
 
 
@@ -37,11 +37,19 @@ class InitializeRepositoryHandler:
         if not candidates_result.is_success:
             self._show_info_message(
                 translate("History", "No Directories Available"),
-                translate(
-                    "History",
-                    "No open documents are available for project initialization. "
-                    "Please open at least one saved document in the root location "
-                    "you'd like to initialize a new project.",
+                term(
+                    translate(
+                        "History",
+                        "No open documents are available for project initialization. "
+                        "Please open at least one saved document in the root location "
+                        "you'd like to initialize a new project.",
+                    ),
+                    translate(
+                        "History",
+                        "No open documents are available for repository initialization. "
+                        "Please open at least one saved document in the root location "
+                        "you'd like to initialize a new repository.",
+                    ),
                 ),
             )
             return False
@@ -61,10 +69,12 @@ class InitializeRepositoryHandler:
         repository = init_result.data
         self._application_state.git_repository = repository
 
-        success_template = translate("History", "Initialized project: %1")
+        success_template = term(
+            translate("History", "Initialized project: %1"), translate("History", "Initialized repository: %1")
+        )
         success_message = success_template.replace("%1", repository.absolute_path)
         self._show_info_message(
-            translate("History", "Project Initialized"),
+            term(translate("History", "Project Initialized"), translate("History", "Repository Initialized")),
             success_message,
         )
         Log.info(f"Initialized git repository at {repository.absolute_path}")

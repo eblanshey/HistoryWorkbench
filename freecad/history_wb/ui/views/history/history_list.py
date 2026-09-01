@@ -3,7 +3,7 @@
 from typing import cast
 
 from ....qt import QtCore, QtGui, QtWidgets
-from ....utils import translate
+from ....utils import term, translate
 from .models import HistorySelection
 
 
@@ -138,7 +138,9 @@ class HistoryList(QtWidgets.QListWidget):
         """Show Current Files Area bulk-review context action."""
         menu = QtWidgets.QMenu(self)
         menu.setToolTipsVisible(True)
-        action = menu.addAction(translate("History", "Mark All Files Reviewed"))
+        action = menu.addAction(
+            term(translate("History", "Mark All Files Reviewed"), translate("History", "Mark All Files Staged"))
+        )
         selected_action = menu.exec(self.mapToGlobal(pos))
 
         if selected_action == action:
@@ -146,15 +148,29 @@ class HistoryList(QtWidgets.QListWidget):
 
     def _show_reviewed_context_menu(self, pos: QtCore.QPoint, selection: HistorySelection) -> None:
         """Show Reviewed Area context menu actions."""
-        tooltip = translate(
-            "History",
-            "Remove document(s) from Reviewed. The current file(s) stay unchanged "
-            "and will not be saved in the next iteration until reviewed again.",
+        tooltip = term(
+            translate(
+                "History",
+                "Remove document(s) from Reviewed. The current file(s) stay unchanged "
+                "and will not be saved in the next iteration until reviewed again.",
+            ),
+            translate(
+                "History",
+                "Remove document(s) from Staged. The current file(s) stay unchanged "
+                "and will not be saved in the next commit until staged again.",
+            ),
         )
         menu = QtWidgets.QMenu(self)
         menu.setToolTipsVisible(True)
-        action = menu.addAction(translate("History", "Remove All Files From Reviewed"))
-        restore_action = menu.addAction(translate("History", "Restore All Reviewed Files"))
+        action = menu.addAction(
+            term(
+                translate("History", "Remove All Files From Reviewed"),
+                translate("History", "Remove All Files From Staged"),
+            )
+        )
+        restore_action = menu.addAction(
+            term(translate("History", "Restore All Reviewed Files"), translate("History", "Restore All Staged Files"))
+        )
         action.setToolTip(tooltip)
         action.setStatusTip(tooltip)
         selected_action = menu.exec(self.mapToGlobal(pos))
@@ -168,8 +184,18 @@ class HistoryList(QtWidgets.QListWidget):
     def _show_commit_context_menu(self, pos: QtCore.QPoint, selection: HistorySelection) -> None:
         """Show commit-row context actions."""
         menu = QtWidgets.QMenu(self)
-        restore_action = menu.addAction(translate("History", "Restore All Files From Iteration"))
-        copy_id_action = menu.addAction(translate("History", "Copy Iteration ID to Clipboard"))
+        restore_action = menu.addAction(
+            term(
+                translate("History", "Restore All Files From Iteration"),
+                translate("History", "Restore All Files From Commit"),
+            )
+        )
+        copy_id_action = menu.addAction(
+            term(
+                translate("History", "Copy Iteration ID to Clipboard"),
+                translate("History", "Copy Commit ID to Clipboard"),
+            )
+        )
         selected_action = menu.exec(self.mapToGlobal(pos))
 
         if selected_action == restore_action:

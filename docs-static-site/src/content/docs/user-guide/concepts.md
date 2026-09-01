@@ -9,6 +9,8 @@ Understanding the concepts laid out here will help you understand how to use the
 
 Note: if you are already knowledgeable in git, just review git term next to each heading to familiarize yourself with the terminology mapping, and you'll be ready to rock and roll.
 
+Prefer the git terms everywhere? Enable **Edit → Preferences → History → Terminology → "Use git terminology"** to relabel the interface (Iteration → Commit, Project → Repository, Reviewed → Staged, and so on). Restart FreeCAD for the change to apply to every label.
+
 ## FreeCAD Terminology
 
 FreeCAD stores files in the `.FCStd` format, and represents a single **Document**. From the workbench's perspective, a FreeCAD "Document" and "file" mean the same thing.

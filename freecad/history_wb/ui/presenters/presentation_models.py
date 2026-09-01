@@ -8,6 +8,7 @@ from typing import Any, cast
 from ...domain.diff.models import DiffState
 from ...qt import QtCore, QtGui
 from ...resources import get_icon_path
+from ...utils import term
 
 
 __all__ = [
@@ -42,9 +43,15 @@ class OldSnapshotMissingIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(
                 str,
-                QtCore.QT_TRANSLATE_NOOP(
-                    "History",
-                    "Cannot find previous snapshot. Tree comparison cannot be generated.",
+                term(
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History",
+                        "Cannot find previous snapshot. Tree comparison cannot be generated.",
+                    ),
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History",
+                        "Cannot find previous snapshot. Tree diff cannot be generated.",
+                    ),
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusOldSnapshotMissing.svg"))),
@@ -59,8 +66,13 @@ class NewSnapshotMissingIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(
                 str,
-                QtCore.QT_TRANSLATE_NOOP(
-                    "History", "No snapshot available for this document. Tree comparison cannot be generated."
+                term(
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "No snapshot available for this document. Tree comparison cannot be generated."
+                    ),
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "No snapshot available for this document. Tree diff cannot be generated."
+                    ),
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusSnapshotMissing.svg"))),
@@ -75,7 +87,10 @@ class WorkingTreeDocumentClosedIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(
                 str,
-                QtCore.QT_TRANSLATE_NOOP("History", "Click to open the document and generate a comparison."),
+                term(
+                    QtCore.QT_TRANSLATE_NOOP("History", "Click to open the document and generate a comparison."),
+                    QtCore.QT_TRANSLATE_NOOP("History", "Click to open the document and generate a diff."),
+                ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("OpenDocument.svg"))),
         )
@@ -89,8 +104,13 @@ class OldInvalidSnapshotIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(
                 str,
-                QtCore.QT_TRANSLATE_NOOP(
-                    "History", "The old snapshot is invalid, so a tree comparison cannot be generated."
+                term(
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "The old snapshot is invalid, so a tree comparison cannot be generated."
+                    ),
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "The old snapshot is invalid, so a tree diff cannot be generated."
+                    ),
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusInvalidSnapshot.svg"))),
@@ -105,8 +125,13 @@ class NewInvalidSnapshotIndicator(DocumentStatusIndicator):
         super().__init__(
             tooltip=cast(
                 str,
-                QtCore.QT_TRANSLATE_NOOP(
-                    "History", "The selected snapshot is invalid, so a tree comparison cannot be generated."
+                term(
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "The selected snapshot is invalid, so a tree comparison cannot be generated."
+                    ),
+                    QtCore.QT_TRANSLATE_NOOP(
+                        "History", "The selected snapshot is invalid, so a tree diff cannot be generated."
+                    ),
                 ),
             ),
             icon=QtGui.QIcon(str(get_icon_path("DocumentStatusInvalidSnapshot.svg"))),

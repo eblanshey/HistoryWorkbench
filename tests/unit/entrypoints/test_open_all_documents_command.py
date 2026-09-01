@@ -22,6 +22,7 @@ class TestOpenAllDocumentsInRepositoryCommand:
         """When no repository in UI state, warning popup is shown."""
         mock_container = MagicMock()
         mock_container.translate.side_effect = lambda _ctx, text: text
+        mock_container.settings_repo.git_terminology_enabled.return_value = False
         mock_get_container.return_value = mock_container
         mock_ui_registry.application_state.git_repository = None
 

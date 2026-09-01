@@ -5,7 +5,7 @@ from collections.abc import Callable
 from ....domain.git.models import GitRepository
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
-from ....utils import translate
+from ....utils import term, translate
 from ..widgets.buttons import make_tool_button
 from ..widgets.styles import HEADER_ICON_BUTTON_STYLE, REPOSITORY_LABEL_EMPTY_STYLE, REPOSITORY_LABEL_LINK_STYLE
 
@@ -60,14 +60,18 @@ class RepositoryHeader(QtWidgets.QWidget):
         # Null repository means workbench currently has no project context.
         if repo is None:
             self._current_repository_path = None
-            self._repository_label.setText(translate("History", "No project detected"))
+            self._repository_label.setText(
+                term(translate("History", "No project detected"), translate("History", "No repository detected"))
+            )
             self._repository_label.setToolTip("")
             self._repository_label.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
             self._repository_label.setStyleSheet(REPOSITORY_LABEL_EMPTY_STYLE)
             return
 
         self._current_repository_path = repo.absolute_path
-        text = translate("History", "Project: %1").replace("%1", repo.name)
+        text = term(translate("History", "Project: %1"), translate("History", "Repository: %1")).replace(
+            "%1", repo.name
+        )
         self._repository_label.setText(text)
         self._repository_label.setToolTip(repo.absolute_path)
         self._repository_label.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
@@ -80,7 +84,10 @@ class RepositoryHeader(QtWidgets.QWidget):
         self._repository_label.setStyleSheet(REPOSITORY_LABEL_EMPTY_STYLE)
 
         self._refresh_button = make_tool_button(
-            tooltip=translate("History", "Refresh Project and Iterations"),
+            tooltip=term(
+                translate("History", "Refresh Project and Iterations"),
+                translate("History", "Refresh Repository and Commits"),
+            ),
             style=HEADER_ICON_BUTTON_STYLE,
             icon_size=QtCore.QSize(24, 24),
             tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
@@ -90,7 +97,7 @@ class RepositoryHeader(QtWidgets.QWidget):
         self._refresh_button.clicked.connect(self.refresh_requested.emit)
 
         self._save_iteration_button = make_tool_button(
-            tooltip=translate("History", "Save Iteration"),
+            tooltip=term(translate("History", "Save Iteration"), translate("History", "Commit")),
             style=HEADER_ICON_BUTTON_STYLE,
             icon_size=QtCore.QSize(24, 24),
             tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,

@@ -1,10 +1,12 @@
-# File responsibility: Unit tests for float comparison helper functions.
+# File responsibility: Unit tests for utility helper functions.
 """Unit tests for utility functions in the Diff Workbench."""
+
+from unittest.mock import patch
 
 import pytest
 
 from freecad.history_wb.domain.config import FLOAT_PRECISION
-from freecad.history_wb.utils import float_values_equal
+from freecad.history_wb.utils import float_values_equal, term
 
 
 class TestFloatValuesEqual:
@@ -36,3 +38,15 @@ class TestFloatValuesEqual:
         """Test that float_values_equal uses the configured precision."""
         assert float_values_equal(1.0, 1.0 + 1e-8, FLOAT_PRECISION) is True
         assert float_values_equal(1.0, 1.1, FLOAT_PRECISION) is False
+
+
+class TestTerm:
+    """Tests for the git-terminology phrase selector."""
+
+    def test_returns_cad_phrase_when_disabled(self) -> None:
+        with patch("freecad.history_wb.utils.git_terminology_enabled", return_value=False):
+            assert term("Save Iteration", "Commit") == "Save Iteration"
+
+    def test_returns_git_phrase_when_enabled(self) -> None:
+        with patch("freecad.history_wb.utils.git_terminology_enabled", return_value=True):
+            assert term("Save Iteration", "Commit") == "Commit"

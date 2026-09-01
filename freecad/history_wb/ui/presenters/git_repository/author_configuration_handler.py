@@ -14,7 +14,7 @@ from ....application.actions.git_config.can_write_global_git_identity import (
 from ....application.actions.git_config.get_git_identity import GetGitIdentityAction
 from ....application.actions.git_config.save_git_identity import SaveGitIdentityAction
 from ....domain.git.models import GitIdentity, GitRepository
-from ....utils import translate
+from ....utils import term, translate
 from ...views.diff_panel.dialogs import GitConfigDialogResult
 
 
@@ -65,8 +65,11 @@ class AuthorConfigurationHandler:
 
             if not dialog_result.author_name or not dialog_result.author_email:
                 self._show_warning_message(
-                    translate("History", "Save Iteration Failed"),
-                    translate("History", "Name and email are required to save iteration"),
+                    term(translate("History", "Save Iteration Failed"), translate("History", "Commit Failed")),
+                    term(
+                        translate("History", "Name and email are required to save iteration"),
+                        translate("History", "Name and email are required to commit"),
+                    ),
                 )
                 return False
 
@@ -81,16 +84,23 @@ class AuthorConfigurationHandler:
             # Local save failed; give up
             if not dialog_result.should_save_globally:
                 self._show_error_message(
-                    translate("History", "Save Iteration Failed"),
+                    term(translate("History", "Save Iteration Failed"), translate("History", "Commit Failed")),
                     translate("History", "Git identity could not be saved"),
                 )
                 return False
 
             # Global save failed; retry with local-only option
-            retry_message = translate(
-                "History",
-                "Could not save git identity for all projects. "
-                "Uncheck the global option to save it only for this project.",
+            retry_message = term(
+                translate(
+                    "History",
+                    "Could not save git identity for all projects. "
+                    "Uncheck the global option to save it only for this project.",
+                ),
+                translate(
+                    "History",
+                    "Could not save git identity for all repositories. "
+                    "Uncheck the global option to save it only for this repository.",
+                ),
             )
             initial_values = dialog_result
 

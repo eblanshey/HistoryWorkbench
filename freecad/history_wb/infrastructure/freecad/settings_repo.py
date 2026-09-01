@@ -41,6 +41,25 @@ class _ParamGroup(Protocol):
 MIN_FLOAT_PRECISION = 0
 MAX_FLOAT_PRECISION = 12
 
+# Single source of truth for where the History workbench preferences live.
+PARAM_GROUP_PATH = "User parameter:BaseApp/Preferences/Mod/History"
+KEY_GIT_TERMINOLOGY = "GitTerminology"
+
+
+def read_git_terminology_enabled() -> bool:
+    """Read the git-terminology toggle directly from FreeCAD preferences.
+
+    Used during command registration, which happens at workbench Initialize
+    before the application container (and its cached settings repository)
+    exists. Returns False when FreeCAD is unavailable (e.g. unit tests).
+    """
+    try:
+        import FreeCAD as App  # pylint: disable=import-error
+
+        return bool(App.ParamGet(PARAM_GROUP_PATH).GetBool(KEY_GIT_TERMINOLOGY, False))
+    except (ImportError, AttributeError):
+        return False
+
 
 class FreeCADSettingsRepository:
     """Settings repository implementation using FreeCAD's Parameter system.
@@ -67,8 +86,9 @@ class FreeCADSettingsRepository:
 
     def __init__(self, ctx: FreeCadContext) -> None:
         self._ctx = ctx
-        self._group_path = "User parameter:BaseApp/Preferences/Mod/History"
+        self._group_path = PARAM_GROUP_PATH
         self._cached_settings: Settings | None = None
+        self._cached_git_terminology: bool | None = None
 
     def _get_group(self) -> _ParamGroup:
         return cast(_ParamGroup, self._ctx.app.ParamGet(self._group_path))
@@ -232,3 +252,15 @@ class FreeCADSettingsRepository:
             self._cached_settings = self._build_settings_from_state(self.get_persistence_state())
 
         return self._cached_settings
+
+    def git_terminology_enabled(self) -> bool:
+        """Return the git-terminology display toggle, caching the lookup."""
+        if self._cached_git_terminology is None:
+            self._cached_git_terminology = self._get_group().GetBool(KEY_GIT_TERMINOLOGY, False)
+
+        return self._cached_git_terminology
+
+    def set_git_terminology_enabled(self, enabled: bool) -> None:
+        """Persist the git-terminology display toggle and refresh the cache."""
+        self._get_group().SetBool(KEY_GIT_TERMINOLOGY, enabled)
+        self._cached_git_terminology = enabled

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from freecad.history_wb.domain.diff.models import DiffState
-from freecad.history_wb.qt import QtWidgets
+from freecad.history_wb.qt import QtGui, QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
+from freecad.history_wb.ui.views.document_diff.tree import DocumentDiffTree
+from freecad.history_wb.ui.views.theme.diff import background_for_state
 
 
 def _tree_widget(tree) -> QtWidgets.QTreeWidget:  # type: ignore[no-untyped-def]
@@ -173,8 +175,36 @@ def test_visual_diff_row_widget_owns_visible_text(tree, simple_document_row_fact
     assert label.text() == "Pad"
 
 
-def test_visual_diff_button_only_for_enabled_nodes(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
-    """Visual diff widgets appear only for enabled nodes."""
+def test_unchanged_node_uses_theme_native_row_label(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
+    """Unchanged rows use QLabel theme foreground over transparent containers."""
+    tree.show_doc_diffs(
+        [_diff(nodes=[_node(state=DiffState.UNCHANGED, has_changes=False)])],
+        simple_document_row_factory,
+    )
+
+    widget = _tree_widget(tree)
+    root_item = widget.topLevelItem(0)
+    assert root_item is not None
+    child_item = root_item.child(0)
+    assert child_item is not None
+    row_widget = widget.itemWidget(child_item, 0)
+    assert row_widget is not None
+    label = row_widget.findChild(QtWidgets.QLabel)
+    assert label is not None
+
+    assert child_item.text(0) == ""
+    assert label.text() == "Pad"
+    assert not label.isHidden()
+    assert "margin: 0px; padding: 0px; border: none; border-radius: 0px;" in widget.styleSheet()
+    assert "QTreeWidget#documentDiffTree::item:selected { border: none; border-radius: 0px; }" in widget.styleSheet()
+    assert '[diffState="UNCHANGED"] { background-color: transparent; }' in widget.styleSheet()
+    assert "QWidget#diffRowContainer { border-radius: 0px; }" in widget.styleSheet()
+
+
+def test_all_nodes_use_row_widgets_and_only_enabled_nodes_show_visual_diff_button(
+    tree, simple_document_row_factory
+) -> None:  # type: ignore[no-untyped-def]
+    """Every node owns visible row widget while visual actions remain conditional."""
     tree.show_doc_diffs(
         [
             _diff(
@@ -197,8 +227,67 @@ def test_visual_diff_button_only_for_enabled_nodes(tree, simple_document_row_fac
     first_row = widget.itemWidget(first_item, 0)
     second_row = widget.itemWidget(second_item, 0)
     assert first_row is not None
-    assert second_row is None
+    assert second_row is not None
     assert len(first_row.findChildren(QtWidgets.QToolButton)) == 1
+    assert second_row.findChildren(QtWidgets.QToolButton) == []
+    assert first_item.text(0) == ""
+    assert second_item.text(0) == ""
+
+
+def test_current_node_updates_installed_row_selection_style(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
+    """Changing current tree item updates selected property without local styles."""
+    tree.show_doc_diffs([_diff(nodes=[_node(visual_diff_enabled=False)])], simple_document_row_factory)
+
+    widget = _tree_widget(tree)
+    root_item = widget.topLevelItem(0)
+    assert root_item is not None
+    child_item = root_item.child(0)
+    assert child_item is not None
+    row = widget.itemWidget(child_item, 0)
+    assert row is not None
+
+    widget.setCurrentItem(child_item)
+
+    assert row.property("rowSelected") is True
+    assert row.styleSheet() == ""
+
+
+def test_changed_row_paints_shared_semantic_background(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
+    """Tree-level stylesheet paints custom row background through its paint event."""
+    tree.show_doc_diffs([_diff(nodes=[_node()])], simple_document_row_factory)
+    widget = _tree_widget(tree)
+    root_item = widget.topLevelItem(0)
+    assert root_item is not None
+    child_item = root_item.child(0)
+    assert child_item is not None
+    row = widget.itemWidget(child_item, 0)
+    assert row is not None
+    row.resize(200, 22)
+    image = QtGui.QImage(row.size(), QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtGui.QColor("magenta"))
+
+    row.render(image)
+
+    expected = background_for_state(DiffState.MODIFIED, row.palette())
+    assert expected is not None
+    assert image.pixelColor(150, 11) == expected
+
+
+def test_tree_refreshes_shared_diff_style_when_palette_changes(application) -> None:  # type: ignore[no-untyped-def]
+    """One tree-level stylesheet recomputes all semantic colors after theme changes."""
+    host = QtWidgets.QWidget()
+    host.setStyleSheet("QLabel { color: #f0f0f0; }")
+    tree = DocumentDiffTree(host)
+    widget = _tree_widget(tree)
+    light_style = widget.styleSheet()
+    dark_palette = QtGui.QPalette(tree.palette())
+    dark_palette.setColor(QtGui.QPalette.ColorRole.Base, QtGui.QColor(30, 30, 30))
+    dark_palette.setColor(QtGui.QPalette.ColorRole.Window, QtGui.QColor(20, 20, 20))
+    dark_palette.setColor(QtGui.QPalette.ColorRole.Text, QtGui.QColor(240, 240, 240))
+
+    widget.setPalette(dark_palette)
+
+    assert widget.styleSheet() != light_style
 
 
 def test_nodes_with_changed_descendants_expand_ancestor_branch(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]

@@ -25,6 +25,11 @@ class DocumentStatusIndicatorsWidget(QtWidgets.QWidget):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
+        self.setObjectName("documentStatusIndicators")
+        self.setStyleSheet(
+            "QWidget#documentStatusIndicators { background-color: transparent; } "
+            "QWidget#documentStatusIndicators QLabel { background-color: transparent; }"
+        )
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)

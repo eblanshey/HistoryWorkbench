@@ -8,7 +8,6 @@ from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
 from freecad.history_wb.ui.views.history.models import HistorySelection
-from freecad.history_wb.ui.views.theme.diff import DIFF_STATE_ROLE
 
 
 def _tree_widget(panel) -> QtWidgets.QTreeWidget:  # type: ignore[no-untyped-def]
@@ -72,7 +71,13 @@ def test_show_doc_diffs_creates_top_level_document_rows(panel) -> None:  # type:
     assert tree.topLevelItemCount() == 1
     root_item = tree.topLevelItem(0)
     assert root_item is not None
-    assert root_item.text(0) == "parts/A.FCStd"
+    row_widget = tree.itemWidget(root_item, 0)
+    assert row_widget is not None
+    label = row_widget.findChild(QtWidgets.QLabel)
+    assert label is not None
+    assert root_item.text(0) == ""
+    assert label.text() == "parts/A.FCStd"
+    assert not label.isHidden()
 
 
 @pytest.mark.parametrize("state", [DiffState.ADDED, DiffState.DELETED])
@@ -83,11 +88,11 @@ def test_show_doc_diffs_applies_document_row_diff_state(panel, state: DiffState)
     tree = _tree_widget(panel)
     root_item = tree.topLevelItem(0)
     assert root_item is not None
-    assert root_item.data(0, DIFF_STATE_ROLE) == state
     row_widget = tree.itemWidget(root_item, 0)
     assert row_widget is not None
-    assert "background-color" in row_widget.styleSheet()
-    assert "QWidget#diffRowContainer" in row_widget.styleSheet()
+    assert "background-color" in tree.styleSheet()
+    assert "QWidget#diffRowContainer" in tree.styleSheet()
+    assert row_widget.styleSheet() == ""
 
 
 def test_show_doc_diffs_with_empty_list_clears_tree(panel) -> None:  # type: ignore[no-untyped-def]

@@ -70,11 +70,43 @@ tasks:
       - task: test:unit
       - task: test:integration
 
+  test:quiet:
+    desc: Run all tests and print output only on failure
+    silent: true
+    cmds:
+      - |
+          OUTPUT_FILE=$(mktemp)
+          if task test >"$OUTPUT_FILE" 2>&1; then
+            rm "$OUTPUT_FILE"
+            printf 'All tests passed.\n'
+          else
+            STATUS=$?
+            cat "$OUTPUT_FILE"
+            rm "$OUTPUT_FILE"
+            exit "$STATUS"
+          fi
+
   test:unit:
     desc: Run tests with pytest
     summary: Executes unit tests with coverage
     cmds:
       - "{{.UV}} run pytest {{.CLI_ARGS | default \"tests/unit\"}}"
+
+  test:unit:quiet:
+    desc: Run unit tests and print output only on failure
+    silent: true
+    cmds:
+      - |
+          OUTPUT_FILE=$(mktemp)
+          if {{.UV}} run pytest -q --tb=short {{.CLI_ARGS | default "tests/unit"}} >"$OUTPUT_FILE" 2>&1; then
+            rm "$OUTPUT_FILE"
+            printf 'Unit tests passed.\n'
+          else
+            STATUS=$?
+            cat "$OUTPUT_FILE"
+            rm "$OUTPUT_FILE"
+            exit "$STATUS"
+          fi
 
   test:coverage:
     desc: Run tests with coverage report

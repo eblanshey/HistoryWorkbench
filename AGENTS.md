@@ -9,6 +9,7 @@
 - If you are asked to copy or move a file, prefer to use the cp or mv commands.
 - Run `task check` to run linters and formatters
 - Run `task test` to run all tests (includes unit and integration). Integration tests use FreeCAD's Python 3.11 interpreter through `./run_integration_tests.sh`. If you get a large number of skipped tests, it's because you didn't run it correctly!
+- Agents MUST use `task test:quiet` for full test runs and `task test:unit:quiet -- <paths>` for focused unit tests. These commands print test output only on failure, avoiding large successful pytest logs.
 - When asked to update or fix documentation or any markdown files, do not make the changes in a way that indicates something has changed. E.g. do not write "Update: we now want to do X". Write it in a way that flows naturally as if it's the first version written.
 - Use the `Log` static methods from `utils.py` for logging throughout the codebase.
 - Do not write comments that reference bugs that were fixed (unless explicitly asked to), as such comments are useless long-term.
@@ -21,13 +22,14 @@
 - Encode invariants in types and function signatures: if `None` is not valid, do not use optional return types. Validate preconditions at entry points, then keep inner helpers strict and non-optional.
 - All user-facing English words and phrases must use `translate("History", "...")` literals at display sites, or `QT_TRANSLATE_NOOP` with correct context when deferred (command `GetResources()` uses exact command context; workbench labels use `Workbench`; property descriptions use `App::Property`). Logs do not require translation.
 - When changing user-facing text, run `task translate` before the completion of your work.
-- Read the `docs/development/Architecture.md` guidelines when planning new features.
+- Read the `docs-static-site/src/content/docs/development/Architecture.md` guidelines when planning new features.
 - Do not remove useful line comments when refactoring
 - DO add comments for all public functions/methods, and private/internal methods when their name doesn't describe their logic well enough
 - Add comments on if-statements and other code-path decisions, when semantics are not immediately clear
 - Separate code comments and previous code with an empty line, so that code comment has a line space before it
 - Keep cyclomatic complexity at B (5-10) or better in the src dir: `uv run radon cc --min C freecad/history_wb --no-assert -s`
-- New features that can be easily tested from the GUI should be added to @docs/manual-testing/smoke-testing.md
+- New features that can be easily tested from the GUI should be added to
+  `docs-static-site/src/content/docs/development/Manual Testing/smoke-testing.md`.
 
 Terse like caveman. Technical substance exact. Only fluff die.
 Drop: articles, filler (just/really/basically), pleasantries, hedging.

@@ -1,12 +1,12 @@
-"""File responsibility: Theme-aware diff item coloring for Qt tree views."""
+"""File responsibility: Theme-aware semantic diff colors for widget-backed views."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, cast
 
 from ....domain.diff.models import DiffState
-from ....qt import QtCore, QtGui, QtWidgets
+from ....qt import QtGui, QtWidgets
 from .colors import (
     _blend_colors,
     _color_from_key,
@@ -22,19 +22,14 @@ from .colors import (
 
 
 __all__ = [
-    "DIFF_STATE_ROLE",
-    "DiffItemDelegate",
-    "apply_diff_state_to_item",
+    "DiffInteractionColors",
     "apply_diff_state_to_widget",
     "background_for_state",
+    "colors_for_diff_state",
     "foreground_for_background",
+    "hover_background_for",
+    "selected_background_for",
 ]
-
-
-# Custom model role used by DiffItemDelegate. Qt's built-in BackgroundRole can be
-# ignored by aggressive application stylesheets, so we store semantic state and
-# let the delegate paint it directly.
-DIFF_STATE_ROLE = QtCore.Qt.ItemDataRole.UserRole + 20
 
 # Minimum contrast target for normal-sized UI text. This follows the WCAG AA
 # 4.5:1 guidance and keeps diff labels readable across light and dark themes.
@@ -48,6 +43,8 @@ _DARK_ACCENT_BLEND = 0.38
 # text color reaches the contrast target.
 _CONTRAST_FALLBACK_BLEND_RATIOS = (0.45, 0.52, 0.60, 0.70, 0.82, 1.0)
 _LAST_FALLBACK_BLEND = 0.52
+_HOVER_BLEND = 0.22
+_SELECTED_BLEND = 0.42
 
 # Diff accents are paired as (light-theme accent, dark-theme accent). Light
 # variants preserve the original bright pastel highlights. Dark variants are
@@ -61,43 +58,16 @@ _MODIFIED_LIGHT_ACCENT = QtGui.QColor(200, 200, 255)  # #C8C8FF
 _MODIFIED_DARK_ACCENT = QtGui.QColor(116, 192, 252)  # #74C0FC
 
 
-class DiffItemDelegate(QtWidgets.QStyledItemDelegate):
-    """Paint diff item backgrounds with contrast-safe foreground colors."""
+@dataclass(frozen=True)
+class DiffInteractionColors:
+    """Colors for normal, hovered, and selected rendering of one diff state."""
 
-    def paint(
-        self,
-        painter: QtGui.QPainter,
-        option: QtWidgets.QStyleOptionViewItem,
-        index: QtCore.QModelIndex | QtCore.QPersistentModelIndex,
-    ) -> None:  # type: ignore[override]
-        """Paint one tree cell using semantic diff colors when present."""
-        state = index.data(DIFF_STATE_ROLE)
-        if not isinstance(state, DiffState):
-            super().paint(painter, option, index)
-            return
-
-        themed_option = QtWidgets.QStyleOptionViewItem(option)
-        self.initStyleOption(themed_option, index)
-
-        # PySide exposes these attributes at runtime, but current stubs omit
-        # them. Keep the cast local so the rest of the module remains typed.
-        themed_option_data = cast(Any, themed_option)
-        background = background_for_state(state, themed_option_data.palette)
-        if background is None:
-            super().paint(painter, option, index)
-            return
-
-        foreground = foreground_for_background(background, themed_option_data.palette)
-
-        # Set both background and text roles on the style option. This lets the
-        # current Qt style keep selection, padding, icons, and branch painting
-        # while overriding only diff-specific colors.
-        themed_option_data.backgroundBrush = QtGui.QBrush(background)
-        themed_option_data.palette.setColor(QtGui.QPalette.ColorRole.Text, foreground)
-        themed_option_data.palette.setColor(QtGui.QPalette.ColorRole.WindowText, foreground)
-        themed_option_data.palette.setColor(QtGui.QPalette.ColorRole.Highlight, background)
-        themed_option_data.palette.setColor(QtGui.QPalette.ColorRole.HighlightedText, foreground)
-        super().paint(painter, themed_option, index)
+    normal_background: QtGui.QColor | None
+    normal_foreground: QtGui.QColor
+    hover_background: QtGui.QColor
+    hover_foreground: QtGui.QColor
+    selected_background: QtGui.QColor
+    selected_foreground: QtGui.QColor
 
 
 def background_for_state(state: DiffState, palette: QtGui.QPalette) -> QtGui.QColor | None:
@@ -134,24 +104,41 @@ def foreground_for_background(background: QtGui.QColor, palette: QtGui.QPalette)
     return _cached_foreground_for_background(_color_key(background), _palette_key(palette))
 
 
-def apply_diff_state_to_item(
-    item: QtWidgets.QTreeWidgetItem,
-    state: DiffState,
-    palette: QtGui.QPalette,
-    *,
-    columns: range | list[int] | tuple[int, ...] = (0,),
-) -> QtGui.QColor | None:
-    """Apply semantic diff colors to one tree item across target columns."""
+def hover_background_for(background: QtGui.QColor, palette: QtGui.QPalette) -> QtGui.QColor:
+    """Blend one semantic background toward theme highlight for hover feedback."""
+    return _blend_colors(background, palette.color(QtGui.QPalette.ColorRole.Highlight), _HOVER_BLEND)
+
+
+def selected_background_for(background: QtGui.QColor, palette: QtGui.QPalette) -> QtGui.QColor:
+    """Blend one semantic background toward theme highlight for selection feedback."""
+    return _blend_colors(background, palette.color(QtGui.QPalette.ColorRole.Highlight), _SELECTED_BLEND)
+
+
+def colors_for_diff_state(state: DiffState, palette: QtGui.QPalette) -> DiffInteractionColors:
+    """Return complete interaction colors for one semantic diff state."""
     background = background_for_state(state, palette)
     if background is None:
-        return None
+        hover_background = hover_background_for(palette.color(QtGui.QPalette.ColorRole.Base), palette)
+        selected_background = palette.color(QtGui.QPalette.ColorRole.Highlight)
+        return DiffInteractionColors(
+            normal_background=None,
+            normal_foreground=palette.color(QtGui.QPalette.ColorRole.Text),
+            hover_background=hover_background,
+            hover_foreground=foreground_for_background(hover_background, palette),
+            selected_background=selected_background,
+            selected_foreground=palette.color(QtGui.QPalette.ColorRole.HighlightedText),
+        )
 
-    foreground = foreground_for_background(background, palette)
-    for column in columns:
-        item.setData(column, DIFF_STATE_ROLE, state)
-        item.setBackground(column, QtGui.QBrush(background))
-        item.setForeground(column, QtGui.QBrush(foreground))
-    return background
+    hover_background = hover_background_for(background, palette)
+    selected_background = selected_background_for(background, palette)
+    return DiffInteractionColors(
+        normal_background=background,
+        normal_foreground=foreground_for_background(background, palette),
+        hover_background=hover_background,
+        hover_foreground=foreground_for_background(hover_background, palette),
+        selected_background=selected_background,
+        selected_foreground=foreground_for_background(selected_background, palette),
+    )
 
 
 def apply_diff_state_to_widget(
@@ -161,19 +148,27 @@ def apply_diff_state_to_widget(
     *,
     container_object_name: str,
     label_object_name: str,
+    selected: bool = False,
 ) -> None:
-    """Apply diff colors to row widget container and its label text."""
-    background = background_for_state(state, palette)
+    """Apply diff colors plus local hover and selection styles to a row widget."""
+    colors = colors_for_diff_state(state, palette)
+    normal_background = colors.normal_background.name() if colors.normal_background is not None else "transparent"
+    display_background = colors.selected_background.name() if selected else normal_background
+    display_foreground = colors.selected_foreground if selected else colors.normal_foreground
+    active_hover_background = colors.selected_background if selected else colors.hover_background
+    hover_foreground = colors.selected_foreground if selected else colors.hover_foreground
 
-    # Clear style when row inherits normal theme colors.
-    if background is None:
-        widget.setStyleSheet("")
-        return
-
-    foreground = foreground_for_background(background, palette)
+    # FreeCAD themes such as OpenTheme apply global QSS that overrides item
+    # palette roles. Object-scoped widget QSS wins locally without affecting
+    # unrelated FreeCAD views.
     widget.setStyleSheet(
-        f"QWidget#{container_object_name} {{ background-color: {background.name()}; }} "
-        f"QLabel#{label_object_name} {{ color: {foreground.name()}; }}"
+        f"QWidget#{container_object_name} {{ "
+        f"background-color: {display_background}; color: {display_foreground.name()}; }} "
+        f"QWidget#{container_object_name}:hover {{ "
+        f"background-color: {active_hover_background.name()}; color: {hover_foreground.name()}; }} "
+        f"QWidget#{container_object_name} QLabel#{label_object_name} {{ "
+        f"background-color: transparent; color: {display_foreground.name()}; }} "
+        f"QWidget#{container_object_name}:hover QLabel#{label_object_name} {{ color: {hover_foreground.name()}; }}"
     )
 
 

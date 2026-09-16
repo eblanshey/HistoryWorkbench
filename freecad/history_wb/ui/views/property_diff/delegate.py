@@ -1,13 +1,12 @@
 """File responsibility: Read-only property value delegate with selectable inline text."""
 
 from ....qt import QtCore, QtWidgets
-from ..theme.diff import DiffItemDelegate
 
 
 __all__ = ["PropertyValueDelegate"]
 
 
-class PropertyValueDelegate(DiffItemDelegate):
+class PropertyValueDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate allowing double-click text selection without persisting edits."""
 
     def createEditor(

@@ -4,7 +4,11 @@ import pytest
 
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtGui
-from freecad.history_wb.ui.views.theme.diff import background_for_state, foreground_for_background
+from freecad.history_wb.ui.views.theme.diff import (
+    background_for_state,
+    colors_for_diff_state,
+    foreground_for_background,
+)
 
 
 def _palette(base: QtGui.QColor, text: QtGui.QColor, window: QtGui.QColor) -> QtGui.QPalette:
@@ -49,3 +53,17 @@ def test_dark_theme_uses_blended_background_instead_of_light_pastel() -> None:
 
     assert background is not None
     assert background != QtGui.QColor(200, 255, 200)
+
+
+def test_interaction_colors_centralize_normal_hover_and_selection_states() -> None:
+    """One theme result supplies every interaction color consumed by diff widgets."""
+    palette = _palette(base=QtGui.QColor(255, 255, 255), text=QtGui.QColor(0, 0, 0), window=QtGui.QColor(245, 245, 245))
+
+    colors = colors_for_diff_state(DiffState.MODIFIED, palette)
+
+    assert colors.normal_background == QtGui.QColor(200, 200, 255)
+    assert colors.normal_foreground == QtGui.QColor(0, 0, 0)
+    assert colors.hover_background.isValid()
+    assert colors.hover_foreground.isValid()
+    assert colors.selected_background.isValid()
+    assert colors.selected_foreground.isValid()

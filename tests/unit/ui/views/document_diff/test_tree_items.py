@@ -1,20 +1,11 @@
-"""File responsibility: Unit tests for extracted document diff tree-item builders."""
+"""File responsibility: Unit tests for structural document diff tree-item builders."""
 
 from __future__ import annotations
-
-import pytest
 
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtCore
 from freecad.history_wb.ui.presenters.presentation_models import NodePresentation
 from freecad.history_wb.ui.views.document_diff.tree_items import build_document_root_item, build_node_item
-from freecad.history_wb.ui.views.theme.diff import DIFF_STATE_ROLE
-
-
-@pytest.fixture
-def palette(application):  # type: ignore[no-untyped-def]
-    """Provide QApplication palette through shared fixture lifecycle."""
-    return application.palette()
 
 
 def _node(
@@ -39,58 +30,23 @@ def _node(
     )
 
 
-def test_build_document_root_item_stores_git_path_and_state(palette) -> None:  # type: ignore[no-untyped-def]
-    """Document root items keep display text, git path, and optional diff-state data."""
-    item = build_document_root_item(
-        "parts/A.FCStd",
-        "parts/A.FCStd",
-        palette,
-        document_state=DiffState.ADDED,
-    )
+def test_build_document_root_item_stores_git_path() -> None:
+    """Document root items keep display text and structural git path."""
+    item = build_document_root_item("parts/A.FCStd", "parts/A.FCStd")
 
     assert item.text(0) == "parts/A.FCStd"
     assert item.data(0, QtCore.Qt.ItemDataRole.UserRole) == "parts/A.FCStd"
-    assert item.data(0, DIFF_STATE_ROLE) == DiffState.ADDED
 
 
-@pytest.mark.parametrize("state", [DiffState.ADDED, DiffState.DELETED, DiffState.MODIFIED])
-def test_build_node_item_applies_diff_state_colors(palette, state: DiffState) -> None:  # type: ignore[no-untyped-def]
-    """Changed nodes store semantic diff-state role and color data."""
-    item = build_node_item(_node(state=state), palette)
-
-    assert item.data(0, DIFF_STATE_ROLE) == state
-    assert item.background(0).style() != QtCore.Qt.BrushStyle.NoBrush
-    assert item.foreground(0).style() != QtCore.Qt.BrushStyle.NoBrush
-
-
-def test_build_node_item_leaves_unchanged_nodes_uncolored(palette) -> None:  # type: ignore[no-untyped-def]
-    """Unchanged nodes keep normal theme colors."""
-    item = build_node_item(
-        _node(
-            state=DiffState.UNCHANGED,
-            has_changes=False,
-            type_id="PartDesign::Body",
-            label="BasePart",
-        ),
-        palette,
-    )
-
-    assert item.data(0, DIFF_STATE_ROLE) is None
-    assert item.background(0).style() == QtCore.Qt.BrushStyle.NoBrush
-
-
-def test_build_node_item_stores_path_and_tooltip(palette) -> None:  # type: ignore[no-untyped-def]
+def test_build_node_item_stores_path_and_tooltip() -> None:
     """Node items store path in user role and type in tooltip."""
-    item = build_node_item(
-        _node(path="Body/Pad/Length", type_id="PropertyLength", label="Length"),
-        palette,
-    )
+    item = build_node_item(_node(path="Body/Pad/Length", type_id="PropertyLength", label="Length"))
 
     assert item.data(0, QtCore.Qt.ItemDataRole.UserRole) == "Body/Pad/Length"
     assert item.toolTip(0) == "PropertyLength"
 
 
-def test_build_node_item_recurses_children_and_formats_mismatched_names(palette) -> None:  # type: ignore[no-untyped-def]
+def test_build_node_item_recurses_children_and_formats_mismatched_names() -> None:
     """Node tree builder recurses through children and includes basename when label differs."""
     item = build_node_item(
         _node(
@@ -104,8 +60,7 @@ def test_build_node_item_recurses_children_and_formats_mismatched_names(palette)
                     label="Pad",
                 )
             ],
-        ),
-        palette,
+        )
     )
 
     assert item.text(0) == "Main Body (Body)"

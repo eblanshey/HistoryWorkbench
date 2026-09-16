@@ -47,6 +47,9 @@ description: Checklist of features to verify manually, covering project detectio
 - Display summary counts: Modified, Deleted, Added
 - Display "No changes" state when working tree is clean
 - Expand/collapse document nodes in diff tree
+- Diff row colors, hover, and selection remain visible with OpenTheme enabled
+- Existing diff rows update after switching between light and dark themes
+- Each document and node label renders once with OpenTheme enabled
 - Right-click Current Files Area: mark all reviewed
 
 ## Reviewed Area (Staging) View
@@ -69,6 +72,8 @@ description: Checklist of features to verify manually, covering project detectio
 
 - Select node in document diff tree to show property-level differences
 - Property diff display with old/new value columns
+- Changed property colors remain visible while unchanged rows retain theme styling
+- Highlighted property values remain selectable and copyable
 - Property diff clears when document diff clears or node changes
 - Float precision from settings applied to numeric property display
 

@@ -11,7 +11,6 @@ from freecad.history_wb.ui.views.property_diff.tree_items import (
     apply_stored_expansion_state,
     build_grouped_property_items,
 )
-from freecad.history_wb.ui.views.theme.diff import DIFF_STATE_ROLE
 
 
 def test_group_header_is_non_selectable(widget) -> None:  # type: ignore[no-untyped-def]
@@ -35,7 +34,7 @@ def test_groups_appear_in_alphabetical_order(widget) -> None:  # type: ignore[no
         PropertyPresentation(name="BetaProp", state=DiffState.MODIFIED, group="Beta"),
     ]
 
-    items = build_grouped_property_items(properties, widget.palette(), 6)
+    items = build_grouped_property_items(properties, 6)
 
     assert [item.text(0) for item in items] == ["Alpha", "Beta", "Middle", "Zebra"]
 
@@ -48,7 +47,7 @@ def test_properties_within_groups_maintain_input_order(widget) -> None:  # type:
         PropertyPresentation(name="MProp", state=DiffState.UNCHANGED, group="TestGroup"),
     ]
 
-    items = build_grouped_property_items(properties, widget.palette(), 6)
+    items = build_grouped_property_items(properties, 6)
     group_item = items[0]
 
     assert [group_item.child(index).text(0) for index in range(group_item.childCount())] == [
@@ -66,7 +65,7 @@ def test_properties_within_groups_maintain_input_order(widget) -> None:  # type:
         (DiffState.MODIFIED, "10.0", "20.0", "10.0", "20.0"),
     ],
 )
-def test_state_variant_colors_and_columns(
+def test_state_variant_columns(
     widget,
     state,
     old_val,
@@ -74,20 +73,16 @@ def test_state_variant_colors_and_columns(
     col1,
     col2,
 ) -> None:  # type: ignore[no-untyped-def]
-    """Builder keeps changed-state columns and semantic diff colors."""
+    """Builder keeps changed-state display columns before widget installation."""
     properties = [
         PropertyPresentation(name="TestProp", old_value=old_val, new_value=new_val, state=state),
     ]
 
-    items = build_grouped_property_items(properties, widget.palette(), 6)
+    items = build_grouped_property_items(properties, 6)
     prop_item = items[0].child(0)
 
     assert prop_item.text(1) == col1
     assert prop_item.text(2) == col2
-    for column in range(3):
-        assert prop_item.data(column, DIFF_STATE_ROLE) == state
-        assert prop_item.background(column).style() != QtCore.Qt.BrushStyle.NoBrush
-        assert prop_item.foreground(column).style() != QtCore.Qt.BrushStyle.NoBrush
 
 
 def test_property_with_unchanged_state_uses_normal_background(widget) -> None:  # type: ignore[no-untyped-def]
@@ -98,16 +93,13 @@ def test_property_with_unchanged_state_uses_normal_background(widget) -> None:  
         PropertyPresentation(name="AnotherChanged", old_value=None, new_value="75.0", state=DiffState.ADDED),
     ]
 
-    items = build_grouped_property_items(properties, widget.palette(), 6)
+    items = build_grouped_property_items(properties, 6)
     group_item = items[0]
     names = [group_item.child(index).text(0) for index in range(group_item.childCount())]
 
     unchanged_item = group_item.child(names.index("Unchanged Prop"))
     assert unchanged_item.text(1) == "50.0"
     assert unchanged_item.text(2) == "50.0"
-    for column in range(3):
-        assert unchanged_item.data(column, DIFF_STATE_ROLE) is None
-        assert unchanged_item.background(column).style() == QtCore.Qt.BrushStyle.NoBrush
 
 
 def test_nested_children_recurse_and_expansion_state_applied(widget) -> None:  # type: ignore[no-untyped-def]
@@ -116,7 +108,7 @@ def test_nested_children_recurse_and_expansion_state_applied(widget) -> None:  #
     base_parent = PropertyPresentation(name="Base", state=DiffState.MODIFIED, children=[x_child])
     placement = PropertyPresentation(name="Placement", state=DiffState.MODIFIED, children=[base_parent])
 
-    items = build_grouped_property_items([placement], widget.palette(), 6)
+    items = build_grouped_property_items([placement], 6)
     widget.addTopLevelItems(items)
     apply_stored_expansion_state(items)
     prop_item = items[0].child(0)
@@ -132,7 +124,7 @@ def test_unchanged_branches_collapsed(widget) -> None:  # type: ignore[no-untype
     base_parent = PropertyPresentation(name="Base", state=DiffState.UNCHANGED, children=[x_child])
     placement = PropertyPresentation(name="Placement", state=DiffState.UNCHANGED, children=[base_parent])
 
-    items = build_grouped_property_items([placement], widget.palette(), 6)
+    items = build_grouped_property_items([placement], 6)
     widget.addTopLevelItems(items)
     apply_stored_expansion_state(items)
     prop_item = items[0].child(0)
@@ -144,7 +136,7 @@ def test_unchanged_branches_collapsed(widget) -> None:  # type: ignore[no-untype
 
 def _build_single_group(widget):  # type: ignore[no-untyped-def]
     """Create one simple grouped property item for header assertions."""
-    items = build_grouped_property_items([PropertyPresentation(name="TestProp", state=DiffState.MODIFIED)], widget.palette(), 6)
+    items = build_grouped_property_items([PropertyPresentation(name="TestProp", state=DiffState.MODIFIED)], 6)
     widget.addTopLevelItems(items)
     apply_stored_expansion_state(items)
     return items[0]

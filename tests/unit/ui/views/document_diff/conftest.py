@@ -6,8 +6,8 @@ from collections.abc import Callable
 
 import pytest
 
-from freecad.history_wb.qt import QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation
+from freecad.history_wb.ui.views.document_diff.diff_row import DiffTreeRowWidget
 from freecad.history_wb.ui.views.document_diff.panel import DocumentDiffTreeWidget
 from freecad.history_wb.ui.views.document_diff.tree import DocumentDiffTree
 
@@ -25,12 +25,10 @@ def tree() -> DocumentDiffTree:
 
 
 @pytest.fixture
-def simple_document_row_factory() -> Callable[[DiffTreePresentation, str], QtWidgets.QWidget]:
+def simple_document_row_factory() -> Callable[[DiffTreePresentation, str], DiffTreeRowWidget]:
     """Create minimal document-row widgets for extracted tree tests."""
 
-    def _create_row(_diff: DiffTreePresentation, text: str) -> QtWidgets.QWidget:
-        widget = QtWidgets.QLabel(text)
-        widget.setObjectName("testDocumentRow")
-        return widget
+    def _create_row(_diff: DiffTreePresentation, text: str) -> DiffTreeRowWidget:
+        return DiffTreeRowWidget(text)
 
     return _create_row

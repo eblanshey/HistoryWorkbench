@@ -1,17 +1,24 @@
-"""File responsibility: Document diff tree container with click routing, collapse actions, and node-row wiring."""
+"""File responsibility: Document diff tree rendering, interaction routing, and node-row wiring."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
 from ....domain.diff.models import DiffState
-from ....qt import QtCore, QtWidgets
+from ....qt import QtCore, QtGui, QtWidgets
+from ....resources import get_icon_path
 from ....utils import translate
 from ...presenters.presentation_models import DiffTreePresentation, NodePresentation
-from ..theme.diff import DiffItemDelegate, apply_diff_state_to_widget
-from ..widgets.buttons import make_icon_tool_button
-from ..widgets.styles import DIFF_ROW_CONTAINER_OBJECT_NAME, DIFF_ROW_LABEL_OBJECT_NAME, TREE_ITEM_HEIGHT
-from .node_row import NodeDiffRowWidget
+from ..theme.diff import colors_for_diff_state
+from ..widgets.buttons import make_icon_tool_button, make_tool_button
+from ..widgets.styles import (
+    DIFF_ROW_CONTAINER_OBJECT_NAME,
+    DIFF_ROW_LABEL_OBJECT_NAME,
+    TREE_ITEM_HEIGHT,
+    TREE_ITEM_ICON_SIZE,
+    VISUAL_DIFF_ICON_BUTTON_STYLE,
+)
+from .diff_row import DiffTreeRowWidget
 from .tree_items import build_document_root_item, build_node_item
 
 
@@ -26,6 +33,7 @@ class DocumentDiffTree(QtWidgets.QWidget):
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
+        self._refreshing_style = False
         self._setup_ui()
 
     def clear(self) -> None:
@@ -35,33 +43,39 @@ class DocumentDiffTree(QtWidgets.QWidget):
     def show_doc_diffs(
         self,
         diffs: list[DiffTreePresentation],
-        create_document_row_widget: Callable[[DiffTreePresentation, str], QtWidgets.QWidget],
+        create_document_row_widget: Callable[[DiffTreePresentation, str], DiffTreeRowWidget],
     ) -> None:
         """Render multiple document trees and install custom document-row widgets."""
-        self.clear()
+        updates_enabled = self._tree_widget.updatesEnabled()
 
-        # Empty document lists mean caller wants cleared middle column only.
-        if not diffs:
-            return
+        # Defer repaints while installing many items and row widgets to avoid repeated layout and style work.
+        self._tree_widget.setUpdatesEnabled(False)
+        try:
+            self.clear()
 
-        for diff in diffs:
-            display_text = diff.git_path or translate("History", "Unnamed Document")
-            root_item = build_document_root_item(
-                display_text,
-                diff.git_path,
-                self._tree_widget.palette(),
-                document_state=diff.document_state,
-            )
-            document_row = create_document_row_widget(diff, display_text)
-            self._apply_diff_state_to_widget(document_row, diff.document_state)
+            # Empty document lists mean caller wants cleared middle column only.
+            if not diffs:
+                return
 
-            self._tree_widget.addTopLevelItem(root_item)
-            self._tree_widget.setItemWidget(root_item, 0, document_row)
+            for diff in diffs:
+                display_text = diff.git_path or translate("History", "Unnamed Document")
+                root_item = build_document_root_item(
+                    display_text,
+                    diff.git_path,
+                )
+                document_row = create_document_row_widget(diff, display_text)
 
-            for node in diff.nodes:
-                self._add_node_subtree(root_item, node, diff.git_path)
+                self._tree_widget.addTopLevelItem(root_item)
+                document_row.set_diff_state(diff.document_state)
+                root_item.setText(0, "")
+                self._tree_widget.setItemWidget(root_item, 0, document_row)
 
-            self._expand_nodes_with_changes(root_item)
+                for node in diff.nodes:
+                    self._add_node_subtree(root_item, node, diff.git_path)
+
+                self._expand_nodes_with_changes(root_item)
+        finally:
+            self._tree_widget.setUpdatesEnabled(updates_enabled)
 
         self._tree_widget.show()
 
@@ -97,20 +111,100 @@ class DocumentDiffTree(QtWidgets.QWidget):
 
         self._tree_widget = QtWidgets.QTreeWidget(self)
         self._tree_widget.setObjectName("documentDiffTree")
+        self._theme_probe = QtWidgets.QLabel(self._tree_widget)
+        self._theme_probe.hide()
         self._tree_widget.header().hide()
         self._tree_widget.setColumnCount(1)
         self._tree_widget.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self._tree_widget.setItemDelegate(DiffItemDelegate(self._tree_widget))
         self._tree_widget.itemClicked.connect(self._on_tree_item_clicked)
+        self._tree_widget.currentItemChanged.connect(self._on_current_item_changed)
+        self._tree_widget.installEventFilter(self)
+        self._refresh_diff_stylesheet()
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(tree_header)
         layout.addWidget(self._tree_widget)
 
+    def _refresh_diff_stylesheet(self) -> None:
+        """Apply one shared stylesheet for every highlighted document-tree row."""
+        if self._refreshing_style:
+            return
+
+        # Stylesheet themes such as OpenTheme add item margins, borders, and
+        # rounded corners. Widget-backed rows paint a separate rectangle, so
+        # normalize the native item box to keep both layers aligned without seams.
+        item_selector = "QTreeWidget#documentDiffTree::item"
+        container_selector = f"QTreeWidget#documentDiffTree QWidget#{DIFF_ROW_CONTAINER_OBJECT_NAME}"
+        unchanged_selector = f'{container_selector}[diffState="{DiffState.UNCHANGED.name}"]'
+        rules = [
+            f"{item_selector} {{ margin: 0px; padding: 0px; border: none; border-radius: 0px; }}",
+            f"{item_selector}:selected {{ border: none; border-radius: 0px; }}",
+            f"{item_selector}:hover {{ border: none; border-radius: 0px; }}",
+            f"{container_selector} {{ border-radius: 0px; }}",
+            f"{unchanged_selector} {{ background-color: transparent; }}",
+            f"{unchanged_selector} QLabel#{DIFF_ROW_LABEL_OBJECT_NAME} {{ background-color: transparent; }}",
+        ]
+        palette = self._effective_diff_palette()
+        for state in (DiffState.ADDED, DiffState.DELETED, DiffState.MODIFIED):
+            colors = colors_for_diff_state(state, palette)
+            if colors.normal_background is None:
+                raise RuntimeError("Changed document state requires a background color")
+            selector = (
+                f'QTreeWidget#documentDiffTree QWidget#{DIFF_ROW_CONTAINER_OBJECT_NAME}[diffState="{state.name}"]'
+            )
+            label_selector = f"{selector} QLabel#{DIFF_ROW_LABEL_OBJECT_NAME}"
+            rules.extend(
+                [
+                    f"{selector} {{ background-color: {colors.normal_background.name()}; "
+                    f"color: {colors.normal_foreground.name()}; }}",
+                    f"{label_selector} {{ background-color: transparent; color: {colors.normal_foreground.name()}; }}",
+                    f"{selector}:hover {{ background-color: {colors.hover_background.name()}; "
+                    f"color: {colors.hover_foreground.name()}; }}",
+                    f"{selector}:hover QLabel#{DIFF_ROW_LABEL_OBJECT_NAME} {{ "
+                    f"color: {colors.hover_foreground.name()}; }}",
+                    f'{selector}[rowSelected="true"] {{ background-color: {colors.selected_background.name()}; '
+                    f"color: {colors.selected_foreground.name()}; }}",
+                    f'{selector}[rowSelected="true"] QLabel#{DIFF_ROW_LABEL_OBJECT_NAME} {{ '
+                    f"color: {colors.selected_foreground.name()}; }}",
+                ]
+            )
+
+        # setStyleSheet emits StyleChange synchronously, which can trigger another theme refresh.
+        self._refreshing_style = True
+        try:
+            self._tree_widget.setStyleSheet(" ".join(rules))
+        finally:
+            self._refreshing_style = False
+
+    def _effective_diff_palette(self) -> QtGui.QPalette:
+        """Combine tree surfaces with foreground resolved through application QSS.
+
+        Stylesheet themes can paint label text without updating the tree's Text
+        palette role. A polished QLabel exposes the effective WindowText color,
+        which keeps light/dark diff accent selection aligned with visible text.
+        """
+        self._theme_probe.ensurePolished()
+        palette = QtGui.QPalette(self._tree_widget.palette())
+        palette.setColor(
+            QtGui.QPalette.ColorRole.Text,
+            self._theme_probe.palette().color(QtGui.QPalette.ColorRole.WindowText),
+        )
+        return palette
+
+    def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent) -> bool:  # noqa: N802
+        """Refresh shared colors from theme events delivered to the inner tree."""
+        if watched is self._tree_widget and event.type() in {
+            QtCore.QEvent.Type.ApplicationPaletteChange,
+            QtCore.QEvent.Type.PaletteChange,
+            QtCore.QEvent.Type.StyleChange,
+        }:
+            self._refresh_diff_stylesheet()
+        return super().eventFilter(watched, event)
+
     def _add_node_subtree(self, parent_item: QtWidgets.QTreeWidgetItem, node: NodePresentation, git_path: str) -> None:
-        """Build one node subtree, attach it, then install optional visual-diff row widgets."""
-        item = build_node_item(node, self._tree_widget.palette())
+        """Build one node subtree, attach it, then install widget-backed rows."""
+        item = build_node_item(node)
         parent_item.addChild(item)
         self._install_node_row_widgets(item, node, git_path)
 
@@ -120,23 +214,17 @@ class DocumentDiffTree(QtWidgets.QWidget):
         node: NodePresentation,
         git_path: str,
     ) -> None:
-        """Install node-row widget for visual-diff nodes, then recurse through children."""
+        """Install one node-row widget, then recurse through children."""
+        text = item.text(0)
+
+        row_widget = DiffTreeRowWidget(text, tooltip=node.type_id, parent=self._tree_widget)
+        row_widget.set_diff_state(node.state)
+        item.setText(0, "")
+
         if node.visual_diff_enabled:
-            text = item.text(0)
-            row_widget = NodeDiffRowWidget(text, node.type_id, git_path, node.path, self._tree_widget)
+            row_widget.add_trailing_widget(self._create_visual_diff_button(item, git_path, node.path))
 
-            # Row widget owns visible text; retaining item text lets delegate paint a duplicate label behind it.
-            item.setText(0, "")
-
-            row_widget.visual_diff_requested.connect(
-                lambda emitted_git_path, emitted_node_path, item=item: self._on_node_visual_diff_requested(
-                    item,
-                    emitted_git_path,
-                    emitted_node_path,
-                )
-            )
-            self._apply_diff_state_to_widget(row_widget, node.state)
-            self._tree_widget.setItemWidget(item, 0, row_widget)
+        self._tree_widget.setItemWidget(item, 0, row_widget)
 
         for index, child_node in enumerate(node.children):
             child_item = item.child(index)
@@ -146,6 +234,28 @@ class DocumentDiffTree(QtWidgets.QWidget):
                 raise RuntimeError("Node child item missing during document diff tree wiring")
 
             self._install_node_row_widgets(child_item, child_node, git_path)
+
+    def _create_visual_diff_button(
+        self,
+        item: QtWidgets.QTreeWidgetItem,
+        git_path: str,
+        node_path: str,
+    ) -> QtWidgets.QToolButton:
+        """Create visual comparison action for one node row."""
+        button = make_tool_button(
+            tooltip=translate("History", "Open 3D comparison"),
+            icon=QtGui.QIcon(str(get_icon_path("VisualDiff.svg"))),
+            width=TREE_ITEM_HEIGHT,
+            height=TREE_ITEM_HEIGHT,
+            style=VISUAL_DIFF_ICON_BUTTON_STYLE,
+            auto_raise=True,
+            icon_size=QtCore.QSize(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE),
+            tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
+        )
+        button.clicked.connect(
+            lambda checked=False: self._on_node_visual_diff_requested(item, git_path, node_path)
+        )
+        return button
 
     def _expand_nodes_with_changes(self, item: QtWidgets.QTreeWidgetItem) -> None:
         """Expand ancestor branches that lead to changed descendants."""
@@ -165,6 +275,19 @@ class DocumentDiffTree(QtWidgets.QWidget):
         """Emit selected node coordinates for property-diff routing."""
         del column
         self._emit_node_selected(item)
+
+    def _on_current_item_changed(
+        self,
+        current: QtWidgets.QTreeWidgetItem | None,
+        previous: QtWidgets.QTreeWidgetItem | None,
+    ) -> None:
+        """Refresh selected styling on previous and current widget-backed rows."""
+        for item, selected in ((previous, False), (current, True)):
+            if item is None:
+                continue
+            row_widget = self._tree_widget.itemWidget(item, 0)
+            if isinstance(row_widget, DiffTreeRowWidget):
+                row_widget.set_selected(selected)
 
     def _emit_node_selected(self, item: QtWidgets.QTreeWidgetItem) -> None:
         """Compute git path and node path from clicked item and emit when item is a node."""
@@ -190,13 +313,3 @@ class DocumentDiffTree(QtWidgets.QWidget):
         self._tree_widget.setCurrentItem(item)
         self._emit_node_selected(item)
         self.visual_diff_requested.emit(git_path, node_path)
-
-    def _apply_diff_state_to_widget(self, widget: QtWidgets.QWidget, state: DiffState) -> None:
-        """Apply diff-state colors to document and visual-diff row widgets."""
-        apply_diff_state_to_widget(
-            widget,
-            state,
-            self._tree_widget.palette(),
-            container_object_name=DIFF_ROW_CONTAINER_OBJECT_NAME,
-            label_object_name=DIFF_ROW_LABEL_OBJECT_NAME,
-        )

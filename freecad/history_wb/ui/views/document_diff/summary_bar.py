@@ -6,7 +6,7 @@ from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
 from ....utils import translate
 from ..widgets.buttons import make_tool_button
-from ..widgets.styles import TREE_ITEM_HEIGHT
+from ..widgets.styles import ACTION_BUTTON_STYLE, TREE_ITEM_HEIGHT
 from .summary_state import SummaryButtonState, SummaryCounts
 
 
@@ -56,6 +56,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
             text=translate("History", "+ Mark All Reviewed"),
             width=STAGE_ALL_BUTTON_WIDTH,
             height=TREE_ITEM_HEIGHT,
+            style=ACTION_BUTTON_STYLE,
         )
         self._stage_all_button.setObjectName("documentDiffStageAllButton")
         self._stage_all_button.hide()
@@ -71,6 +72,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
                 "Saved history will not be affected.",
             ),
             height=TREE_ITEM_HEIGHT,
+            style=ACTION_BUTTON_STYLE,
         )
         self._restore_all_button.setObjectName("documentDiffRestoreAllButton")
         self._restore_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
@@ -82,6 +84,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
             text=translate("History", "Remove All"),
             tooltip=self._remove_reviewed_tooltip,
             height=TREE_ITEM_HEIGHT,
+            style=ACTION_BUTTON_STYLE,
         )
         self._remove_all_button.setObjectName("documentDiffRemoveAllButton")
         self._remove_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)

@@ -230,6 +230,13 @@ def test_all_nodes_use_row_widgets_and_only_enabled_nodes_show_visual_diff_butto
     assert second_row is not None
     assert len(first_row.findChildren(QtWidgets.QToolButton)) == 1
     assert second_row.findChildren(QtWidgets.QToolButton) == []
+    visual_diff_button = first_row.findChild(QtWidgets.QToolButton)
+    assert visual_diff_button is not None
+    assert "background-color: transparent" in visual_diff_button.styleSheet()
+    assert "QToolButton:hover" in visual_diff_button.styleSheet()
+    assert "background-color: palette(highlight)" in visual_diff_button.styleSheet()
+    assert "border: 1px solid palette(highlighted-text)" in visual_diff_button.styleSheet()
+    assert "border: none" in visual_diff_button.styleSheet()
     assert first_item.text(0) == ""
     assert second_item.text(0) == ""
 

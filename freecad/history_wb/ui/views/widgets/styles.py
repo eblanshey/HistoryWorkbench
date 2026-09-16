@@ -3,41 +3,52 @@
 TREE_ITEM_HEIGHT = 22
 TREE_ITEM_ICON_SIZE = 18
 
-ROW_ACTION_BUTTON_STYLE = """
-QToolButton {
+ACTION_BUTTON_STYLE = """
+QToolButton, QPushButton {
     padding: 0px 4px;
     margin: 0px;
-    border: 1px solid rgba(128, 128, 128, 120);
+    color: palette(button-text);
+    background-color: palette(button);
+    border: 1px solid palette(mid);
     border-radius: 2px;
-    background-color: rgba(128, 128, 128, 28);
 }
-QToolButton:hover {
-    border-color: rgba(128, 128, 128, 170);
-    background-color: rgba(128, 128, 128, 48);
+QToolButton:hover, QPushButton:hover,
+QToolButton:focus, QPushButton:focus {
+    color: palette(highlighted-text);
+    background-color: palette(highlight);
+    border-color: palette(highlight);
 }
-QToolButton:pressed {
-    border-color: rgba(128, 128, 128, 190);
-    background-color: rgba(128, 128, 128, 70);
+QToolButton:pressed, QPushButton:pressed {
+    color: palette(highlighted-text);
+    background-color: palette(highlight);
+    border: 2px inset palette(dark);
 }
-QToolButton:disabled {
-    color: rgba(128, 128, 128, 140);
-    border-color: rgba(128, 128, 128, 60);
-    background-color: rgba(128, 128, 128, 12);
+QToolButton:disabled, QPushButton:disabled {
+    color: palette(mid);
+    background-color: palette(window);
+    border-color: palette(mid);
 }
 """
 HEADER_ICON_BUTTON_STYLE = "QToolButton { padding: 2px; }"
 
 VISUAL_DIFF_ICON_BUTTON_STYLE = """
-QToolButton {
+QToolButton,
+QToolButton:disabled {
+    padding: 0px;
+    margin: 0px;
     background-color: transparent;
     border: none;
+}
+QToolButton:hover,
+QToolButton:focus {
+    background-color: palette(highlight);
+    border: 1px solid palette(highlighted-text);
     border-radius: 3px;
 }
-QToolButton:hover {
-    background-color: rgba(128, 128, 128, 35);
-}
 QToolButton:pressed {
-    background-color: rgba(128, 128, 128, 60);
+    background-color: palette(highlight);
+    border: 2px inset palette(highlighted-text);
+    border-radius: 3px;
 }
 """
 

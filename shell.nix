@@ -17,22 +17,22 @@ let
     zlib
     stdenv.cc.cc.lib
 
-    # X11 / Qt platform
-    xorg.libX11
-    xorg.libXext
-    xorg.libXrender
-    xorg.libXrandr
-    xorg.libXi
-    xorg.libXcursor
-    xorg.libXfixes
-    xorg.libXcomposite
-    xorg.libXdamage
-    xorg.libxcb
-    xorg.xcbutilcursor
-    xorg.xcbutilimage
-    xorg.xcbutilkeysyms
-    xorg.xcbutilrenderutil
-    xorg.xcbutilwm
+    # X11 / Qt platform (top-level names since the xorg package set was deprecated)
+    libx11
+    libxext
+    libxrender
+    libxrandr
+    libxi
+    libxcursor
+    libxfixes
+    libxcomposite
+    libxdamage
+    libxcb
+    libxcb-cursor
+    libxcb-image
+    libxcb-keysyms
+    libxcb-render-util
+    libxcb-wm
     libxkbcommon
   ];
 in

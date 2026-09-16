@@ -42,6 +42,16 @@ def test_stage_all_button_visibility_and_enabled(application) -> None:  # type: 
     assert widget._stage_all_button.isHidden()
 
 
+def test_bulk_action_buttons_override_transparent_host_theme(application) -> None:  # type: ignore[no-untyped-def]
+    """Bulk actions use paired palette colors instead of host-transparent tool buttons."""
+    widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
+
+    for button in (widget._stage_all_button, widget._restore_all_button, widget._remove_all_button):
+        assert "background-color: palette(button)" in button.styleSheet()
+        assert "color: palette(button-text)" in button.styleSheet()
+        assert "background-color: transparent" not in button.styleSheet()
+
+
 def test_remove_all_button_visibility_and_callback(application) -> None:  # type: ignore[no-untyped-def]
     """Remove All button keeps text, tooltip, visibility, and callback routing."""
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)

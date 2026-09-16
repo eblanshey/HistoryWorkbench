@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from ....qt import QtCore, QtGui, QtWidgets
 from ..theme.icons import set_themed_icon
-from .styles import HEADER_ICON_BUTTON_STYLE, ROW_ACTION_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
+from .styles import ACTION_BUTTON_STYLE, HEADER_ICON_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
 
 
 def make_tool_button(
@@ -68,7 +68,7 @@ def make_row_action_button(
         tooltip=tooltip,
         width=width,
         height=TREE_ITEM_HEIGHT,
-        style=ROW_ACTION_BUTTON_STYLE,
+        style=ACTION_BUTTON_STYLE,
         tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
     )
 

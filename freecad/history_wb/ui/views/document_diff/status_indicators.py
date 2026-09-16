@@ -5,7 +5,7 @@ from __future__ import annotations
 from ....qt import QtCore, QtWidgets
 from ....utils import translate
 from ...presenters.presentation_models import DocumentStatusIndicator, WorkingTreeDocumentClosedIndicator
-from ..widgets.styles import TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
+from ..widgets.styles import ACTION_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
 
 
 class DocumentStatusIndicatorsWidget(QtWidgets.QWidget):
@@ -58,6 +58,6 @@ class DocumentStatusIndicatorsWidget(QtWidgets.QWidget):
         button.setToolTip(translate("History", indicator.tooltip))
         button.setFixedHeight(TREE_ITEM_HEIGHT)
         button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
-        button.setStyleSheet("QPushButton { padding: 0px 4px; margin: 0px; border-radius: 2px; }")
+        button.setStyleSheet(ACTION_BUTTON_STYLE)
         button.clicked.connect(lambda checked=False: self.open_document_requested.emit(self._git_path))
         return button

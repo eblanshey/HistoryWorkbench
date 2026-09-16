@@ -33,4 +33,5 @@ def test_open_document_indicator_emits_git_path(application) -> None:  # type: i
 
     assert buttons[0].text() == "Open"
     assert "generate a comparison" in buttons[0].toolTip()
+    assert "background-color: palette(button)" in buttons[0].styleSheet()
     assert captured == ["parts/A.FCStd"]

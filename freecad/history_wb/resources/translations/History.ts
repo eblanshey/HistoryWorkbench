@@ -76,7 +76,7 @@ Saved history will not be affected.</source>
     </message>
     <message>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="170"/>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="66"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="67"/>
         <source>Restore All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -348,14 +348,14 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="67"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="68"/>
         <source>Choose which files to restore from the selected iteration.
 Current files on disk can be overwritten or removed.
 Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="82"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="84"/>
         <source>Remove All</source>
         <translation type="unfinished"></translation>
     </message>

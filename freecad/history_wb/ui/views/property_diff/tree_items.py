@@ -67,7 +67,8 @@ def _build_property_tree_item(
         item.setToolTip(column, tooltip)
 
     item.setData(0, _EXPAND_STATE_ROLE, _presentation_has_changes(prop))
-    item.setData(0, PROPERTY_DIFF_STATE_ROLE, prop.state)
+    for column in range(3):
+        item.setData(column, PROPERTY_DIFF_STATE_ROLE, prop.state)
     for child in prop.children:
         item.addChild(_build_property_tree_item(child, precision))
 

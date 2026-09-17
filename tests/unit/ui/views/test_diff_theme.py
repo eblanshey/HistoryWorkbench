@@ -8,6 +8,7 @@ from freecad.history_wb.ui.views.theme.diff import (
     background_for_state,
     colors_for_diff_state,
     foreground_for_background,
+    palette_with_resolved_text,
 )
 
 
@@ -67,3 +68,21 @@ def test_interaction_colors_centralize_normal_hover_and_selection_states() -> No
     assert colors.hover_foreground.isValid()
     assert colors.selected_background.isValid()
     assert colors.selected_foreground.isValid()
+
+
+def test_resolved_text_does_not_infer_stylesheet_surface_colors() -> None:
+    """QSS text resolution leaves unknown palette surface roles unchanged."""
+    stale_palette = _palette(
+        base=QtGui.QColor(30, 30, 30),
+        text=QtGui.QColor(240, 240, 240),
+        window=QtGui.QColor(20, 20, 20),
+    )
+
+    effective = palette_with_resolved_text(stale_palette, QtGui.QColor(0, 0, 0))
+    colors = colors_for_diff_state(DiffState.UNCHANGED, effective)
+
+    assert effective.color(QtGui.QPalette.ColorRole.Text) == QtGui.QColor(0, 0, 0)
+    assert effective.color(QtGui.QPalette.ColorRole.Base) == QtGui.QColor(30, 30, 30)
+    assert effective.color(QtGui.QPalette.ColorRole.Window) == QtGui.QColor(20, 20, 20)
+    assert colors.hover_background.alphaF() == pytest.approx(0.18, abs=0.01)
+    assert colors.hover_foreground == QtGui.QColor(0, 0, 0)

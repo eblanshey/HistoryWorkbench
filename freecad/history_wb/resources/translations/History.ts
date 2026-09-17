@@ -407,7 +407,7 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/tree.py" line="246"/>
+        <location filename="../../ui/views/document_diff/tree.py" line="244"/>
         <source>Open 3D comparison</source>
         <translation type="unfinished"></translation>
     </message>
@@ -452,17 +452,17 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="43"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="40"/>
         <source>Property</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="44"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="41"/>
         <source>Old Value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="45"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="42"/>
         <source>New Value</source>
         <translation type="unfinished"></translation>
     </message>

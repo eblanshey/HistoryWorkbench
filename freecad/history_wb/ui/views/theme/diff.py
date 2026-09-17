@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from ....domain.diff.models import DiffState
-from ....qt import QtGui, QtWidgets
+from ....qt import QtGui
 from .colors import (
     _blend_colors,
     _color_from_key,
@@ -23,11 +23,11 @@ from .colors import (
 
 __all__ = [
     "DiffInteractionColors",
-    "apply_diff_state_to_widget",
     "background_for_state",
     "colors_for_diff_state",
     "foreground_for_background",
     "hover_background_for",
+    "palette_with_resolved_text",
     "selected_background_for",
 ]
 
@@ -44,6 +44,7 @@ _DARK_ACCENT_BLEND = 0.38
 _CONTRAST_FALLBACK_BLEND_RATIOS = (0.45, 0.52, 0.60, 0.70, 0.82, 1.0)
 _LAST_FALLBACK_BLEND = 0.52
 _HOVER_BLEND = 0.22
+_UNCHANGED_HOVER_OPACITY = 0.18
 _SELECTED_BLEND = 0.42
 
 # Diff accents are paired as (light-theme accent, dark-theme accent). Light
@@ -104,6 +105,14 @@ def foreground_for_background(background: QtGui.QColor, palette: QtGui.QPalette)
     return _cached_foreground_for_background(_color_key(background), _palette_key(palette))
 
 
+def palette_with_resolved_text(palette: QtGui.QPalette, visible_text: QtGui.QColor) -> QtGui.QPalette:
+    """Return palette with text roles resolved from visible QSS styling."""
+    effective = QtGui.QPalette(palette)
+    effective.setColor(QtGui.QPalette.ColorRole.Text, visible_text)
+    effective.setColor(QtGui.QPalette.ColorRole.WindowText, visible_text)
+    return effective
+
+
 def hover_background_for(background: QtGui.QColor, palette: QtGui.QPalette) -> QtGui.QColor:
     """Blend one semantic background toward theme highlight for hover feedback."""
     return _blend_colors(background, palette.color(QtGui.QPalette.ColorRole.Highlight), _HOVER_BLEND)
@@ -118,13 +127,14 @@ def colors_for_diff_state(state: DiffState, palette: QtGui.QPalette) -> DiffInte
     """Return complete interaction colors for one semantic diff state."""
     background = background_for_state(state, palette)
     if background is None:
-        hover_background = hover_background_for(palette.color(QtGui.QPalette.ColorRole.Base), palette)
+        hover_background = QtGui.QColor(palette.color(QtGui.QPalette.ColorRole.Highlight))
+        hover_background.setAlphaF(_UNCHANGED_HOVER_OPACITY)
         selected_background = palette.color(QtGui.QPalette.ColorRole.Highlight)
         return DiffInteractionColors(
             normal_background=None,
             normal_foreground=palette.color(QtGui.QPalette.ColorRole.Text),
             hover_background=hover_background,
-            hover_foreground=foreground_for_background(hover_background, palette),
+            hover_foreground=palette.color(QtGui.QPalette.ColorRole.Text),
             selected_background=selected_background,
             selected_foreground=palette.color(QtGui.QPalette.ColorRole.HighlightedText),
         )
@@ -139,38 +149,6 @@ def colors_for_diff_state(state: DiffState, palette: QtGui.QPalette) -> DiffInte
         selected_background=selected_background,
         selected_foreground=foreground_for_background(selected_background, palette),
     )
-
-
-def apply_diff_state_to_widget(
-    widget: QtWidgets.QWidget,
-    state: DiffState,
-    palette: QtGui.QPalette,
-    *,
-    container_object_name: str,
-    label_object_name: str,
-    selected: bool = False,
-) -> None:
-    """Apply diff colors plus local hover and selection styles to a row widget."""
-    colors = colors_for_diff_state(state, palette)
-    normal_background = colors.normal_background.name() if colors.normal_background is not None else "transparent"
-    display_background = colors.selected_background.name() if selected else normal_background
-    display_foreground = colors.selected_foreground if selected else colors.normal_foreground
-    active_hover_background = colors.selected_background if selected else colors.hover_background
-    hover_foreground = colors.selected_foreground if selected else colors.hover_foreground
-
-    # FreeCAD themes such as OpenTheme apply global QSS that overrides item
-    # palette roles. Object-scoped widget QSS wins locally without affecting
-    # unrelated FreeCAD views.
-    widget.setStyleSheet(
-        f"QWidget#{container_object_name} {{ "
-        f"background-color: {display_background}; color: {display_foreground.name()}; }} "
-        f"QWidget#{container_object_name}:hover {{ "
-        f"background-color: {active_hover_background.name()}; color: {hover_foreground.name()}; }} "
-        f"QWidget#{container_object_name} QLabel#{label_object_name} {{ "
-        f"background-color: transparent; color: {display_foreground.name()}; }} "
-        f"QWidget#{container_object_name}:hover QLabel#{label_object_name} {{ color: {hover_foreground.name()}; }}"
-    )
-
 
 @lru_cache(maxsize=256)
 def _cached_foreground_for_background(background_key: _ColorKey, palette_cache_key: _PaletteKey) -> QtGui.QColor:

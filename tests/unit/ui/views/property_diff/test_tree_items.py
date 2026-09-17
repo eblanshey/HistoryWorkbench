@@ -8,6 +8,7 @@ from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtCore
 from freecad.history_wb.ui.presenters.presentation_models import PropertyPresentation
 from freecad.history_wb.ui.views.property_diff.tree_items import (
+    PROPERTY_DIFF_STATE_ROLE,
     apply_stored_expansion_state,
     build_grouped_property_items,
 )
@@ -83,6 +84,7 @@ def test_state_variant_columns(
 
     assert prop_item.text(1) == col1
     assert prop_item.text(2) == col2
+    assert [prop_item.data(column, PROPERTY_DIFF_STATE_ROLE) for column in range(3)] == [state, state, state]
 
 
 def test_property_with_unchanged_state_uses_normal_background(widget) -> None:  # type: ignore[no-untyped-def]

@@ -9,7 +9,7 @@ from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
 from ....utils import translate
 from ...presenters.presentation_models import DiffTreePresentation, NodePresentation
-from ..theme.diff import colors_for_diff_state
+from ..theme.diff import colors_for_diff_state, palette_with_resolved_text
 from ..widgets.buttons import make_icon_tool_button, make_tool_button
 from ..widgets.styles import (
     DIFF_ROW_CONTAINER_OBJECT_NAME,
@@ -178,19 +178,17 @@ class DocumentDiffTree(QtWidgets.QWidget):
             self._refreshing_style = False
 
     def _effective_diff_palette(self) -> QtGui.QPalette:
-        """Combine tree surfaces with foreground resolved through application QSS.
+        """Resolve visible text color from application QSS into tree palette.
 
         Stylesheet themes can paint label text without updating the tree's Text
-        palette role. A polished QLabel exposes the effective WindowText color,
-        which keeps light/dark diff accent selection aligned with visible text.
+        palette role. A polished QLabel exposes effective WindowText while
+        preserving theme-owned surface roles.
         """
         self._theme_probe.ensurePolished()
-        palette = QtGui.QPalette(self._tree_widget.palette())
-        palette.setColor(
-            QtGui.QPalette.ColorRole.Text,
+        return palette_with_resolved_text(
+            self._tree_widget.palette(),
             self._theme_probe.palette().color(QtGui.QPalette.ColorRole.WindowText),
         )
-        return palette
 
     def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent) -> bool:  # noqa: N802
         """Refresh shared colors from theme events delivered to the inner tree."""

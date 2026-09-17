@@ -91,3 +91,17 @@ def test_row_routes_stage_remove_restore_and_open_document(application) -> None:
         ("restore", "parts/A.FCStd"),
         ("remove", "parts/A.FCStd"),
     ]
+
+
+def test_document_row_renders_leading_document_icon(application) -> None:  # type: ignore[no-untyped-def]
+    """Top-level document rows show FreeCAD's document icon before the label."""
+    row = DocumentDiffRowWidget(
+        _diff(),
+        "parts/A.FCStd",
+        HistorySelection(item_kind="COMMIT", commit_hash="abc123"),
+    )
+
+    icon_labels = [label for label in row.findChildren(QtWidgets.QLabel) if not label.pixmap().isNull()]
+
+    assert len(icon_labels) == 1
+    assert row.layout().itemAt(0).widget() is icon_labels[0]

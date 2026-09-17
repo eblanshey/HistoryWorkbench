@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from freecad.history_wb.domain.diff.models import DiffState
-from freecad.history_wb.qt import QtWidgets
+from freecad.history_wb.qt import QtGui, QtWidgets
 from freecad.history_wb.ui.views.document_diff.diff_row import DiffTreeRowWidget
 from freecad.history_wb.ui.views.widgets.styles import TREE_ITEM_HEIGHT
 
@@ -55,3 +55,15 @@ def test_unchanged_row_keeps_theme_native_label_without_local_style(application)
     assert label.text() == "Body"
     assert not label.isHidden()
     assert row.styleSheet() == ""
+
+
+def test_add_leading_widget_prepends_before_text_label(application) -> None:  # type: ignore[no-untyped-def]
+    """Shared row inserts a leading widget ahead of the row label."""
+    row = DiffTreeRowWidget("Body")
+    leading = QtWidgets.QLabel()
+    leading.setPixmap(QtGui.QPixmap(16, 16))
+
+    row.add_leading_widget(leading)
+
+    assert row.layout().itemAt(0).widget() is leading
+    assert row.findChild(QtWidgets.QLabel, "diffRowLabel") is not leading

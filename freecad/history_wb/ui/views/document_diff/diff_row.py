@@ -48,6 +48,10 @@ class DiffTreeRowWidget(QtWidgets.QWidget):
         """Append status or action content after row label."""
         self._layout.addWidget(widget)
 
+    def add_leading_widget(self, widget: QtWidgets.QWidget) -> None:
+        """Prepend content before the row label, e.g. a row identity icon."""
+        self._layout.insertWidget(0, widget)
+
     def set_diff_state(self, state: DiffState) -> None:
         """Expose semantic state for the document tree's shared stylesheet."""
         self._state = state

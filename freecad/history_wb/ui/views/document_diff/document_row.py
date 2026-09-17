@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from functools import partial
 
-from ....qt import QtCore, QtWidgets
+from ....qt import QtCore, QtGui, QtWidgets
+from ....resources import get_icon_path
 from ....utils import translate
 from ...presenters.presentation_models import DiffTreePresentation
 from ..history.models import HistorySelection
 from ..widgets.buttons import make_row_action_button
+from ..widgets.styles import TREE_ITEM_ICON_SIZE
 from .diff_row import DiffTreeRowWidget
 from .status_indicators import DocumentStatusIndicatorsWidget
 
@@ -45,6 +47,7 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         self._stage_button: QtWidgets.QToolButton | None = None
         self._remove_from_reviewed_button: QtWidgets.QToolButton | None = None
         super().__init__(top_level_text, parent=parent)
+        self._add_document_icon()
         self._setup_actions()
 
     @property
@@ -56,6 +59,16 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
     def remove_from_reviewed_button(self) -> QtWidgets.QToolButton | None:
         """Return Remove button when rendered for current selection."""
         return self._remove_from_reviewed_button
+
+    def _add_document_icon(self) -> None:
+        """Prefix the row with FreeCAD's document icon, matching the model tree."""
+        # Reuse FreeCAD's full-color Document glyph as-is; it is not a themed
+        # monochrome asset, so render the resource directly instead of recoloring.
+        icon = QtGui.QIcon(str(get_icon_path("Document.svg")))
+        icon_label = QtWidgets.QLabel(self)
+        icon_label.setPixmap(icon.pixmap(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE))
+        icon_label.setStyleSheet("QLabel { background-color: transparent; border: none; }")
+        self.add_leading_widget(icon_label)
 
     def _setup_actions(self) -> None:
         """Add document-specific statuses and actions to shared row shell."""

@@ -360,7 +360,7 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="19"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="21"/>
         <source>Remove document(s) from Reviewed.
 The current file(s) stay unchanged.
 They will not be saved in the next iteration until reviewed again.</source>
@@ -384,17 +384,17 @@ They will not be saved in the next iteration until reviewed again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="93"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="106"/>
         <source>+ Reviewed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="103"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="116"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="112"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="125"/>
         <source>Restore the selected file.
 This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.
 THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.
@@ -542,7 +542,7 @@ Saved history will not be affected.</source>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="141"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="154"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="220"/>
-        <location filename="../../ui/views/document_diff/document_row.py" line="120"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="133"/>
         <source>Restore</source>
         <translation type="unfinished"></translation>
     </message>

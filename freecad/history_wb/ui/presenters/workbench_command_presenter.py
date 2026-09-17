@@ -18,6 +18,7 @@ from ...application.actions.git_config.get_gitignore_content import GetGitIgnore
 from ...application.actions.git_config.save_git_identity import SaveGitIdentityAction
 from ...application.actions.git_config.update_gitignore import UpdateGitIgnoreAction
 from ...application.actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
+from ...application.actions.git_repo.check_git_availability import CheckGitAvailabilityAction
 from ...application.actions.git_repo.find_active_git_repository import (
     FindActiveGitRepositoryAction,
 )
@@ -56,6 +57,7 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         application_state: ApplicationState,
         get_main_window: Callable[[], "QtWidgets.QWidget | None"],
         find_active_git_repository_action: FindActiveGitRepositoryAction,
+        check_git_availability_action: CheckGitAvailabilityAction,
         get_staged_file_paths_action: GetStagedFilePathsAction,
         commit_staging_action: CommitStagingAction,
         get_git_identity_action: GetGitIdentityAction,
@@ -72,6 +74,7 @@ class WorkbenchCommandPresenter(QtCore.QObject):
             application_state: Application-scoped state holder.
             get_main_window: Callable that returns the FreeCAD main window widget.
             find_active_git_repository_action: Action to find the active git repository.
+            check_git_availability_action: Action to check whether the git executable is available.
             get_staged_file_paths_action: Action to get staged file paths.
             commit_staging_action: Action to commit staging area.
             get_git_identity_action: Action to get git identity.
@@ -86,6 +89,7 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         self._application_state = application_state
         self._get_main_window = get_main_window
         self._find_active_git_repository_action = find_active_git_repository_action
+        self._check_git_availability_action = check_git_availability_action
 
         # Create handlers with dialog callbacks that create DialogView at call time
         self._author_handler = AuthorConfigurationHandler(
@@ -136,6 +140,9 @@ class WorkbenchCommandPresenter(QtCore.QObject):
             )
             return False
 
+        if not self._ensure_git_available():
+            return False
+
         return self._author_handler.execute(repo)
 
     def save_iteration(self) -> bool:
@@ -152,6 +159,9 @@ class WorkbenchCommandPresenter(QtCore.QObject):
             )
             return False
 
+        if not self._ensure_git_available():
+            return False
+
         return self._commit_handler.execute(repo)
 
     def initialize_repository(self) -> bool:
@@ -160,6 +170,9 @@ class WorkbenchCommandPresenter(QtCore.QObject):
         Returns:
             True if a repository was initialized, False otherwise.
         """
+        if not self._ensure_git_available():
+            return False
+
         return self._init_repo_handler.execute()
 
     def update_gitignore(self) -> None:
@@ -193,9 +206,31 @@ class WorkbenchCommandPresenter(QtCore.QObject):
             self.repository_changed.emit(result.data)
             return result.data
 
-        # Detection failed; keep existing repo in state (sticky behavior)
+        # Detection failed; keep existing repo in state (sticky behavior).
+        # A missing git executable is a distinct cause worth surfacing.
+        self._ensure_git_available()
         self.repository_changed.emit(current_repo)
         return current_repo
+
+    def _ensure_git_available(self) -> bool:
+        """Probe the git executable and show guidance when it cannot be found.
+
+        Returns:
+            True when git is available, False when guidance was shown.
+        """
+        result = self._check_git_availability_action.execute()
+        if result.is_success and result.data is True:
+            return True
+
+        self._show_error_message(
+            translate("History", "Git Not Found"),
+            translate(
+                "History",
+                "Git executable not found or invalid. Ensure it's installed, or "
+                "configure its location manually in the History Workbench preferences.",
+            ),
+        )
+        return False
 
     # --- Dialog helpers ---
 

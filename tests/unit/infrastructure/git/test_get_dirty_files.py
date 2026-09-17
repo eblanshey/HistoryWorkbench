@@ -11,6 +11,8 @@ import pytest
 from freecad.history_wb.domain.git.models import DirtyFile, DirtyFileStatus
 from freecad.history_wb.infrastructure.git.git_port_adapter import GitPortAdapter
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 def test_get_dirty_files_returns_fcstd_modified_untracked_deleted() -> None:
     """Given mixed dirty files, returns FCStd DirtyFile records only."""
@@ -22,7 +24,7 @@ def test_get_dirty_files_returns_fcstd_modified_untracked_deleted() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == [
@@ -42,7 +44,7 @@ def test_get_dirty_files_accepts_lowercase_fcstd_extension() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == [DirtyFile(git_path="lower.fcstd", status=DirtyFileStatus.MODIFIED)]
@@ -58,7 +60,7 @@ def test_get_dirty_files_empty_for_clean_repo() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == []
@@ -74,7 +76,7 @@ def test_get_dirty_files_filters_staged_only_changes() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == []
@@ -90,7 +92,7 @@ def test_get_dirty_files_handles_git_error() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/not/a/repo")
 
     assert result == []
@@ -106,7 +108,7 @@ def test_get_dirty_files_handles_git_error() -> None:
 def test_get_dirty_files_handles_errors(side_effect: Exception) -> None:
     """Given timeout or OS error, returns empty list."""
     with patch.object(subprocess, "run", side_effect=side_effect):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == []
@@ -128,7 +130,7 @@ def test_get_dirty_files_handles_mixed_status_codes() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == [
@@ -149,7 +151,7 @@ def test_get_dirty_files_handles_z_paths_with_newlines() -> None:
     )
 
     with patch.object(subprocess, "run", return_value=mock_result):
-        adapter = GitPortAdapter()
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
         result = adapter.get_dirty_files("/path/to/repo")
 
     assert result == [

@@ -8,13 +8,15 @@ import pytest
 
 from freecad.history_wb.infrastructure.git import GitPortAdapter
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 class TestGitPortAdapterRestoreMethods:
     """Tests for restore and FCStd path query methods."""
 
     def setup_method(self) -> None:
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_restore_paths_from_commit_uses_restore_source(self) -> None:
         result_ok = subprocess.CompletedProcess(args=["git"], returncode=0, stdout="", stderr="")

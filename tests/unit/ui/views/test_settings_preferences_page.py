@@ -209,3 +209,52 @@ class TestDiffSettingsPreferencesPage:
         }
         assert saved.excluded_properties_by_type.custom_initialized is True
         assert saved.float_precision == 6
+
+    def test_git_executable_loads_into_line_edit(self) -> None:
+        _ensure_qapplication()
+
+        state = replace(_make_state(), git_executable="/opt/portable-git/bin/git")
+        page = DiffSettingsPreferencesPage(
+            get_settings_action=_FakeGetDiffSettingsAction(state),
+            save_settings_action=_FakeSaveDiffSettingsAction(),
+        )
+
+        page.loadSettings()
+
+        assert page._git_executable_edit.text() == "/opt/portable-git/bin/git"
+
+    def test_git_executable_saved_from_line_edit(self) -> None:
+        _ensure_qapplication()
+
+        save_action = _FakeSaveDiffSettingsAction()
+        page = DiffSettingsPreferencesPage(
+            get_settings_action=_FakeGetDiffSettingsAction(_make_state()),
+            save_settings_action=save_action,
+        )
+        page.loadSettings()
+
+        page._git_executable_edit.setText("C:/PortableGit/bin/git.exe")
+        page.saveSettings()
+
+        assert save_action.saved_state is not None
+        assert save_action.saved_state.git_executable == "C:/PortableGit/bin/git.exe"
+
+    def test_git_executable_browse_button_fills_line_edit(self, monkeypatch) -> None:
+        _ensure_qapplication()
+
+        monkeypatch.setattr(
+            QtWidgets.QFileDialog,
+            "getOpenFileName",
+            staticmethod(lambda *_args, **_kwargs: ("/opt/portable-git/bin/git", "")),
+        )
+        page = DiffSettingsPreferencesPage(
+            get_settings_action=_FakeGetDiffSettingsAction(_make_state()),
+            save_settings_action=_FakeSaveDiffSettingsAction(),
+        )
+        page.loadSettings()
+
+        browse_buttons = page.form.findChildren(QtWidgets.QPushButton)
+        assert browse_buttons, "Expected a Browse button on the preferences page"
+        browse_buttons[0].click()
+
+        assert page._git_executable_edit.text() == "/opt/portable-git/bin/git"

@@ -13,14 +13,16 @@ import pytest
 from freecad.history_wb.infrastructure.git import GitPortAdapter
 from freecad.history_wb.utils import Log
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 class TestGitPortAdapter:
     """Tests for the GitPortAdapter class."""
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     @pytest.mark.parametrize(
         "path",
@@ -333,13 +335,125 @@ class TestGitPortAdapter:
         mock_run.assert_called_once()
 
 
+class TestGitPortAdapterGitExecutable:
+    """Tests for resolving the git executable from the settings preference."""
+
+    @staticmethod
+    def _success_result() -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=["git", "rev-parse", "--show-toplevel"],
+            returncode=0,
+            stdout="/home/user/project\n",
+            stderr="",
+        )
+
+    def test_configured_executable_is_used_for_git_commands(self) -> None:
+        """Given a configured git executable, subprocess is invoked with that binary."""
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="/opt/portable-git/bin/git"))
+
+        with patch.object(subprocess, "run", return_value=self._success_result()) as mock_run:
+            result = adapter.find_top_level_git_path("/home/user/project")
+
+        assert result == "/home/user/project"
+        assert mock_run.call_args[0][0][0] == "/opt/portable-git/bin/git"
+
+    def test_path_lookup_used_when_no_executable_configured(self) -> None:
+        """Given an empty preference, git is located on the PATH via shutil.which."""
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository())
+
+        with (
+            patch(
+                "freecad.history_wb.infrastructure.git.git_port_adapter.shutil.which",
+                return_value="/usr/bin/git",
+            ) as mock_which,
+            patch.object(subprocess, "run", return_value=self._success_result()) as mock_run,
+        ):
+            result = adapter.find_top_level_git_path("/home/user/project")
+
+        assert result == "/home/user/project"
+        mock_which.assert_called_once_with("git")
+        assert mock_run.call_args[0][0][0] == "/usr/bin/git"
+
+    def test_updated_preference_applies_to_later_commands(self) -> None:
+        """Given a preference change after save, the next command uses the new binary."""
+        settings_repo = FakeSettingsRepository()
+        adapter = GitPortAdapter(settings_repo=settings_repo)
+
+        with patch.object(subprocess, "run", return_value=self._success_result()) as mock_run:
+            with patch(
+                "freecad.history_wb.infrastructure.git.git_port_adapter.shutil.which",
+                return_value="/usr/bin/git",
+            ):
+                adapter.find_top_level_git_path("/home/user/project")
+            settings_repo.set_git_executable("/opt/portable-git/bin/git")
+            adapter.find_top_level_git_path("/home/user/project")
+
+        assert mock_run.call_args_list[0][0][0][0] == "/usr/bin/git"
+        assert mock_run.call_args_list[1][0][0][0] == "/opt/portable-git/bin/git"
+
+    def test_missing_executable_everywhere_returns_none_without_running(self) -> None:
+        """Given no configured binary and no git on PATH, no subprocess is started."""
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository())
+
+        with (
+            patch(
+                "freecad.history_wb.infrastructure.git.git_port_adapter.shutil.which",
+                return_value=None,
+            ),
+            patch.object(subprocess, "run") as mock_run,
+            patch.object(Log, "warning"),
+        ):
+            result = adapter.find_top_level_git_path("/home/user/project")
+
+        assert result is None
+        mock_run.assert_not_called()
+
+    def test_probe_true_for_valid_configured_executable(self, tmp_path) -> None:
+        """A configured path naming an executable file reports available."""
+        fake_git = tmp_path / "git"
+        fake_git.write_text("#!/bin/sh\n")
+        fake_git.chmod(0o755)
+
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable=str(fake_git)))
+
+        assert adapter.is_git_executable_available() is True
+
+    def test_probe_false_for_missing_configured_path(self, tmp_path) -> None:
+        """A configured path that does not name an existing file reports unavailable."""
+        missing = tmp_path / "git"
+
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable=str(missing)))
+
+        assert adapter.is_git_executable_available() is False
+
+    def test_probe_true_when_git_found_on_path(self) -> None:
+        """With no configured path, a PATH lookup hit reports available."""
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository())
+
+        with patch(
+            "freecad.history_wb.infrastructure.git.git_port_adapter.shutil.which",
+            return_value="/usr/bin/git",
+        ):
+            assert adapter.is_git_executable_available() is True
+
+    def test_probe_false_when_git_missing_everywhere(self) -> None:
+        """With no configured path and no PATH hit, reports unavailable."""
+        adapter = GitPortAdapter(settings_repo=FakeSettingsRepository())
+
+        with patch(
+            "freecad.history_wb.infrastructure.git.git_port_adapter.shutil.which",
+            return_value=None,
+        ):
+            assert adapter.is_git_executable_available() is False
+
+
 class TestGitPortAdapterGetCommits:
     """Tests for the get_commits method of GitPortAdapter."""
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_get_commits_success_single_commit(self) -> None:
         """Test successful commit retrieval with a single commit."""
@@ -678,8 +792,8 @@ class TestGitPortAdapterIsPathInRepository:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     @pytest.mark.parametrize(
         "git_root,path,expected",
@@ -754,8 +868,8 @@ class TestGitPortAdapterStageFiles:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_stage_files_uses_pathspec_separator(self) -> None:
         """Given paths that look like options, git add receives -- separator."""
@@ -794,8 +908,8 @@ class TestGitPortAdapterGetStagedPaths:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_get_staged_paths_returns_staged_fcstd_files(self) -> None:
         """Test that staged .FCStd files are returned correctly.
@@ -1039,8 +1153,8 @@ class TestGitPortAdapterGetFileContents:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_get_file_contents_from_index(self) -> None:
         """Test getting file contents from the index (staged version).
@@ -1169,8 +1283,8 @@ class TestGitPortAdapterUnstage:
     """Tests for unstage methods of GitPortAdapter."""
 
     def setup_method(self) -> None:
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_unstage_files_uses_restore_with_pathspec_separator(self) -> None:
         status_result = subprocess.CompletedProcess(

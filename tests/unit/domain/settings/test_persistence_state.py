@@ -1,6 +1,8 @@
 # File responsibility: Unit tests for persistence-to-effective settings conversion helpers.
 """Tests for SettingsPersistenceState conversion helpers."""
 
+import os
+
 from freecad.history_wb.domain.settings.models import Settings
 from freecad.history_wb.domain.settings.persistence_state import (
     ByTypeSettingState,
@@ -63,3 +65,54 @@ def test_to_effective_settings_uses_custom_values_for_custom_modes() -> None:
         excluded_properties_by_type={"App::Part": ["Tip"]},
         float_precision=6,
     )
+
+
+def _minimal_state(**overrides: object) -> SettingsPersistenceState:
+    base = {
+        "excluded_types": ListSettingState(use_default=True, custom_values=[], custom_initialized=False),
+        "excluded_properties": ListSettingState(use_default=True, custom_values=[], custom_initialized=False),
+        "excluded_properties_by_type": ByTypeSettingState(
+            use_default=True,
+            custom_values={},
+            custom_initialized=False,
+        ),
+        "float_precision": 2,
+    }
+    base.update(overrides)
+    return SettingsPersistenceState(**base)  # type: ignore[arg-type]
+
+
+def test_to_effective_settings_normalizes_configured_git_executable() -> None:
+    state = _minimal_state(git_executable="  /opt/git/bin/git  ")
+
+    effective = state.to_effective_settings(
+        default_excluded_types=[],
+        default_excluded_properties=[],
+        default_excluded_properties_by_type={},
+    )
+
+    assert effective.git_executable == "/opt/git/bin/git"
+
+
+def test_to_effective_settings_expands_home_relative_git_executable() -> None:
+    state = _minimal_state(git_executable="~/bin/git")
+
+    effective = state.to_effective_settings(
+        default_excluded_types=[],
+        default_excluded_properties=[],
+        default_excluded_properties_by_type={},
+    )
+
+    assert effective.git_executable == os.path.expanduser("~/bin/git")
+
+
+def test_to_effective_settings_keeps_whitespace_only_git_executable_empty() -> None:
+    state = _minimal_state(git_executable="   ")
+
+    effective = state.to_effective_settings(
+        default_excluded_types=[],
+        default_excluded_properties=[],
+        default_excluded_properties_by_type={},
+    )
+
+    assert effective.git_executable == ""

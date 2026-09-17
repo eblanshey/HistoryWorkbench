@@ -15,6 +15,7 @@ from typing import Any
 from freecad.history_wb.domain.git.models import DirtyFile, DirtyFileStatus, GitCommit, GitIdentity
 from freecad.history_wb.domain.git.paths import is_fcstd_path
 from freecad.history_wb.domain.git.ports import GitPort
+from freecad.history_wb.domain.settings.repository import SettingsRepository
 from freecad.history_wb.utils import Log
 
 
@@ -26,14 +27,37 @@ class GitPortAdapter(GitPort):
     whether a given path is within a git repository and returning the root
     path of that repository.
 
+    The git executable is resolved for each command: the configured
+    preference is used when set, otherwise git is located on the PATH.
+
     Attributes:
         No public attributes.
     """
 
-    def __init__(self) -> None:
-        """Initialize adapter with cached git executable path."""
-        self._git_executable = shutil.which("git")
-        Log.debug(f"Git executable detected: {self._git_executable or '<not found>'}")
+    def __init__(self, settings_repo: SettingsRepository) -> None:
+        """Initialize adapter with the settings repository for git executable preference."""
+        self._settings_repo = settings_repo
+
+    def _resolve_git_executable(self) -> str | None:
+        """Return the git executable to invoke, or None when git cannot be located."""
+        configured = self._settings_repo.get_git_executable()
+        if configured:
+            return configured
+
+        return shutil.which("git")
+
+    def is_git_executable_available(self) -> bool:
+        """Return whether the git executable can be located (preference or PATH)."""
+        git_executable = self._resolve_git_executable()
+        if git_executable is None:
+            return False
+
+        # A configured path must still name a readable executable file; PATH
+        # lookups via shutil.which already guarantee this.
+        if self._settings_repo.get_git_executable():
+            return os.path.isfile(git_executable) and os.access(git_executable, os.X_OK)
+
+        return True
 
     def _windows_no_console_kwargs(self) -> dict[str, Any]:
         """Return subprocess options that suppress console windows on Windows."""
@@ -64,7 +88,8 @@ class GitPortAdapter(GitPort):
         extra_env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str] | None:
         """Run git command with consistent encoding and error handling."""
-        if self._git_executable is None:
+        git_executable = self._resolve_git_executable()
+        if git_executable is None:
             Log.warning("Git command not found - git may not be installed or not in PATH")
             return None
 
@@ -84,7 +109,7 @@ class GitPortAdapter(GitPort):
             run_kwargs["env"] = os.environ | env_overrides
         run_kwargs.update(self._windows_no_console_kwargs())
 
-        return subprocess.run([self._git_executable, *args], **run_kwargs)
+        return subprocess.run([git_executable, *args], **run_kwargs)
 
     def _global_git_config_home_path(self) -> str:
         """Return home path used for global git config in current runtime."""
@@ -709,7 +734,8 @@ class GitPortAdapter(GitPort):
 
     def get_file_bytes_from_ref(self, git_root: str, commit: str | None, git_path: str) -> bytes | None:
         """Read file bytes from git ref/index without decoding."""
-        if self._git_executable is None:
+        git_executable = self._resolve_git_executable()
+        if git_executable is None:
             Log.warning("Git command not found - git may not be installed or not in PATH")
             return None
         try:
@@ -725,7 +751,7 @@ class GitPortAdapter(GitPort):
             if env_overrides:
                 run_kwargs["env"] = os.environ | env_overrides
             run_kwargs.update(self._windows_no_console_kwargs())
-            result = subprocess.run([self._git_executable, "show", target], **run_kwargs)
+            result = subprocess.run([git_executable, "show", target], **run_kwargs)
             if result.returncode != 0:
                 return None
             return result.stdout

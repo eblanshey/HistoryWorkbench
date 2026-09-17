@@ -36,6 +36,7 @@ from .actions.git_config.update_gitignore import UpdateGitIgnoreAction
 from .actions.git_history.get_commits import GetCommitsAction
 from .actions.git_history.get_committed_file_paths import GetCommittedFilePathsAction
 from .actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
+from .actions.git_repo.check_git_availability import CheckGitAvailabilityAction
 from .actions.git_repo.find_active_git_repository import FindActiveGitRepositoryAction
 from .actions.git_repo.get_git_repository_init_candidates import GetGitRepositoryInitCandidatesAction
 from .actions.git_repo.initialize_git_repository import InitializeGitRepositoryAction
@@ -90,6 +91,7 @@ class ApplicationContainer:
     save_diff_settings_action: SaveDiffSettingsAction
     open_visual_feature_diff_action: OpenVisualDiffAction
     restore_documents_action: RestoreDocumentsAction
+    check_git_availability_action: CheckGitAvailabilityAction
 
     # Settings repository for runtime precision and user preferences
     settings_repo: SettingsRepository
@@ -158,7 +160,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
     diff_engine = DiffEngine(settings_repo=settings_repo)
 
     # Create git detection components
-    git_port = GitPortAdapter()
+    git_port = GitPortAdapter(settings_repo=settings_repo)
     git_service = GitService(git_port=git_port)
 
     find_active_git_repository_action = FindActiveGitRepositoryAction(
@@ -180,6 +182,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
     )
 
     get_commits_action = GetCommitsAction(git_service=git_service)
+    check_git_availability_action = CheckGitAvailabilityAction(git_service=git_service)
     open_all_documents_in_repository_action = OpenAllDocumentsInRepositoryAction(
         freecad_port=freecad_port,
     )
@@ -258,6 +261,7 @@ def create_application_container(ctx: FreeCadContext) -> ApplicationContainer:
         get_gitignore_content_action=get_gitignore_content_action,
         update_gitignore_action=update_gitignore_action,
         get_commits_action=get_commits_action,
+        check_git_availability_action=check_git_availability_action,
         open_all_documents_in_repository_action=open_all_documents_in_repository_action,
         open_document_action=open_document_action,
         recompute_all_open_documents_action=recompute_all_open_documents_action,

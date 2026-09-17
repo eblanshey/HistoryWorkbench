@@ -49,6 +49,10 @@ class GitService:
         name = git_path_name(git_root)
         return GitRepository(name=name, absolute_path=git_root)
 
+    def is_git_executable_available(self) -> bool:
+        """Return whether the git executable can be located (preference or PATH)."""
+        return self._git_port.is_git_executable_available()
+
     def get_commits(self, repo: GitRepository, limit: int = 20, skip: int = 0) -> list[GitCommit]:
         """Get recent commits from git repository.
 

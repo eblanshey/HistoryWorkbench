@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from ...application.actions.settings.get_diff_settings import GetDiffSettingsAction
@@ -116,6 +117,31 @@ class DiffSettingsPreferencesPage:
         precision_group = QtWidgets.QGroupBox(translate("History", "Numeric comparison"), self.form)
         precision_group.setLayout(precision_layout)
         root_layout.addWidget(precision_group)
+
+        self._git_executable_edit = QtWidgets.QLineEdit(self.form)
+        self._git_executable_edit.setPlaceholderText(
+            translate("History", "Leave empty to run git from the system PATH")
+        )
+        browse_button = QtWidgets.QPushButton(translate("History", "Browse..."), self.form)
+        browse_button.clicked.connect(self._browse_git_executable)
+        git_layout = QtWidgets.QHBoxLayout()
+        git_layout.addWidget(self._git_executable_edit, 1)
+        git_layout.addWidget(browse_button)
+        git_group = QtWidgets.QGroupBox(translate("History", "Git executable"), self.form)
+        git_group.setLayout(git_layout)
+        root_layout.addWidget(git_group)
+
+        git_help_text = QtWidgets.QLabel(
+            translate(
+                "History",
+                "Optional path to the git executable, for example a portable git installation. "
+                "Applies to all platforms; when empty, git is found on the system PATH.",
+            ),
+            self.form,
+        )
+        git_help_text.setWordWrap(True)
+        root_layout.addWidget(git_help_text)
+
         root_layout.addStretch(1)
 
         self._excluded_types_default_radio = self._excluded_types_controls.default_radio
@@ -147,6 +173,7 @@ class DiffSettingsPreferencesPage:
         self._apply_list_state(self._excluded_properties_controls, state.excluded_properties)
         self._apply_by_type_state(self._excluded_by_type_controls, state.excluded_properties_by_type)
         self._float_precision_spin.setValue(state.float_precision)
+        self._git_executable_edit.setText(state.git_executable)
         self._is_loading = False
         self._sync_visibility()
 
@@ -167,6 +194,7 @@ class DiffSettingsPreferencesPage:
                 current_state=loaded.excluded_properties_by_type,
             ),
             float_precision=self._float_precision_spin.value(),
+            git_executable=self._git_executable_edit.text(),
         )
         result = self._save_settings_action.execute(state_to_save)
         if not result.is_success:
@@ -188,6 +216,20 @@ class DiffSettingsPreferencesPage:
         self._excluded_types_controls.default_radio.toggled.connect(lambda _checked: self._sync_visibility())
         self._excluded_properties_controls.default_radio.toggled.connect(lambda _checked: self._sync_visibility())
         self._excluded_by_type_controls.default_radio.toggled.connect(lambda _checked: self._sync_visibility())
+
+    def _browse_git_executable(self) -> None:
+        """Open a file dialog to pick the git executable and fill the line edit."""
+        current_text = self._git_executable_edit.text().strip()
+        start_dir = os.path.dirname(current_text) if current_text else os.path.expanduser("~")
+
+        # Unfiltered dialog: the git binary name varies by platform (git, git.exe).
+        selected, _accepted = QtWidgets.QFileDialog.getOpenFileName(
+            self.form,
+            translate("History", "Select git executable"),
+            start_dir,
+        )
+        if selected:
+            self._git_executable_edit.setText(selected)
 
     def _sync_visibility(self) -> None:
         self._excluded_types_controls.text_edit.setVisible(self._excluded_types_controls.custom_radio.isChecked())
@@ -324,6 +366,7 @@ class DiffSettingsPreferencesPage:
                 custom_initialized=False,
             ),
             float_precision=FLOAT_PRECISION,
+            git_executable="",
         )
 
 

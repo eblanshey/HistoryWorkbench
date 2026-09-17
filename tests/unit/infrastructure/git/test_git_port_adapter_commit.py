@@ -13,14 +13,16 @@ from freecad.history_wb.domain.git.models import GitIdentity
 from freecad.history_wb.infrastructure.git import GitPortAdapter
 from freecad.history_wb.utils import Log
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 class TestGitPortAdapterCommit:
     """Tests for the commit method of GitPortAdapter."""
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_commit_success(self) -> None:
         """Test successful commit returns True.
@@ -248,8 +250,8 @@ class TestGitPortAdapterIdentity:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_get_identity_returns_local_identity(self) -> None:
         """Local repo identity is returned when name and email are configured."""

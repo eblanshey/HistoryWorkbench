@@ -1,6 +1,7 @@
 # File responsibility: Unit tests for FreeCAD settings repository persistence model behavior.
 """Unit tests for FreeCAD settings repository behavior."""
 
+import os
 from dataclasses import replace
 
 from freecad.history_wb.domain.config import (
@@ -223,3 +224,35 @@ class TestFreeCADSettingsRepository:
         refreshed = repo.get_settings()
         assert refreshed is not first
         assert refreshed.float_precision == 7
+
+    def test_git_executable_defaults_to_empty_and_normalizes_on_read(self) -> None:
+        group = _FakeParamGet()
+        ctx = FreeCadContext(app=_FakeApp(group), gui=_FakeGui())  # type: ignore[arg-type]
+
+        repo = FreeCADSettingsRepository(ctx)
+        assert repo.get_git_executable() == ""
+
+        group.SetString(FreeCADSettingsRepository.KEY_GIT_EXECUTABLE, "  /opt/git/bin/git  ")
+
+        # A fresh repository instance reads the persisted value instead of the previous cache.
+        fresh_repo = FreeCADSettingsRepository(ctx)
+        assert fresh_repo.get_git_executable() == "/opt/git/bin/git"
+
+    def test_git_executable_save_persists_normalized_value_and_refreshes_cache(self) -> None:
+        repo, group = _make_repo()
+
+        state = repo.get_persistence_state()
+        repo.save_persistence_state(replace(state, git_executable="~/PortableGit/bin/git.exe"))
+
+        assert group.GetString(FreeCADSettingsRepository.KEY_GIT_EXECUTABLE, "") == os.path.expanduser("~/PortableGit/bin/git.exe")
+        assert repo.get_git_executable() == os.path.expanduser("~/PortableGit/bin/git.exe")
+
+    def test_git_executable_save_with_whitespace_clears_preference(self) -> None:
+        repo, group = _make_repo()
+
+        state = repo.get_persistence_state()
+        repo.save_persistence_state(replace(state, git_executable="  /opt/git/bin/git  "))
+        repo.save_persistence_state(replace(repo.get_persistence_state(), git_executable="   "))
+
+        assert group.GetString(FreeCADSettingsRepository.KEY_GIT_EXECUTABLE, "unset") == ""
+        assert repo.get_git_executable() == ""

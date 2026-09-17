@@ -35,6 +35,9 @@ def mock_actions() -> dict:
     """Create a dict of mock container actions."""
     return {
         "find_active_git_repository_action": MagicMock(),
+        "check_git_availability_action": MagicMock(
+            execute=MagicMock(return_value=MagicMock(is_success=True, data=True))
+        ),
         "get_staged_file_paths_action": MagicMock(),
         "commit_staging_action": MagicMock(),
         "get_git_identity_action": MagicMock(),
@@ -294,6 +297,84 @@ class TestRefreshGitRepository:
         result = presenter.refresh_git_repository()
 
         assert result is None
+
+    def test_refresh_shows_git_not_found_popup_when_detection_fails_and_git_missing(
+        self,
+        presenter: WorkbenchCommandPresenter,
+        mock_application_state: MagicMock,
+        mock_actions: dict,
+    ) -> None:
+        """Detection failure plus missing git executable surfaces guidance via error popup."""
+        mock_application_state.git_repository = None
+        mock_result = MagicMock()
+        mock_result.is_success = False
+        mock_actions["find_active_git_repository_action"].execute.return_value = mock_result
+        mock_actions["check_git_availability_action"].execute.return_value = MagicMock(
+            is_success=True, data=False
+        )
+
+        with patch.object(presenter, "_show_error_message") as mock_error:
+            result = presenter.refresh_git_repository()
+
+        assert result is None
+        mock_error.assert_called_once_with(
+            "Git Not Found",
+            "Git executable not found or invalid. Ensure it's installed, or configure its location manually in the History Workbench preferences.",
+        )
+
+    def test_refresh_does_not_popup_git_not_found_when_git_is_available(
+        self,
+        presenter: WorkbenchCommandPresenter,
+        mock_application_state: MagicMock,
+        mock_actions: dict,
+    ) -> None:
+        """A plain not-a-repository detection failure must not show the git popup."""
+        mock_application_state.git_repository = None
+        mock_result = MagicMock()
+        mock_result.is_success = False
+        mock_actions["find_active_git_repository_action"].execute.return_value = mock_result
+
+        with patch.object(presenter, "_show_error_message") as mock_error:
+            presenter.refresh_git_repository()
+
+        mock_error.assert_not_called()
+
+
+class TestInitializeRepositoryGitAvailability:
+    """Tests for the git executable guard on the init-repository flow."""
+
+    def test_initialize_aborts_with_popup_when_git_missing(
+        self,
+        presenter: WorkbenchCommandPresenter,
+        mock_actions: dict,
+    ) -> None:
+        """initialize_repository() aborts and shows guidance when git is unavailable."""
+        mock_actions["check_git_availability_action"].execute.return_value = MagicMock(
+            is_success=True, data=False
+        )
+
+        with (
+            patch.object(presenter, "_show_error_message") as mock_error,
+            patch.object(presenter, "_init_repo_handler") as mock_handler,
+        ):
+            result = presenter.initialize_repository()
+
+        assert result is False
+        mock_handler.execute.assert_not_called()
+        mock_error.assert_called_once()
+
+    def test_initialize_proceeds_when_git_available(
+        self,
+        presenter: WorkbenchCommandPresenter,
+        mock_actions: dict,
+    ) -> None:
+        """initialize_repository() runs the handler when the git probe succeeds."""
+        with patch.object(presenter, "_init_repo_handler") as mock_handler:
+            mock_handler.execute.return_value = True
+            result = presenter.initialize_repository()
+
+        assert result is True
+        mock_handler.execute.assert_called_once()
 
 
 class TestDialogHelpers:

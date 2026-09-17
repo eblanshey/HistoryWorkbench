@@ -10,14 +10,16 @@ import pytest
 
 from freecad.history_wb.infrastructure.git import GitPortAdapter
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 class TestGitPortAdapterGetCommittedFiles:
     """Tests for the get_committed_files method of GitPortAdapter."""
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-        self.adapter = GitPortAdapter()
-        self.adapter._git_executable = "git"
+        self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
+        
 
     def test_get_committed_files_success(self) -> None:
         """Test successful parsing of git diff-tree output returning FCStd files.

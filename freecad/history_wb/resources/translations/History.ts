@@ -5,9 +5,9 @@
     <name>History</name>
     <message>
         <location filename="../../entrypoints/commands.py" line="205"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="134"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="150"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="170"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="138"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="157"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="183"/>
         <source>No Project</source>
         <translation type="unfinished"></translation>
     </message>
@@ -221,9 +221,9 @@ Saved history will not be affected.</source>
     </message>
     <message>
         <location filename="../../entrypoints/commands.py" line="206"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="135"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="151"/>
-        <location filename="../../ui/presenters/workbench_command_presenter.py" line="171"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="139"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="158"/>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="184"/>
         <source>No project detected. Open a FreeCAD document in a project first.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -472,62 +472,87 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="65"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="66"/>
         <source>General</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="69"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="70"/>
         <source>Settings apply only during tree comparisons. Saved tree snapshots are unaffected by these settings.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="80"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="81"/>
         <source>One TypeId per line.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="84"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="85"/>
         <source>Excluded object types</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="91"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="92"/>
         <source>One property name per line.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="95"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="96"/>
         <source>Excluded properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="102"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="103"/>
         <source>One line per mapping: TypeId -&gt; Property</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="106"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="107"/>
         <source>Type-specific excluded properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="115"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="116"/>
         <source>Float precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="116"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="117"/>
         <source>Numeric comparison</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="257"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="123"/>
+        <source>Leave empty to run git from the system PATH</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/settings_preferences_page.py" line="125"/>
+        <source>Browse...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/settings_preferences_page.py" line="130"/>
+        <source>Git executable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/settings_preferences_page.py" line="135"/>
+        <source>Optional path to the git executable, for example a portable git installation. Applies to all platforms; when empty, git is found on the system PATH.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/settings_preferences_page.py" line="228"/>
+        <source>Select git executable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/settings_preferences_page.py" line="299"/>
         <source>Use default exclusion list</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/settings_preferences_page.py" line="258"/>
+        <location filename="../../ui/views/settings_preferences_page.py" line="300"/>
         <source>Use custom exclusion list</source>
         <translation type="unfinished"></translation>
     </message>
@@ -549,6 +574,16 @@ Saved history will not be affected.</source>
     <message>
         <location filename="../../ui/presenters/document_diff/restore_handler.py" line="109"/>
         <source>Restoration complete.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="226"/>
+        <source>Git Not Found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/presenters/workbench_command_presenter.py" line="227"/>
+        <source>Git executable not found or invalid. Ensure it&apos;s installed, or configure its location manually in the History Workbench preferences.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -83,6 +83,7 @@ def _mock_container() -> MagicMock:
     mock.can_write_global_git_identity_action = MagicMock()
     mock.restore_documents_action = MagicMock()
     mock.find_active_git_repository_action = MagicMock()
+    mock.check_git_availability_action = MagicMock()
     mock.get_commits_action = MagicMock()
     mock.get_git_repository_init_candidates_action = MagicMock()
     mock.initialize_git_repository_action = MagicMock()
@@ -290,6 +291,7 @@ def test_compose_and_register_workbench_commands() -> None:
         wcp_kwargs = MockWCP.call_args.kwargs
         assert wcp_kwargs["application_state"] is mock_application_state
         assert wcp_kwargs["find_active_git_repository_action"] is mock_container.find_active_git_repository_action
+        assert wcp_kwargs["check_git_availability_action"] is mock_container.check_git_availability_action
         assert wcp_kwargs["get_staged_file_paths_action"] is mock_container.get_staged_file_paths_action
         assert wcp_kwargs["commit_staging_action"] is mock_container.commit_staging_action
         assert wcp_kwargs["get_git_identity_action"] is mock_container.get_git_identity_action

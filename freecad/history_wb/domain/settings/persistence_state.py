@@ -3,6 +3,7 @@
 """Persistence-state contracts for diff settings preferences."""
 
 from dataclasses import dataclass
+from os.path import expanduser
 
 from .models import Settings
 
@@ -33,6 +34,7 @@ class SettingsPersistenceState:
     excluded_properties: ListSettingState
     excluded_properties_by_type: ByTypeSettingState
     float_precision: int
+    git_executable: str = ""
 
     def to_effective_settings(
         self,
@@ -59,7 +61,22 @@ class SettingsPersistenceState:
                 else _copy_by_type(self.excluded_properties_by_type.custom_values)
             ),
             float_precision=self.float_precision,
+            git_executable=normalize_git_executable(self.git_executable),
         )
+
+
+def normalize_git_executable(value: str) -> str:
+    """Normalize a configured git executable path.
+
+    Trims surrounding whitespace and expands a leading ``~`` to the user's
+    home directory. An empty or whitespace-only value stays empty, which
+    means "no override configured; search the PATH".
+    """
+    trimmed = value.strip()
+    if not trimmed:
+        return ""
+
+    return expanduser(trimmed)
 
 
 def _copy_by_type(values: dict[str, list[str]]) -> dict[str, list[str]]:

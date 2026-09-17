@@ -61,6 +61,7 @@ class FakeSettingsRepository(SettingsRepository):
         excluded_types: list[str] | None = None,
         excluded_properties: list[str] | None = None,
         excluded_properties_by_type: dict[str, list[str]] | None = None,
+        git_executable: str = "",
     ):
         """Initialize with optional custom excluded lists.
 
@@ -69,10 +70,12 @@ class FakeSettingsRepository(SettingsRepository):
             excluded_properties: List of property names to exclude (default: ["TimeStamp", "Label2"])
             excluded_properties_by_type: Dict mapping type IDs to property names to exclude
                 for that type only (default: empty dict)
+            git_executable: Path to the git executable (default: empty, meaning search PATH)
         """
         self._excluded_types = excluded_types or ["App::Origin"]
         self._excluded_properties = excluded_properties or ["TimeStamp", "Label2"]
         self._excluded_properties_by_type = excluded_properties_by_type or {}
+        self._git_executable = git_executable
 
     def get_excluded_types(self) -> list[str]:
         """Get the configured excluded type IDs."""
@@ -90,12 +93,21 @@ class FakeSettingsRepository(SettingsRepository):
         """Get the configured float precision."""
         return 2
 
+    def get_git_executable(self) -> str:
+        """Get the configured git executable path (empty means search PATH)."""
+        return self._git_executable
+
+    def set_git_executable(self, value: str) -> None:
+        """Set the configured git executable path for test scenarios."""
+        self._git_executable = value
+
     def get_settings(self) -> Settings:
         """Get all settings as a Settings object."""
         return Settings(
             excluded_types=self._excluded_types.copy(),
             excluded_properties=self._excluded_properties.copy(),
             excluded_properties_by_type=self.get_excluded_properties_by_type(),
+            git_executable=self._git_executable,
         )
 
 

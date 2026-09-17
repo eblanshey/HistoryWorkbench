@@ -50,6 +50,15 @@ class SettingsRepository(Protocol):
         """
         ...
 
+    def get_git_executable(self) -> str:
+        """Get the configured git executable path.
+
+        Returns:
+            Path to the git executable, or an empty string when no override
+            is configured and git should be located on the PATH.
+        """
+        ...
+
     def get_settings(self) -> Settings:
         """Get all settings as a Settings object.
 

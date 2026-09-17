@@ -32,12 +32,14 @@ class FakeGitPort:
         fail_commit: bool = False,
         fail_init: bool = False,
         fail_unstage: bool = False,
+        git_executable_available: bool = True,
     ) -> None:
         """Initialize the fake git port with empty mappings.
 
         Args:
             fail_stage: If True, stage_files will return False (for testing failure cases).
             fail_commit: If True, commit will return False (for testing failure cases).
+            git_executable_available: Value returned by is_git_executable_available.
         """
         # Maps paths to their git root paths
         self._git_roots: dict[str, str] = {}
@@ -50,6 +52,8 @@ class FakeGitPort:
         # Flag to simulate git init failures
         self._fail_init = fail_init
         self._fail_unstage = fail_unstage
+        # Value returned by is_git_executable_available
+        self._git_executable_available = git_executable_available
         # Staged paths for get_staged_paths
         self._staged_paths: list[str] = []
         self._dirty_files: list[DirtyFile] = []
@@ -128,6 +132,14 @@ class FakeGitPort:
             commits: List of GitCommit objects to return for this repo.
         """
         self._commits[root_path] = commits
+
+    def is_git_executable_available(self) -> bool:
+        """Return the configured git executable availability (True by default)."""
+        return self._git_executable_available
+
+    def set_git_executable_available(self, available: bool) -> None:
+        """Control the simulated git executable availability for tests."""
+        self._git_executable_available = available
 
     def find_top_level_git_path(self, path: str) -> str | None:
         """Find git root by checking if path is within a known git repo.

@@ -13,6 +13,8 @@ from freecad.history_wb.domain.git.git_service import GitService
 from freecad.history_wb.infrastructure.freecad.ports import get_port
 from freecad.history_wb.infrastructure.git.git_port_adapter import GitPortAdapter
 
+from tests.fakes.fake_repositories import FakeSettingsRepository
+
 
 if TYPE_CHECKING:
     from freecad.history_wb.domain.freecad_ports import AppLike, GuiLike
@@ -41,7 +43,7 @@ class TestFindActiveGitRepositoryAction:
         # Wire up dependencies directly - no container needed
         ctx = FreeCadContext(app=freecad_app, gui=freecad_gui)
         port = get_port(ctx)
-        git_service = GitService(git_port=GitPortAdapter())
+        git_service = GitService(git_port=GitPortAdapter(settings_repo=FakeSettingsRepository()))
 
         action = FindActiveGitRepositoryAction(
             freecad_port=port,
@@ -81,7 +83,7 @@ class TestFindActiveGitRepositoryAction:
         # Wire up dependencies directly - no container needed
         ctx = FreeCadContext(app=freecad_app, gui=freecad_gui)
         port = get_port(ctx)
-        git_service = GitService(git_port=GitPortAdapter())
+        git_service = GitService(git_port=GitPortAdapter(settings_repo=FakeSettingsRepository()))
 
         action = FindActiveGitRepositoryAction(
             freecad_port=port,
@@ -119,7 +121,7 @@ class TestFindActiveGitRepositoryAction:
         # Wire up dependencies directly - no container needed
         ctx = FreeCadContext(app=freecad_app, gui=freecad_gui)
         port = get_port(ctx)
-        git_service = GitService(git_port=GitPortAdapter())
+        git_service = GitService(git_port=GitPortAdapter(settings_repo=FakeSettingsRepository()))
 
         action = FindActiveGitRepositoryAction(
             freecad_port=port,

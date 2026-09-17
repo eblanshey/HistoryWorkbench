@@ -19,6 +19,7 @@ from ...domain.settings.persistence_state import (
     ByTypeSettingState,
     ListSettingState,
     SettingsPersistenceState,
+    normalize_git_executable,
 )
 from ...domain.settings.text_codec import (
     parse_by_type_lines,
@@ -64,6 +65,7 @@ class FreeCADSettingsRepository:
     KEY_CUSTOM_EXCLUDED_PROPERTIES_BY_TYPE_INITIALIZED = "CustomExcludedPropertiesByTypeInitialized"
 
     KEY_FLOAT_PRECISION = "FloatPrecision"
+    KEY_GIT_EXECUTABLE = "***"
 
     def __init__(self, ctx: FreeCadContext) -> None:
         self._ctx = ctx
@@ -135,6 +137,14 @@ class FreeCADSettingsRepository:
         group = self._get_group()
         group.SetInt(self.KEY_FLOAT_PRECISION, self._normalize_float_precision(value))
 
+    def _get_git_executable(self) -> str:
+        group = self._get_group()
+        return group.GetString(self.KEY_GIT_EXECUTABLE, "")
+
+    def _set_git_executable(self, value: str) -> None:
+        group = self._get_group()
+        group.SetString(self.KEY_GIT_EXECUTABLE, normalize_git_executable(value))
+
     def _normalize_float_precision(self, value: int) -> int:
         return max(MIN_FLOAT_PRECISION, min(MAX_FLOAT_PRECISION, value))
 
@@ -156,6 +166,7 @@ class FreeCADSettingsRepository:
             ),
             excluded_properties_by_type=self._get_by_type_state(),
             float_precision=self._get_float_precision(),
+            git_executable=self._get_git_executable(),
         )
 
     def save_persistence_state(self, state: SettingsPersistenceState) -> None:
@@ -174,6 +185,7 @@ class FreeCADSettingsRepository:
         )
         self._set_by_type_state(state.excluded_properties_by_type)
         self._set_float_precision(state.float_precision)
+        self._set_git_executable(state.git_executable)
         self._cached_settings = self._build_settings_from_state(state)
 
     def _build_settings_from_state(self, state: SettingsPersistenceState) -> Settings:
@@ -219,6 +231,15 @@ class FreeCADSettingsRepository:
             Number of decimal places for float comparison (default: 2).
         """
         return self.get_settings().float_precision
+
+    def get_git_executable(self) -> str:
+        """Get the configured git executable path.
+
+        Returns:
+            Normalized path to the git executable, or an empty string when
+            no override is configured and git should be located on the PATH.
+        """
+        return self.get_settings().git_executable
 
     def get_settings(self) -> Settings:
         """Get all settings as a Settings object.

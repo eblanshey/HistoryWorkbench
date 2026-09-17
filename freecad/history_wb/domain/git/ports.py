@@ -41,6 +41,17 @@ class GitPort(Protocol):
         """
         ...
 
+    def is_git_executable_available(self) -> bool:
+        """Return whether the git executable can be located.
+
+        Checks the configured preference first, then the system PATH.
+        Purely a lookup: performs no git command.
+
+        Returns:
+            True when a git executable is configured or found on the PATH.
+        """
+        ...
+
     def get_commits(self, path: str, limit: int = 20, skip: int = 0) -> list[GitCommit]:
         """Get recent commits from git repository.
 

@@ -31,6 +31,7 @@ def compose_and_register_workbench_commands(
         application_state=application_state,
         get_main_window=lambda: getMainWindow(),  # noqa: B026
         find_active_git_repository_action=container.find_active_git_repository_action,
+        check_git_availability_action=container.check_git_availability_action,
         get_staged_file_paths_action=container.get_staged_file_paths_action,
         commit_staging_action=container.commit_staging_action,
         get_git_identity_action=container.get_git_identity_action,

@@ -131,5 +131,11 @@ description: Checklist of features to verify manually, covering project detectio
 - Excluded properties: use custom exclusion list with prefill from defaults on first use
 - Type-specific excluded properties: use default exclusion list
 - Type-specific excluded properties: use custom exclusion list with prefill from defaults on first use
+- Git executable: leave empty so git runs from the system PATH
+- Git executable: enter a path manually (e.g. portable git) and save; commit history loads through the configured binary
+- Git executable: Browse button opens a file dialog that fills the path field
+- Git executable: clear the field and save to return to PATH lookup
+- Git executable: popup "Git Not Found" when git is neither configured nor on PATH, or the configured path is not a readable executable (refresh project, initialize project, save iteration)
+- Git executable: no popup when detection simply finds no repository but git works
 - Settings save and load persistence
 - Settings info text: changes affect comparison only, not saved snapshots

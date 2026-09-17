@@ -7,32 +7,17 @@ from typing import Any, cast
 
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
-from .colors import _color_from_key, _color_key, _ColorKey, _contrast_ratio, _is_dark_color, _relative_luminance
+from .colors import _color_from_key, _color_key, _ColorKey
 
 
 __all__ = ["set_themed_icon"]
 
-_LIGHT_TEXT_LUMINANCE_THRESHOLD = 0.65
 _THEMED_ICON_BINDING_ATTR = "_history_wb_themed_icon_binding"
 
 
-def _themed_icon(icon_name: str, palette: QtGui.QPalette, color: QtGui.QColor | None = None) -> QtGui.QIcon:
-    """Create a QIcon from an SVG resource that uses currentColor.
-
-    Args:
-        icon_name: SVG file name inside resources/icons.
-        palette: Palette used to choose black or white when color is omitted.
-        color: Explicit icon color. Use this for accent icons.
-    """
-    icon_color = color if color is not None else _themed_icon_color(palette)
-    return _cached_themed_icon(icon_name, _color_key(icon_color))
-
-
-def _themed_icon_color(palette: QtGui.QPalette) -> QtGui.QColor:
-    """Return default monochrome icon color for the current theme."""
-    if _palette_suggests_dark_icon(palette):
-        return QtGui.QColor(255, 255, 255)
-    return _contrast_icon_color(_primary_icon_background(palette))
+def _themed_icon(icon_name: str, color: QtGui.QColor) -> QtGui.QIcon:
+    """Create QIcon from currentColor SVG using explicit resolved color."""
+    return _cached_themed_icon(icon_name, _color_key(color))
 
 
 def set_themed_icon(button: QtWidgets.QAbstractButton, icon_name: str) -> None:
@@ -50,10 +35,13 @@ class _ThemedButtonIconBinding(QtCore.QObject):
         super().__init__(button)
         self._button = button
         self._icon_name = icon_name
+        self._theme_probe = QtWidgets.QLabel(button)
+        self._theme_probe.hide()
+        self._theme_probe.installEventFilter(self)
 
     def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent) -> bool:
         """Refresh icon after Qt style or palette changes."""
-        if watched is self._button and event.type() in {
+        if watched in (self._button, self._theme_probe) and event.type() in {
             QtCore.QEvent.Type.ApplicationPaletteChange,
             QtCore.QEvent.Type.PaletteChange,
             QtCore.QEvent.Type.Polish,
@@ -65,64 +53,9 @@ class _ThemedButtonIconBinding(QtCore.QObject):
 
     def apply(self) -> None:
         """Apply current themed icon to the target button."""
-        self._button.setIcon(_themed_icon(self._icon_name, _effective_icon_palette(self._button)))
-
-
-def _effective_icon_palette(widget: QtWidgets.QWidget) -> QtGui.QPalette:
-    """Return widget palette, falling back to application palette for stylesheet themes."""
-    widget_palette = widget.palette()
-    app = QtWidgets.QApplication.instance()
-    if app is None:
-        return widget_palette
-
-    app = cast(QtWidgets.QApplication, app)
-    app_palette = app.palette()
-    if _palette_suggests_dark_icon(app_palette) and not _palette_suggests_dark_icon(widget_palette):
-        return app_palette
-    return widget_palette
-
-
-def _palette_suggests_dark_icon(palette: QtGui.QPalette) -> bool:
-    """Return true when button/window palette roles indicate dark icon surface."""
-    has_dark_background = any(_is_dark_color(color) for color in _icon_background_candidates(palette))
-    has_light_text = any(
-        _relative_luminance(color) > _LIGHT_TEXT_LUMINANCE_THRESHOLD for color in _icon_text_candidates(palette)
-    )
-    return has_dark_background and has_light_text
-
-
-def _contrast_icon_color(background: QtGui.QColor) -> QtGui.QColor:
-    """Return black or white, whichever contrasts better with background."""
-    black = QtGui.QColor(0, 0, 0)
-    white = QtGui.QColor(255, 255, 255)
-    return white if _contrast_ratio(white, background) > _contrast_ratio(black, background) else black
-
-
-def _primary_icon_background(palette: QtGui.QPalette) -> QtGui.QColor:
-    """Return most likely surface color under a transparent tool button."""
-    for role in (QtGui.QPalette.ColorRole.Window, QtGui.QPalette.ColorRole.Button, QtGui.QPalette.ColorRole.Base):
-        color = palette.color(role)
-        if color.isValid():
-            return color
-    return QtGui.QColor(255, 255, 255)
-
-
-def _icon_background_candidates(palette: QtGui.QPalette) -> list[QtGui.QColor]:
-    """Return palette background roles that can sit behind icons."""
-    return [
-        palette.color(QtGui.QPalette.ColorRole.Button),
-        palette.color(QtGui.QPalette.ColorRole.Window),
-        palette.color(QtGui.QPalette.ColorRole.Base),
-    ]
-
-
-def _icon_text_candidates(palette: QtGui.QPalette) -> list[QtGui.QColor]:
-    """Return palette text roles that describe icon foreground intent."""
-    return [
-        palette.color(QtGui.QPalette.ColorRole.ButtonText),
-        palette.color(QtGui.QPalette.ColorRole.WindowText),
-        palette.color(QtGui.QPalette.ColorRole.Text),
-    ]
+        self._theme_probe.ensurePolished()
+        color = self._theme_probe.palette().color(QtGui.QPalette.ColorRole.WindowText)
+        self._button.setIcon(_themed_icon(self._icon_name, color))
 
 
 @lru_cache(maxsize=256)

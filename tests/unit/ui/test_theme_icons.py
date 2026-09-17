@@ -47,11 +47,11 @@ def test_set_themed_icon_refreshes_when_button_palette_changes() -> None:
     )
     QtWidgets.QApplication.sendEvent(button, QtCore.QEvent(QtCore.QEvent.Type.PaletteChange))
 
-    assert _icon_center_color(button.icon()) == QtGui.QColor(255, 255, 255)
+    assert _icon_center_color(button.icon()) == QtGui.QColor(240, 240, 240)
 
 
-def test_set_themed_icon_uses_dark_application_palette_when_button_palette_is_stale() -> None:
-    """Application palette fixes stylesheet themes that leave button palette light."""
+def test_set_themed_icon_uses_light_stylesheet_text_over_stale_dark_palette() -> None:
+    """Light QSS text keeps icon dark when application palette remains dark."""
     app = QtWidgets.QApplication.instance()
     assert app is not None
     original_palette = app.palette()
@@ -63,14 +63,33 @@ def test_set_themed_icon_uses_dark_application_palette_when_button_palette_is_st
                 window=QtGui.QColor(20, 20, 20),
             )
         )
-        button = QtWidgets.QToolButton()
-        button.setPalette(
+        host = QtWidgets.QWidget()
+        host.setStyleSheet("QLabel { color: #000000; }")
+        button = QtWidgets.QToolButton(host)
+
+        set_themed_icon(button, "Collapse.svg")
+
+        assert _icon_center_color(button.icon()) == QtGui.QColor(0, 0, 0)
+    finally:
+        app.setPalette(original_palette)
+
+
+def test_set_themed_icon_uses_dark_stylesheet_text_over_stale_light_palette() -> None:
+    """Dark QSS text keeps icon light when application palette remains light."""
+    app = QtWidgets.QApplication.instance()
+    assert app is not None
+    original_palette = app.palette()
+    try:
+        app.setPalette(
             _palette(
                 base=QtGui.QColor(255, 255, 255),
                 text=QtGui.QColor(0, 0, 0),
                 window=QtGui.QColor(245, 245, 245),
             )
         )
+        host = QtWidgets.QWidget()
+        host.setStyleSheet("QLabel { color: #ffffff; }")
+        button = QtWidgets.QToolButton(host)
 
         set_themed_icon(button, "Collapse.svg")
 

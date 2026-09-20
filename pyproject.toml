@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "freecad.history_wb"
-version = "0.1.0"
+version = "0.2.0"
 description = "Track CAD model history and review changes using 3D and tree comparisons"
 readme = "README.md"
 license = {file = "LICENSE"}

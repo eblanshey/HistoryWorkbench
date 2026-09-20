@@ -61,9 +61,9 @@ description: Checklist of features to verify manually, covering project detectio
 
 ## Document Staging
 
-- Stage single document: + Reviewed button per document row
+- Stage single document: plus icon button per document row with tooltip
 - Stage all documents: + Mark All Reviewed button in summary bar
-- Remove single document from Reviewed: Remove button per document row
+- Remove single document from Reviewed: minus icon button per document row with removal tooltip
 - Remove all from Reviewed: Remove All button in summary bar
 - Stage button disabled for non-stageable documents
 - Stage deleted documents

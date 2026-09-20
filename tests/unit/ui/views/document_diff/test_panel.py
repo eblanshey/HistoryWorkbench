@@ -17,8 +17,8 @@ def _tree_widget(panel) -> QtWidgets.QTreeWidget:  # type: ignore[no-untyped-def
     return tree
 
 
-def _first_document_row_button(panel, text: str) -> QtWidgets.QToolButton:  # type: ignore[no-untyped-def]
-    """Find first top-level document-row action button by visible text."""
+def _first_document_row_button(panel, accessible_name: str) -> QtWidgets.QToolButton:  # type: ignore[no-untyped-def]
+    """Find first top-level document-row action button by accessible name."""
     tree = _tree_widget(panel)
     root_item = tree.topLevelItem(0)
     assert root_item is not None
@@ -26,9 +26,9 @@ def _first_document_row_button(panel, text: str) -> QtWidgets.QToolButton:  # ty
     assert row_widget is not None
 
     for button in row_widget.findChildren(QtWidgets.QToolButton):
-        if button.text() == text:
+        if button.accessibleName() == accessible_name:
             return button
-    raise RuntimeError(f"Document row button not found: {text}")
+    raise RuntimeError(f"Document row button not found: {accessible_name}")
 
 
 def _node(
@@ -180,7 +180,7 @@ def test_set_stage_button_enabled_updates_button(panel) -> None:  # type: ignore
         ]
     )
 
-    stage_button = _first_document_row_button(panel, "+ Reviewed")
+    stage_button = _first_document_row_button(panel, "Mark this document as reviewed")
     assert stage_button.isEnabled()
 
     panel.set_stage_button_enabled("parts/A.FCStd", False)

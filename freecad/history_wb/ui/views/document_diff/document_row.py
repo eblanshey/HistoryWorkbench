@@ -15,9 +15,8 @@ from .diff_row import DiffTreeRowWidget
 from .status_indicators import DocumentStatusIndicatorsWidget
 
 
-STAGE_BUTTON_WIDTH = 90
-REMOVE_BUTTON_WIDTH = 90
-RESTORE_BUTTON_WIDTH = 90
+ROW_ACTION_BUTTON_WIDTH = 30
+MARK_REVIEWED_TOOLTIP = translate("History", "Mark this document as reviewed")
 REMOVE_REVIEWED_TOOLTIP = translate(
     "History",
     "Remove document(s) from Reviewed.\n"
@@ -52,12 +51,12 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
 
     @property
     def stage_button(self) -> QtWidgets.QToolButton | None:
-        """Return + Reviewed button when rendered for current selection."""
+        """Return mark-reviewed button when rendered for current selection."""
         return self._stage_button
 
     @property
     def remove_from_reviewed_button(self) -> QtWidgets.QToolButton | None:
-        """Return Remove button when rendered for current selection."""
+        """Return remove-from-reviewed button when rendered for current selection."""
         return self._remove_from_reviewed_button
 
     def _add_document_icon(self) -> None:
@@ -101,10 +100,12 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         return self._current_selection is not None and self._current_selection.item_kind == "COMMIT"
 
     def _add_stage_button(self) -> None:
-        """Add + Reviewed button for one working-tree document row."""
+        """Add mark-reviewed button for one working-tree document row."""
         self._stage_button = make_row_action_button(
-            text=translate("History", "+ Reviewed"),
-            width=STAGE_BUTTON_WIDTH,
+            icon_name="Add.svg",
+            tooltip=MARK_REVIEWED_TOOLTIP,
+            accessible_name=MARK_REVIEWED_TOOLTIP,
+            width=ROW_ACTION_BUTTON_WIDTH,
             on_clicked=partial(self.stage_requested.emit, self._diff.git_path),
             parent=self,
         )
@@ -112,18 +113,19 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         self.add_trailing_widget(self._stage_button)
 
     def _add_remove_from_reviewed_button(self) -> None:
-        """Add Remove button for one reviewed document row."""
+        """Add remove-from-reviewed button for one reviewed document row."""
         self._remove_from_reviewed_button = make_row_action_button(
-            text=translate("History", "Remove"),
+            icon_name="Remove.svg",
             tooltip=REMOVE_REVIEWED_TOOLTIP,
-            width=REMOVE_BUTTON_WIDTH,
+            accessible_name=translate("History", "Remove"),
+            width=ROW_ACTION_BUTTON_WIDTH,
             on_clicked=partial(self.remove_from_reviewed_requested.emit, self._diff.git_path),
             parent=self,
         )
         self.add_trailing_widget(self._remove_from_reviewed_button)
 
     def _add_restore_button(self) -> None:
-        """Add Restore button for reviewed or commit-backed document rows."""
+        """Add restore button for reviewed or commit-backed document rows."""
         tooltip = translate(
             "History",
             "Restore the selected file.\n"
@@ -132,9 +134,10 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
             "Saved history will not be affected.",
         ).replace("%1", self._top_level_text)
         restore_button = make_row_action_button(
-            text=translate("History", "Restore"),
+            icon_name="Restore.svg",
             tooltip=tooltip,
-            width=RESTORE_BUTTON_WIDTH,
+            accessible_name=translate("History", "Restore"),
+            width=ROW_ACTION_BUTTON_WIDTH,
             on_clicked=partial(self.restore_requested.emit, self._diff.git_path),
             parent=self,
         )

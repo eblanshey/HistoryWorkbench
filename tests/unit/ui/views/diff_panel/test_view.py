@@ -28,10 +28,10 @@ def test_history_click_updates_document_row_buttons_on_first_click() -> None:
     )
 
     history_panel._history_list.itemClicked.emit(history_panel._history_list.item(1))
-    assert _document_row_button_texts(document_tree) == ["Restore", "Remove"]
+    assert _document_row_button_accessible_names(document_tree) == ["Restore", "Remove"]
 
     history_panel._history_list.itemClicked.emit(history_panel._history_list.item(0))
-    assert _document_row_button_texts(document_tree) == ["+ Reviewed"]
+    assert _document_row_button_accessible_names(document_tree) == ["Mark this document as reviewed"]
 
 
 def _sample_diff_tree() -> DiffTreePresentation:
@@ -39,12 +39,12 @@ def _sample_diff_tree() -> DiffTreePresentation:
     return DiffTreePresentation(nodes=[], git_path="parts/A.FCStd", indicators=[], document_state=DiffState.MODIFIED)
 
 
-def _document_row_button_texts(widget: DocumentDiffTreeWidget) -> list[str]:
-    """Return visible action-button texts from first document row."""
+def _document_row_button_accessible_names(widget: DocumentDiffTreeWidget) -> list[str]:
+    """Return action-button accessible names from first document row."""
     tree_widget = widget.findChild(QtWidgets.QTreeWidget, "documentDiffTree")
     assert tree_widget is not None
     root_item = tree_widget.topLevelItem(0)
     assert root_item is not None
     row_widget = tree_widget.itemWidget(root_item, 0)
     assert row_widget is not None
-    return [button.text() for button in row_widget.findChildren(QtWidgets.QToolButton) if button.text()]
+    return [button.accessibleName() for button in row_widget.findChildren(QtWidgets.QToolButton)]

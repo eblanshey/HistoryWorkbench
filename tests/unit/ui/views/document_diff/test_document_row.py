@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import (
@@ -23,49 +25,60 @@ def _diff(*, indicators: list | None = None, stage_button_enabled: bool = False)
     )
 
 
-def _button_texts(widget: DocumentDiffRowWidget) -> list[str]:
-    """Return visible action-button texts from a document row."""
-    return [button.text() for button in widget.findChildren(QtWidgets.QToolButton) if button.text()]
+def _action_buttons(widget: DocumentDiffRowWidget) -> list[QtWidgets.QToolButton]:
+    """Return document-row action buttons in layout order."""
+    return cast(list[QtWidgets.QToolButton], widget.findChildren(QtWidgets.QToolButton))
 
 
 def test_working_tree_selection_shows_only_stage_button(application) -> None:  # type: ignore[no-untyped-def]
-    """Current Files Area rows show only + Reviewed action."""
+    """Current Files Area rows show only icon-based mark-reviewed action."""
     row = DocumentDiffRowWidget(
         _diff(stage_button_enabled=False),
         "parts/A.FCStd",
         HistorySelection(item_kind="WORKING_TREE", commit_hash=None),
     )
 
-    assert _button_texts(row) == ["+ Reviewed"]
+    assert [button.accessibleName() for button in _action_buttons(row)] == ["Mark this document as reviewed"]
     stage_button = row.stage_button
     assert stage_button is not None
+    assert stage_button.text() == ""
+    assert not stage_button.icon().isNull()
+    assert stage_button.toolTip() == "Mark this document as reviewed"
+    assert stage_button.width() - stage_button.iconSize().width() >= 12
+    assert stage_button.height() - stage_button.iconSize().height() >= 6
     assert not stage_button.isEnabled()
     assert stage_button.property("historyDarkTheme") is not None
 
 
 def test_staging_selection_shows_restore_and_remove(application) -> None:  # type: ignore[no-untyped-def]
-    """Reviewed Area rows show Restore and Remove actions."""
+    """Reviewed Area rows show icon-based restore and remove actions."""
     row = DocumentDiffRowWidget(
         _diff(),
         "parts/A.FCStd",
         HistorySelection(item_kind="STAGING", commit_hash=None),
     )
 
-    assert _button_texts(row) == ["Restore", "Remove"]
+    action_buttons = _action_buttons(row)
+    assert [button.accessibleName() for button in action_buttons] == ["Restore", "Remove"]
+    assert all(button.text() == "" and not button.icon().isNull() for button in action_buttons)
     remove_button = row.remove_from_reviewed_button
     assert remove_button is not None
     assert "will not be saved in the next iteration" in remove_button.toolTip()
 
 
 def test_commit_selection_shows_only_restore(application) -> None:  # type: ignore[no-untyped-def]
-    """Commit-backed rows show Restore without reviewed-only actions."""
+    """Commit-backed rows show restore icon without reviewed-only actions."""
     row = DocumentDiffRowWidget(
         _diff(),
         "parts/A.FCStd",
         HistorySelection(item_kind="COMMIT", commit_hash="abc123"),
     )
 
-    assert _button_texts(row) == ["Restore"]
+    action_buttons = _action_buttons(row)
+    assert [button.accessibleName() for button in action_buttons] == ["Restore"]
+    assert action_buttons[0].text() == ""
+    assert not action_buttons[0].icon().isNull()
+    assert "Restore the selected file" in action_buttons[0].toolTip()
     assert row.stage_button is None
     assert row.remove_from_reviewed_button is None
 

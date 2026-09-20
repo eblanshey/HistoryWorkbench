@@ -7,7 +7,13 @@ from collections.abc import Callable
 from ....qt import QtCore, QtGui, QtWidgets
 from ..theme.buttons import set_action_button_style
 from ..theme.icons import set_themed_icon
-from .styles import ACTION_BUTTON_STYLE, HEADER_ICON_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
+from .styles import (
+    ACTION_BUTTON_STYLE,
+    HEADER_ICON_BUTTON_STYLE,
+    ROW_ACTION_ICON_SIZE,
+    TREE_ITEM_HEIGHT,
+    TREE_ITEM_ICON_SIZE,
+)
 
 
 def make_tool_button(
@@ -67,20 +73,23 @@ def _apply_button_style(button: QtWidgets.QAbstractButton, style: str) -> None:
 
 def make_row_action_button(
     *,
-    text: str,
+    icon_name: str,
     tooltip: str = "",
+    accessible_name: str,
     width: int | None = None,
     on_clicked: Callable[[], None] | None = None,
     parent: QtWidgets.QWidget | None = None,
 ) -> QtWidgets.QToolButton:
-    """Create text-only row action button matching diff tree rows."""
+    """Create icon-only row action button matching diff tree rows."""
     button = make_tool_button(
-        text=text,
         tooltip=tooltip,
+        icon_name=icon_name,
         width=width,
         height=TREE_ITEM_HEIGHT,
         style=ACTION_BUTTON_STYLE,
-        tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+        accessible_name=accessible_name,
+        icon_size=QtCore.QSize(ROW_ACTION_ICON_SIZE, ROW_ACTION_ICON_SIZE),
+        tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
         parent=parent,
     )
 

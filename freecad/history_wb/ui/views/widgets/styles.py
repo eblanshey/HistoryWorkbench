@@ -5,12 +5,12 @@ TREE_ITEM_ICON_SIZE = 18
 
 ACTION_BUTTON_STYLE = """
 QToolButton, QPushButton {
-    padding: 0px 4px;
+    padding: 0px 6px;
     margin: 0px;
     color: palette(button-text);
     background-color: palette(button);
     border: 1px solid palette(mid);
-    border-radius: 2px;
+    border-radius: 3px;
 }
 QToolButton:hover, QPushButton:hover,
 QToolButton:focus, QPushButton:focus {
@@ -27,6 +27,33 @@ QToolButton:disabled, QPushButton:disabled {
     color: palette(mid);
     background-color: palette(window);
     border-color: palette(mid);
+}
+"""
+
+DARK_ACTION_BUTTON_STYLE = """
+QToolButton, QPushButton {
+    padding: 0px 6px;
+    margin: 0px;
+    color: #e6e6e6;
+    background-color: rgba(255, 255, 255, 48);
+    border: 1px solid rgba(255, 255, 255, 110);
+    border-radius: 3px;
+}
+QToolButton:hover, QPushButton:hover,
+QToolButton:focus, QPushButton:focus {
+    color: palette(highlighted-text);
+    background-color: palette(highlight);
+    border-color: palette(highlight);
+}
+QToolButton:pressed, QPushButton:pressed {
+    color: palette(highlighted-text);
+    background-color: palette(highlight);
+    border: 2px inset palette(dark);
+}
+QToolButton:disabled, QPushButton:disabled {
+    color: #8f969b;
+    background-color: rgba(255, 255, 255, 24);
+    border-color: rgba(255, 255, 255, 55);
 }
 """
 HEADER_ICON_BUTTON_STYLE = "QToolButton { padding: 2px; }"

@@ -57,6 +57,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
             width=STAGE_ALL_BUTTON_WIDTH,
             height=TREE_ITEM_HEIGHT,
             style=ACTION_BUTTON_STYLE,
+            parent=self,
         )
         self._stage_all_button.setObjectName("documentDiffStageAllButton")
         self._stage_all_button.hide()
@@ -73,6 +74,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
             ),
             height=TREE_ITEM_HEIGHT,
             style=ACTION_BUTTON_STYLE,
+            parent=self,
         )
         self._restore_all_button.setObjectName("documentDiffRestoreAllButton")
         self._restore_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
@@ -85,6 +87,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
             tooltip=self._remove_reviewed_tooltip,
             height=TREE_ITEM_HEIGHT,
             style=ACTION_BUTTON_STYLE,
+            parent=self,
         )
         self._remove_all_button.setObjectName("documentDiffRemoveAllButton")
         self._remove_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)

@@ -5,7 +5,8 @@ from __future__ import annotations
 from ....qt import QtCore, QtWidgets
 from ....utils import translate
 from ...presenters.presentation_models import DocumentStatusIndicator, WorkingTreeDocumentClosedIndicator
-from ..widgets.styles import ACTION_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
+from ..theme.buttons import set_action_button_style
+from ..widgets.styles import TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
 
 
 class DocumentStatusIndicatorsWidget(QtWidgets.QWidget):
@@ -51,13 +52,13 @@ class DocumentStatusIndicatorsWidget(QtWidgets.QWidget):
 
     def _create_open_document_button(self, indicator: WorkingTreeDocumentClosedIndicator) -> QtWidgets.QPushButton:
         """Create button that opens a closed working-tree document for comparison."""
-        button = QtWidgets.QPushButton()
+        button = QtWidgets.QPushButton(self)
         button.setIcon(indicator.icon)
         button.setText(translate("History", "Open"))
         button.setIconSize(QtCore.QSize(TREE_ITEM_ICON_SIZE, TREE_ITEM_ICON_SIZE))
         button.setToolTip(translate("History", indicator.tooltip))
         button.setFixedHeight(TREE_ITEM_HEIGHT)
         button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
-        button.setStyleSheet(ACTION_BUTTON_STYLE)
+        set_action_button_style(button)
         button.clicked.connect(lambda checked=False: self.open_document_requested.emit(self._git_path))
         return button

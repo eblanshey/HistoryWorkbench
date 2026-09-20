@@ -106,6 +106,7 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
             text=translate("History", "+ Reviewed"),
             width=STAGE_BUTTON_WIDTH,
             on_clicked=partial(self.stage_requested.emit, self._diff.git_path),
+            parent=self,
         )
         self._stage_button.setEnabled(self._diff.stage_button_enabled)
         self.add_trailing_widget(self._stage_button)
@@ -117,6 +118,7 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
             tooltip=REMOVE_REVIEWED_TOOLTIP,
             width=REMOVE_BUTTON_WIDTH,
             on_clicked=partial(self.remove_from_reviewed_requested.emit, self._diff.git_path),
+            parent=self,
         )
         self.add_trailing_widget(self._remove_from_reviewed_button)
 
@@ -134,5 +136,6 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
             tooltip=tooltip,
             width=RESTORE_BUTTON_WIDTH,
             on_clicked=partial(self.restore_requested.emit, self._diff.git_path),
+            parent=self,
         )
         self.add_trailing_widget(restore_button)

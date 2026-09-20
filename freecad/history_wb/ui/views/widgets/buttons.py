@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ....qt import QtCore, QtGui, QtWidgets
+from ..theme.buttons import set_action_button_style
 from ..theme.icons import set_themed_icon
 from .styles import ACTION_BUTTON_STYLE, HEADER_ICON_BUTTON_STYLE, TREE_ITEM_HEIGHT, TREE_ITEM_ICON_SIZE
 
@@ -22,9 +23,10 @@ def make_tool_button(
     accessible_name: str = "",
     icon_size: QtCore.QSize | None = None,
     tool_button_style: QtCore.Qt.ToolButtonStyle = QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+    parent: QtWidgets.QWidget | None = None,
 ) -> QtWidgets.QToolButton:
     """Create configured QToolButton for History Workbench views."""
-    button = QtWidgets.QToolButton()
+    button = QtWidgets.QToolButton(parent)
     button.setText(text)
     button.setToolTip(tooltip)
     button.setToolButtonStyle(tool_button_style)
@@ -43,7 +45,7 @@ def make_tool_button(
         button.setIconSize(icon_size)
 
     if style:
-        button.setStyleSheet(style)
+        _apply_button_style(button, style)
 
     if width is not None and height is not None:
         button.setFixedSize(width, height)
@@ -55,12 +57,21 @@ def make_tool_button(
     return button
 
 
+def _apply_button_style(button: QtWidgets.QAbstractButton, style: str) -> None:
+    """Apply static styling or bind theme-aware action styling."""
+    if style == ACTION_BUTTON_STYLE:
+        set_action_button_style(button)
+        return
+    button.setStyleSheet(style)
+
+
 def make_row_action_button(
     *,
     text: str,
     tooltip: str = "",
     width: int | None = None,
     on_clicked: Callable[[], None] | None = None,
+    parent: QtWidgets.QWidget | None = None,
 ) -> QtWidgets.QToolButton:
     """Create text-only row action button matching diff tree rows."""
     button = make_tool_button(
@@ -70,6 +81,7 @@ def make_row_action_button(
         height=TREE_ITEM_HEIGHT,
         style=ACTION_BUTTON_STYLE,
         tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+        parent=parent,
     )
 
     if on_clicked is not None:

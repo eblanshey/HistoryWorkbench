@@ -40,8 +40,7 @@ def test_working_tree_selection_shows_only_stage_button(application) -> None:  #
     stage_button = row.stage_button
     assert stage_button is not None
     assert not stage_button.isEnabled()
-    assert "background-color: palette(button)" in stage_button.styleSheet()
-    assert "color: palette(button-text)" in stage_button.styleSheet()
+    assert stage_button.property("historyDarkTheme") is not None
 
 
 def test_staging_selection_shows_restore_and_remove(application) -> None:  # type: ignore[no-untyped-def]

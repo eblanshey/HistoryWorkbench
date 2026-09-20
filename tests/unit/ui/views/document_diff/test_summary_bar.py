@@ -42,14 +42,12 @@ def test_stage_all_button_visibility_and_enabled(application) -> None:  # type: 
     assert widget._stage_all_button.isHidden()
 
 
-def test_bulk_action_buttons_override_transparent_host_theme(application) -> None:  # type: ignore[no-untyped-def]
-    """Bulk actions use paired palette colors instead of host-transparent tool buttons."""
+def test_bulk_action_buttons_use_theme_aware_style(application) -> None:  # type: ignore[no-untyped-def]
+    """Bulk actions bind styling to current application theme."""
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
 
     for button in (widget._stage_all_button, widget._restore_all_button, widget._remove_all_button):
-        assert "background-color: palette(button)" in button.styleSheet()
-        assert "color: palette(button-text)" in button.styleSheet()
-        assert "background-color: transparent" not in button.styleSheet()
+        assert button.property("historyDarkTheme") is not None
 
 
 def test_remove_all_button_visibility_and_callback(application) -> None:  # type: ignore[no-untyped-def]

@@ -76,7 +76,7 @@ Saved history will not be affected.</source>
     </message>
     <message>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="170"/>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="67"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="68"/>
         <source>Restore All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -348,14 +348,14 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="68"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="69"/>
         <source>Choose which files to restore from the selected iteration.
 Current files on disk can be overwritten or removed.
 Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="84"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="86"/>
         <source>Remove All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -389,12 +389,12 @@ They will not be saved in the next iteration until reviewed again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="116"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="117"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="125"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="127"/>
         <source>Restore the selected file.
 This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.
 THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.
@@ -402,7 +402,7 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/status_indicators.py" line="56"/>
+        <location filename="../../ui/views/document_diff/status_indicators.py" line="57"/>
         <source>Open</source>
         <translation type="unfinished"></translation>
     </message>
@@ -567,7 +567,7 @@ Saved history will not be affected.</source>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="141"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="154"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="220"/>
-        <location filename="../../ui/views/document_diff/document_row.py" line="133"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="135"/>
         <source>Restore</source>
         <translation type="unfinished"></translation>
     </message>

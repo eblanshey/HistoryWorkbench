@@ -15,6 +15,16 @@ tasks:
       - task --list --sort none
     silent: true
 
+  release:
+    desc: Update release version, date, and lockfile
+    summary: Use `task release VERSION=0.2.0` or `task release -- 0.2.0`
+    vars:
+      RELEASE_INPUT: '{{.VERSION | default .CLI_ARGS}}'
+    env:
+      RELEASE_INPUT: '{{.RELEASE_INPUT}}'
+    cmds:
+      - "python3 scripts/prepare_release.py \"$RELEASE_INPUT\""
+
   check:
     desc: Run all code quality checks
     summary: Runs ruff, mypy, docstring check, and complexity analysis

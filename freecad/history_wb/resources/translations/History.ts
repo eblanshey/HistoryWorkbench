@@ -452,17 +452,17 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="40"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="47"/>
         <source>Property</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="41"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="48"/>
         <source>Old Value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/property_diff/tree.py" line="42"/>
+        <location filename="../../ui/views/property_diff/tree.py" line="49"/>
         <source>New Value</source>
         <translation type="unfinished"></translation>
     </message>

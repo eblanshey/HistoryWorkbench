@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from freecad.history_wb.domain.diff.models import DiffState
-from freecad.history_wb.qt import QtWidgets
+from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import PropertyPresentation
 from freecad.history_wb.ui.views.property_diff.delegate import PropertyValueDelegate
 
@@ -107,3 +107,53 @@ def test_tree_uses_native_mouse_tracking_without_cell_stylesheet(widget) -> None
     """Tree supplies native hover flags directly to delegate without widget QSS."""
     assert widget.hasMouseTracking()
     assert widget.styleSheet() == ""
+
+
+def test_columns_use_interactive_resize_mode(widget) -> None:  # type: ignore[no-untyped-def]
+    """Property columns remain manually resizable from the header."""
+    header = widget.header()
+
+    assert all(
+        header.sectionResizeMode(column) == QtWidgets.QHeaderView.ResizeMode.Interactive
+        for column in range(widget.columnCount())
+    )
+
+
+def test_dragging_body_separator_resizes_column(widget) -> None:  # type: ignore[no-untyped-def]
+    """Dragging a separator below the header resizes its left column."""
+    widget.resize(600, 300)
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+    initial_width = widget.columnWidth(0)
+    separator_x = widget.header().sectionViewportPosition(0) + initial_width
+    start = QtCore.QPoint(separator_x, widget.viewport().height() // 2)
+    end = start + QtCore.QPoint(35, 0)
+
+    _send_mouse_event(widget, QtCore.QEvent.Type.MouseButtonPress, start, QtCore.Qt.MouseButton.LeftButton)
+    _send_mouse_event(widget, QtCore.QEvent.Type.MouseMove, end, QtCore.Qt.MouseButton.LeftButton)
+    _send_mouse_event(widget, QtCore.QEvent.Type.MouseButtonRelease, end, QtCore.Qt.MouseButton.NoButton)
+
+    assert widget.columnWidth(0) == initial_width + 35
+
+
+def _send_mouse_event(
+    widget,  # type: ignore[no-untyped-def]
+    event_type: QtCore.QEvent.Type,
+    position: QtCore.QPoint,
+    buttons: QtCore.Qt.MouseButton,
+) -> None:
+    """Send one viewport mouse event with button state suitable for resize dragging."""
+    button = (
+        QtCore.Qt.MouseButton.NoButton
+        if event_type == QtCore.QEvent.Type.MouseMove
+        else QtCore.Qt.MouseButton.LeftButton
+    )
+    event = QtGui.QMouseEvent(
+        event_type,
+        QtCore.QPointF(position),
+        QtCore.QPointF(widget.viewport().mapToGlobal(position)),
+        button,
+        buttons,
+        QtCore.Qt.KeyboardModifier.NoModifier,
+    )
+    QtWidgets.QApplication.sendEvent(widget.viewport(), event)

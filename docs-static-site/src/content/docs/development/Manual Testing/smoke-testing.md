@@ -62,9 +62,9 @@ description: Checklist of features to verify manually, covering project detectio
 ## Document Staging
 
 - Stage single document: plus icon button per document row with tooltip
-- Stage all documents: + Mark All Reviewed button in summary bar
+- Stage all documents: plus icon button in summary bar with tooltip
 - Remove single document from Reviewed: minus icon button per document row with removal tooltip
-- Remove all from Reviewed: Remove All button in summary bar
+- Remove all from Reviewed: minus icon button in summary bar with removal tooltip
 - Stage button disabled for non-stageable documents
 - Stage deleted documents
 
@@ -88,8 +88,8 @@ description: Checklist of features to verify manually, covering project detectio
 
 - Restore single document from Reviewed: confirmation dialog with destructive warning
 - Restore single document from commit: confirmation dialog with destructive warning
-- Restore all from Reviewed: scope selection dialog (listed FreeCAD files vs all FreeCAD files)
-- Restore all from commit: scope selection dialog (listed FreeCAD files vs all FreeCAD files)
+- Restore all from Reviewed: restore icon button opens scope selection dialog (listed FreeCAD files vs all FreeCAD files)
+- Restore all from commit: restore icon button opens scope selection dialog (listed FreeCAD files vs all FreeCAD files)
 - Restore confirmation: cancel aborts operation
 - Restore all: confirmation dialog after scope selection
 - Restore success info message

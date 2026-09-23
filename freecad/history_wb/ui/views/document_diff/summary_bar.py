@@ -5,12 +5,11 @@ from __future__ import annotations
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
 from ....utils import translate
-from ..widgets.buttons import make_tool_button
-from ..widgets.styles import ACTION_BUTTON_STYLE, TREE_ITEM_HEIGHT
+from ..widgets.buttons import make_row_action_button
 from .summary_state import SummaryButtonState, SummaryCounts
 
 
-STAGE_ALL_BUTTON_WIDTH = 140
+SUMMARY_ACTION_BUTTON_WIDTH = 30
 _ICON_SIZE = 16
 
 
@@ -51,49 +50,52 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._summary_layout.addStretch()
 
         layout.addLayout(self._summary_layout)
+        self._action_layout = QtWidgets.QHBoxLayout()
+        self._action_layout.setContentsMargins(0, 0, 0, 0)
+        self._action_layout.setSpacing(4)
 
-        self._stage_all_button = make_tool_button(
-            text=translate("History", "+ Mark All Reviewed"),
-            width=STAGE_ALL_BUTTON_WIDTH,
-            height=TREE_ITEM_HEIGHT,
-            style=ACTION_BUTTON_STYLE,
+        mark_all_reviewed_text = translate("History", "Mark All Reviewed")
+        self._stage_all_button = make_row_action_button(
+            icon_name="Add.svg",
+            tooltip=mark_all_reviewed_text,
+            accessible_name=mark_all_reviewed_text,
+            width=SUMMARY_ACTION_BUTTON_WIDTH,
             parent=self,
         )
         self._stage_all_button.setObjectName("documentDiffStageAllButton")
         self._stage_all_button.hide()
         self._stage_all_button.clicked.connect(self.stage_all_requested.emit)
-        layout.addWidget(self._stage_all_button)
+        self._action_layout.addWidget(self._stage_all_button)
 
-        self._restore_all_button = make_tool_button(
-            text=translate("History", "Restore All"),
+        self._restore_all_button = make_row_action_button(
+            icon_name="Restore.svg",
             tooltip=translate(
                 "History",
                 "Choose which files to restore from the selected iteration.\n"
                 "Current files on disk can be overwritten or removed.\n"
                 "Saved history will not be affected.",
             ),
-            height=TREE_ITEM_HEIGHT,
-            style=ACTION_BUTTON_STYLE,
+            accessible_name=translate("History", "Restore All"),
+            width=SUMMARY_ACTION_BUTTON_WIDTH,
             parent=self,
         )
         self._restore_all_button.setObjectName("documentDiffRestoreAllButton")
-        self._restore_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
         self._restore_all_button.hide()
         self._restore_all_button.clicked.connect(self.restore_all_requested.emit)
-        layout.addWidget(self._restore_all_button)
+        self._action_layout.addWidget(self._restore_all_button)
 
-        self._remove_all_button = make_tool_button(
-            text=translate("History", "Remove All"),
+        self._remove_all_button = make_row_action_button(
+            icon_name="Remove.svg",
             tooltip=self._remove_reviewed_tooltip,
-            height=TREE_ITEM_HEIGHT,
-            style=ACTION_BUTTON_STYLE,
+            accessible_name=translate("History", "Remove All"),
+            width=SUMMARY_ACTION_BUTTON_WIDTH,
             parent=self,
         )
         self._remove_all_button.setObjectName("documentDiffRemoveAllButton")
-        self._remove_all_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
         self._remove_all_button.hide()
         self._remove_all_button.clicked.connect(self.remove_all_requested.emit)
-        layout.addWidget(self._remove_all_button)
+        self._action_layout.addWidget(self._remove_all_button)
+        layout.addLayout(self._action_layout)
 
     def _create_summary_section(self, icon_name: str, tooltip: str) -> tuple[QtWidgets.QWidget, QtWidgets.QLabel]:
         """Create an icon+count section with a shared tooltip.

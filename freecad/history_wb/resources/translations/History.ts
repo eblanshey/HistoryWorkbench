@@ -76,7 +76,7 @@ Saved history will not be affected.</source>
     </message>
     <message>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="170"/>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="68"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="78"/>
         <source>Restore All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -328,34 +328,34 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="39"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="38"/>
         <source>Modified file count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="42"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="41"/>
         <source>Added file count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="45"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="44"/>
         <source>Deleted file count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="56"/>
-        <source>+ Mark All Reviewed</source>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="57"/>
+        <source>Mark All Reviewed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="69"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="72"/>
         <source>Choose which files to restore from the selected iteration.
 Current files on disk can be overwritten or removed.
 Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/summary_bar.py" line="86"/>
+        <location filename="../../ui/views/document_diff/summary_bar.py" line="90"/>
         <source>Remove All</source>
         <translation type="unfinished"></translation>
     </message>

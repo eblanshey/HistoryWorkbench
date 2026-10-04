@@ -557,7 +557,7 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../entrypoints/workbench.py" line="216"/>
+        <location filename="../../entrypoints/workbench.py" line="208"/>
         <source>History</source>
         <translation type="unfinished"></translation>
     </message>
@@ -723,9 +723,9 @@ How it works: open FreeCAD documents are checked one by one until one is found t
     <name>Workbench</name>
     <message>
         <location filename="../../entrypoints/workbench.py" line="59"/>
-        <location filename="../../entrypoints/workbench.py" line="77"/>
-        <location filename="../../entrypoints/workbench.py" line="81"/>
-        <location filename="../../entrypoints/workbench.py" line="102"/>
+        <location filename="../../entrypoints/workbench.py" line="79"/>
+        <location filename="../../entrypoints/workbench.py" line="83"/>
+        <location filename="../../entrypoints/workbench.py" line="104"/>
         <source>History</source>
         <translation type="unfinished"></translation>
     </message>

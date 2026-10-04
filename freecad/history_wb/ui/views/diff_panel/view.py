@@ -1,4 +1,5 @@
-"""File responsibility: Diff panel facade with 3-column layout and cross-column coordination."""
+# File responsibility: History panel facade, cross-column coordination, and native non-canvas view proxy.
+"""History panel facade and FreeCAD native view callbacks."""
 
 from ....domain.settings import SettingsRepository
 from ....qt import QtCore, QtWidgets
@@ -13,7 +14,7 @@ __all__ = ["HistoryPanelView"]
 
 
 class HistoryPanelView(QtWidgets.QWidget):
-    """3-column diff panel view coordinating child facades and shared state.
+    """3-column diff panel and document-independent FreeCAD native view proxy.
 
     Provides a horizontal QSplitter with:
     - Left: HistoryPanelWidget for repository info and history list
@@ -33,6 +34,14 @@ class HistoryPanelView(QtWidgets.QWidget):
         self._settings_repo = settings_repo
         self._current_selection: HistorySelection | None = None
         self._setup_ui()
+
+    def widget(self) -> QtWidgets.QWidget:
+        """Return the History widget for FreeCAD's native MDI view wrapper."""
+        return self
+
+    def onHasMsg(self, _message: str) -> bool:
+        """Reject canvas capabilities, including panning and automatic overlay hover reveal."""
+        return False
 
     def _setup_ui(self) -> None:
         """Initialize the 3-column layout with child widgets."""

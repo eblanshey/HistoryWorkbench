@@ -56,12 +56,17 @@ First Workbench.Activated()
 Workbench.Activated() or Open Diff Window command after activation
         |
         v
-compose_and_register_panel(container, application_state)
+compose_and_register_panel(container, application_state, focus_history_window_callback)
         |
         |-- create HistoryPanelView
         |-- create presenters (consume application_state)
         |-- register presenters in UIRegistry
         |-- detect active git repository
+        v
+FreeCAD main window addWindow(HistoryPanelView)
+        |
+        |-- register document-independent native MDI view
+        |-- activate History with non-canvas overlay capabilities
         v
 Presenter executes application actions
         |
@@ -78,6 +83,7 @@ Location: `freecad/history_wb/entrypoints/`
 Entry points integrate with FreeCAD's workbench and command APIs. They are driving adapters from the host desktop application into History Workbench.
 
 - `workbench.py` defines `HistoryWorkbench`, registers toolbars/menus, lazily creates the application container, registers preferences, and opens the diff panel.
+- History is registered through the main window's native `addWindow()` API as a document-independent view. Native activation lets FreeCAD apply its non-canvas overlay policy without changing dock preferences or the active document. FreeCAD/Qt manage window geometry and maximized state. Panel cleanup follows native view destruction, including across MDI shell replacement during detach/redock.
 - `commands.py` defines FreeCAD command classes and delegates work to `WorkbenchCommandPresenter` or application actions.
 - Entry points may access the global container through `freecad/history_wb/_container.py`.
 - Entry points should stay thin. They translate FreeCAD callbacks into application or UI calls.
@@ -95,6 +101,7 @@ The UI layer owns presenter state, Qt views, dialog flow, display feedback, sign
 - `registry.py` stores globally reachable `ApplicationState`, app-scoped `WorkbenchCommandPresenter`, and nullable panel-scoped presenters.
 - `presenters/` coordinates application actions, owns UI session flow, and maps domain/application results into presentation models.
 - `views/` contains Qt widgets, child view components, dialog helpers, theme helpers, and preferences UI.
+- `HistoryPanelView` supplies `widget()` and `onHasMsg()` callbacks for FreeCAD's native MDI wrapper. It does not advertise canvas capabilities such as `CanPan` or `AllowsOverlayOnHover`, matching Start-style overlay behavior. Overlay auto-hide still follows FreeCAD's non-3D-view preference, and explicit overlay hint clicks remain available.
 - User-facing UI text is translated at display sites with literal `translate("History", "...")` calls, or defined with `QT_TRANSLATE_NOOP` when deferred.
 
 Presenter responsibilities are split by kind:
@@ -108,7 +115,7 @@ Presenter responsibilities are split by kind:
 
 Presenters receive only the specific view objects and action objects they need from the UI composer, not sibling child widgets or Qt gesture details. Views render Qt widgets and perform translation. Presenters pass raw data and intent, not translated UI strings. Dialogs and message boxes stay in view layer even when launched from FreeCAD command entry points.
 
-Presenters must never import Qt or call message helpers directly. They depend on `DialogView` or equivalent message protocol methods for all modal UI. `DiffPanelView` implements those protocol methods by delegating to `views/diff_panel/messages.py`. Extracted presenter collaborators (handlers, loaders) receive the narrow dialog/message protocol, not concrete view modules. This keeps modal UI in the view layer and keeps presenter tests Qt-free.
+Presenters must never import Qt or call message helpers directly. They depend on `DialogView` or equivalent message protocol methods for all modal UI. `DialogView` implements those protocol methods by delegating to `views/diff_panel/messages.py`. Extracted presenter collaborators (handlers, loaders) receive the narrow dialog/message protocol, not concrete view modules. This keeps modal UI in the view layer and keeps presenter tests Qt-free.
 
 Handlers are focused, stateless workflow classes inside presenter subdirectories. They own multi-step dialog flows and action orchestration for a single use case. They are owned by `WorkbenchCommandPresenter` for command-accessible flows. Panel presenters delegate shared command flows to `WorkbenchCommandPresenter` instead of constructing handlers directly.
 
@@ -272,7 +279,7 @@ The container is stored through `set_container()` so FreeCAD command instances c
 
 ### UI Composition
 
-`compose_and_register_panel(container, application_state)` creates:
+`compose_and_register_panel(container, application_state, focus_history_window_callback)` creates:
 
 - `HistoryPanelView`
 - `DiffPresenter`

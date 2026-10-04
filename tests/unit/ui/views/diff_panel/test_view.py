@@ -1,6 +1,9 @@
-"""File responsibility: Unit tests for HistoryPanelView cross-column coordination behavior."""
+# File responsibility: Test HistoryPanelView cross-column coordination and native view capability policy.
+"""History panel behavior and native overlay capability contracts."""
 
 from __future__ import annotations
+
+import pytest
 
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtWidgets
@@ -8,6 +11,13 @@ from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresent
 from freecad.history_wb.ui.views.diff_panel.view import HistoryPanelView
 from freecad.history_wb.ui.views.document_diff.panel import DocumentDiffTreeWidget
 from freecad.history_wb.ui.views.history.panel import HistoryPanelWidget
+
+
+@pytest.mark.parametrize("message", ["CanPan", "AllowsOverlayOnHover"])
+def test_native_view_declines_3d_overlay_capabilities(message: str) -> None:
+    """History advertises neither panning nor overlay hover reveal to FreeCAD."""
+    panel = HistoryPanelView()
+    assert panel.onHasMsg(message) is False
 
 
 def test_history_click_updates_document_row_buttons_on_first_click() -> None:

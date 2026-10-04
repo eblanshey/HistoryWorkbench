@@ -1,6 +1,6 @@
 ---
 title: Smoke Testing
-description: Checklist of features to verify manually, covering project detection, initialization, git identity, and iteration operations.
+description: Checklist for project detection, iteration operations, settings, and native History panel behavior.
 ---
 ## Project Detection
 
@@ -120,7 +120,15 @@ description: Checklist of features to verify manually, covering project detectio
 - Panel 3-column layout: history, document diff, property diff
 - Panel splitter resize between columns
 - Panel close and reopen preserves application state (current git repository detection)
+- With a TechDraw page tab open, open History from both the 3D tab and the page tab; only History occupies the active MDI page
+- Close and reopen History with the TechDraw page tab still open; History fills the active MDI page without exposing other subwindows
 - Panel focus after async FreeCAD actions (open document)
+- History activation preserves the active CAD document; Recompute Active Document still targets it
+- Enable **Edit > Preferences > Display > UI > Overlay > Automatically hide in non-3D view**; activating History auto-hides overlay panels and hovering over their edge hints does not reveal them
+- Clicking an overlay edge hint explicitly reveals its panel while History is active
+- Switching from History back to a 3D view restores the configured overlay behavior without changing dock preferences
+- Disable **Automatically hide in non-3D view**; History respects FreeCAD's configured behavior without changing the preference
+- Detach and redock History through FreeCAD's view controls; panel state remains available and Open History Panel focuses the same view
 
 ## Settings
 

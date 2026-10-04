@@ -1,11 +1,11 @@
 # File responsibility: Defines the HistoryWorkbench class that integrates
-# the workbench into FreeCAD's GUI with menus, toolbars, and UI panels.
+# the workbench into FreeCAD's GUI with menus, toolbars, and a native History view.
 # Container initialization is deferred to Activated() for faster startup.
-"""FreeCAD workbench registration for Diff Workbench.
+"""FreeCAD workbench registration and native History view lifecycle.
 
 Defines the Gui.Workbench subclass used by FreeCAD to create menus/toolbars
-and activate the workbench. Container creation and command registration are
-deferred to Activated() for faster FreeCAD startup.
+and activate the workbench. Commands are registered during Initialize();
+container creation is deferred to Activated() for faster FreeCAD startup.
 """
 
 import os
@@ -54,11 +54,13 @@ if Gui is not None:
             "HistoryUpdateGitIgnore",
         ]
 
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
             self.MenuText = cast(str, QtCore.QT_TRANSLATE_NOOP("Workbench", "History"))
             self.ToolTip = cast(str, QtCore.QT_TRANSLATE_NOOP("Workbench", "Track project iterations and history"))
-            self._subwindow = None  # Store reference to MDI subwindow
+
+            # Native Qt host and FreeCAD view handle share one lifetime.
+            self._history_window: tuple[QtWidgets.QWidget, object] | None = None
 
         def GetClassName(self) -> str:
             """Return the class name of the workbench."""
@@ -165,14 +167,11 @@ if Gui is not None:
         def create_or_show_diff_panel(self) -> None:
             """Create the diff panel if it doesn't exist, or show/focus it if it does."""
             try:
-                # Create subwindow if it doesn't exist (was closed or never created)
-                if self._subwindow is None:
+                # Create the native view if it was closed or never created.
+                if self._history_window is None:
                     self._create_diff_panel()
                 else:
-                    # Show existing subwindow and bring to front
-                    self._subwindow.show()
-                    self._subwindow.raise_()
-                    self._subwindow.setFocus()
+                    self._show_diff_panel(*self._history_window)
             except (RuntimeError, AttributeError, TypeError) as e:
                 Log.exception(f"Error creating/showing diff panel: {e}")
 
@@ -180,9 +179,9 @@ if Gui is not None:
             """Called when this workbench is deactivated."""
             Log.debug("Workbench history_wb de-activated.")
 
-            # Don't hide the subwindow - let it stay visible like other FreeCAD panels
+            # Don't hide the native view - let it stay visible like other FreeCAD panels
             # This prevents interference with FreeCAD's default view management
-            # Presenter reference is kept alive; cleaned up by _on_subwindow_closed if window closes
+            # Presenter reference is kept alive; cleaned up when the native view is destroyed
 
         def _create_diff_panel(self) -> None:
             """Create UI components and register them."""
@@ -191,59 +190,69 @@ if Gui is not None:
                 return
 
             try:
-                from .._container import _container
+                from .._container import get_container
                 from ..ui.composer import compose_and_register_panel
                 from ..ui.registry import ui_registry
 
-                # Get MDI area
+                # Use FreeCAD's native host so activation updates its overlay policy.
                 main_window = getMainWindow()
-                mdi_area = main_window.findChild(QtWidgets.QMdiArea)
-
-                if mdi_area is None:
-                    Log.warning("Could not get MDI area")
-                    return
 
                 # Compose UI and register presenters globally
                 # Application state is pre-created during container init; passed in here
                 view = compose_and_register_panel(
-                    _container,
+                    get_container(),
                     ui_registry.application_state,
                     self._focus_diff_panel_deferred,
                 )
 
-                # Add as MDI subwindow
-                self._subwindow = mdi_area.addSubWindow(view)
-                self._subwindow.setWindowTitle(translate("History", "History"))
-                self._subwindow.setWindowIcon(QtGui.QIcon(os.path.join(ICONPATH, "Logo.svg")))
-                self._subwindow.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
-                self._subwindow.resize(900, 600)
-                self._subwindow.show()
+                view.setWindowTitle(translate("History", "History"))
+                native_view = main_window.addWindow(view)
+                native_window = view.parentWidget()
+                if native_view is None or native_window is None:
+                    raise RuntimeError("FreeCAD did not create a native History view")
+                subwindow = native_window.parentWidget()
+                if not isinstance(subwindow, QtWidgets.QMdiSubWindow):
+                    raise RuntimeError("FreeCAD did not attach the History view to an MDI subwindow")
 
-                # Connect window close cleanup
-                self._subwindow.destroyed.connect(self._on_subwindow_closed)
+                icon = QtGui.QIcon(os.path.join(ICONPATH, "Logo.svg"))
+                native_window.setWindowIcon(icon)
+                subwindow.setWindowIcon(icon)
+                self._history_window = (native_window, native_view)
+
+                # MDI shells can be replaced when detaching or redocking the same native view.
+                native_window.destroyed.connect(self._on_history_window_closed)
+                self._show_diff_panel(native_window, native_view)
 
             except (ImportError, AttributeError, TypeError, RuntimeError) as e:
                 Log.exception(f"ERROR creating diff panel: {e} traceback: {traceback.format_exc()}")
 
-        def _on_subwindow_closed(self) -> None:
-            """Called when the diff panel subwindow is closed."""
+        def _on_history_window_closed(self) -> None:
+            """Clear panel-scoped state when the native History view is destroyed."""
             Log.debug("Diff panel closed.")
-            self._subwindow = None  # Reset reference so new one will be created on next activation
+            self._history_window = None  # Recreate the view on the next activation.
 
             # Clear panel-scoped presenters; application state survives for command access
             from ..ui.registry import ui_registry
+
             ui_registry.clear_presenters()
 
+        def _show_diff_panel(self, window: QtWidgets.QWidget, native_view: object) -> None:
+            """Show History and synchronize Qt focus with FreeCAD's active view."""
+            window.show()
+            window.raise_()
+            window.activateWindow()
+            getMainWindow().setActiveWindow(native_view)
+
         def _focus_diff_panel_deferred(self) -> None:
-            """Queue focus on diff subwindow after FreeCAD activation events settle."""
+            """Queue focus on the same History instance after FreeCAD activation events settle."""
+            history_window = self._history_window
+            if history_window is None:
+                return
 
             def _focus() -> None:
-                subwindow = self._subwindow
-                if subwindow is None:
-                    return
-                subwindow.show()
-                subwindow.raise_()
-                subwindow.activateWindow()
-                subwindow.setFocus(QtCore.Qt.FocusReason.OtherFocusReason)
+
+                # A queued request must not focus a replacement panel after close and reopen.
+                if self._history_window is history_window:
+                    self._show_diff_panel(*history_window)
 
             QtCore.QTimer.singleShot(75, _focus)

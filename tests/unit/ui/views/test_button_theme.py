@@ -6,6 +6,7 @@ import pytest
 
 from freecad.history_wb.qt import QtGui, QtWidgets
 from freecad.history_wb.ui.views.theme.buttons import set_action_button_style
+from freecad.history_wb.ui.views.widgets.buttons import make_row_action_button
 
 
 def _palette(background: QtGui.QColor, text: QtGui.QColor) -> QtGui.QPalette:
@@ -34,6 +35,7 @@ def test_action_button_selects_surface_for_theme(
     """Dark themes select subdued overlay while light themes retain palette button color."""
     host = QtWidgets.QWidget()
     host.setStyleSheet(f"QLabel {{ color: {text.name()}; }}")
+    host.ensurePolished()
     button = QtWidgets.QToolButton(host)
     button.setPalette(_palette(background, text))
 
@@ -58,3 +60,23 @@ def test_disabled_button_keeps_dark_surface(application: QtWidgets.QApplication)
 
     assert button.property("historyDarkTheme") is True
     assert "background-color: rgba(255, 255, 255, 24)" in button.styleSheet()
+
+
+@pytest.mark.parametrize("text", ["#141414", "#f0f0f0"])
+def test_review_action_icon_is_muted_when_disabled(application: QtWidgets.QApplication, text: str) -> None:
+    """Shared row and summary review actions visibly mute icons when disabled."""
+    host = QtWidgets.QWidget()
+    host.setStyleSheet(f"QLabel {{ color: {text}; }}")
+    host.ensurePolished()
+    button = make_row_action_button(icon_name="Add.svg", accessible_name="Review", parent=host)
+    enabled_image = button.icon().pixmap(button.iconSize(), QtGui.QIcon.Mode.Normal).toImage()
+
+    button.setEnabled(False)
+    disabled_image = button.icon().pixmap(button.iconSize(), QtGui.QIcon.Mode.Disabled).toImage()
+
+    assert not disabled_image.isNull()
+    assert disabled_image != enabled_image
+
+    button.setEnabled(True)
+
+    assert button.icon().pixmap(button.iconSize(), QtGui.QIcon.Mode.Normal).toImage() == enabled_image

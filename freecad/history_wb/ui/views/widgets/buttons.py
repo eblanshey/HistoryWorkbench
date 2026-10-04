@@ -28,7 +28,6 @@ def make_tool_button(
     auto_raise: bool = False,
     accessible_name: str = "",
     icon_size: QtCore.QSize | None = None,
-    preserve_disabled_icon_color: bool = False,
     tool_button_style: QtCore.Qt.ToolButtonStyle = QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
     parent: QtWidgets.QWidget | None = None,
 ) -> QtWidgets.QToolButton:
@@ -46,7 +45,7 @@ def make_tool_button(
         button.setIcon(icon)
 
     if icon_name is not None:
-        set_themed_icon(button, icon_name, preserve_disabled_color=preserve_disabled_icon_color)
+        set_themed_icon(button, icon_name)
 
     if icon_size is not None:
         button.setIconSize(icon_size)
@@ -90,7 +89,6 @@ def make_row_action_button(
         style=ACTION_BUTTON_STYLE,
         accessible_name=accessible_name,
         icon_size=QtCore.QSize(ROW_ACTION_ICON_SIZE, ROW_ACTION_ICON_SIZE),
-        preserve_disabled_icon_color=True,
         tool_button_style=QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
         parent=parent,
     )

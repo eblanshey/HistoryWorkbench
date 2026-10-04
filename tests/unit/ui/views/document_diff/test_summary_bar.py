@@ -57,7 +57,7 @@ def test_bulk_action_buttons_use_theme_aware_style(application) -> None:  # type
 
 
 def test_bulk_action_icons_use_button_text_color(application) -> None:  # type: ignore[no-untyped-def]
-    """Bulk icons match action text color in normal and disabled icon modes."""
+    """Bulk icons match enabled action text and become gray when disabled."""
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
     palette = widget.palette()
     palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(130, 130, 130))
@@ -77,7 +77,8 @@ def test_bulk_action_icons_use_button_text_color(application) -> None:  # type: 
         .pixelColor(32, 32)
     )
     assert center_color == QtGui.QColor(0, 0, 0)
-    assert disabled_center_color == QtGui.QColor(0, 0, 0)
+    assert disabled_center_color != center_color
+    assert disabled_center_color.red() == disabled_center_color.green() == disabled_center_color.blue()
 
 
 def test_remove_all_button_visibility_and_callback(application) -> None:  # type: ignore[no-untyped-def]

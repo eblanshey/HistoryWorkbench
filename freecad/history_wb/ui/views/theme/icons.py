@@ -17,19 +17,17 @@ _DARK_THEME_PROPERTY = "historyDarkTheme"
 _DARK_ACTION_ICON_COLOR = QtGui.QColor("#e6e6e6")
 
 
-def _themed_icon(icon_name: str, color: QtGui.QColor, preserve_disabled_color: bool = False) -> QtGui.QIcon:
+def _themed_icon(icon_name: str, color: QtGui.QColor) -> QtGui.QIcon:
     """Create QIcon from currentColor SVG using explicit resolved color."""
-    return _cached_themed_icon(icon_name, _color_key(color), preserve_disabled_color)
+    return _cached_themed_icon(icon_name, _color_key(color))
 
 
 def set_themed_icon(
     button: QtWidgets.QAbstractButton,
     icon_name: str,
-    *,
-    preserve_disabled_color: bool = False,
 ) -> None:
     """Set a themed SVG icon on a button and refresh it when palette changes."""
-    binding = _ThemedButtonIconBinding(button, icon_name, preserve_disabled_color)
+    binding = _ThemedButtonIconBinding(button, icon_name)
     cast(Any, button).__setattr__(_THEMED_ICON_BINDING_ATTR, binding)
     button.installEventFilter(binding)
     binding.apply()
@@ -42,12 +40,10 @@ class _ThemedButtonIconBinding(QtCore.QObject):
         self,
         button: QtWidgets.QAbstractButton,
         icon_name: str,
-        preserve_disabled_color: bool,
     ) -> None:
         super().__init__(button)
         self._button = button
         self._icon_name = icon_name
-        self._preserve_disabled_color = preserve_disabled_color
         self._theme_probe = QtWidgets.QLabel(button)
         self._theme_probe.hide()
         self._theme_probe.installEventFilter(self)
@@ -77,14 +73,13 @@ class _ThemedButtonIconBinding(QtCore.QObject):
         else:
             self._theme_probe.ensurePolished()
             color = self._theme_probe.palette().color(QtGui.QPalette.ColorRole.WindowText)
-        self._button.setIcon(_themed_icon(self._icon_name, color, self._preserve_disabled_color))
+        self._button.setIcon(_themed_icon(self._icon_name, color))
 
 
 @lru_cache(maxsize=256)
 def _cached_themed_icon(
     icon_name: str,
     icon_color_key: _ColorKey,
-    preserve_disabled_color: bool,
 ) -> QtGui.QIcon:
     """Return cached icon rendered with one foreground color."""
     icon_path = get_icon_path(icon_name)
@@ -100,7 +95,4 @@ def _cached_themed_icon(
     pixmap = QtGui.QPixmap()
     if not pixmap.loadFromData(themed_svg_text.encode("utf-8")):
         raise RuntimeError(f"Themed SVG icon could not be rendered: {icon_name}")
-    icon = QtGui.QIcon(pixmap)
-    if preserve_disabled_color:
-        icon.addPixmap(pixmap, QtGui.QIcon.Mode.Disabled)
-    return icon
+    return QtGui.QIcon(pixmap)

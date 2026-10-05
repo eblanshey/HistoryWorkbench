@@ -63,7 +63,6 @@ When you're ready to learn more, jump into the [documentation](https://eblanshey
 - [ ] Track and compare non-FCStd files in the project
 - [ ] Compare any commits, not just to the previous commit
 - [ ] Push project to GitHub or other git remote services
-- [ ] Ability to regenerate historical snapshots (discussion in https://github.com/eblanshey/HistoryWorkbench/issues/5)
 
 Done:
 

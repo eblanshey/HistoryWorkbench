@@ -36,7 +36,10 @@ class PropertyDiffTreeWidget(QtWidgets.QTreeWidget):
         self._resizing_column: int | None = None
         self._resize_start_x = 0
         self._resize_start_width = 0
+        self._custom_column_widths = False
+        self._balancing_columns = False
         self._setup_tree()
+        self.header().sectionResized.connect(self._on_section_resized)
 
     def _setup_tree(self) -> None:
         """Configure headers, resize behavior, delegate, and edit triggers."""
@@ -56,9 +59,35 @@ class PropertyDiffTreeWidget(QtWidgets.QTreeWidget):
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked)
         self.setMouseTracking(True)
 
+    def showEvent(self, event: QtGui.QShowEvent) -> None:  # noqa: N802
+        """Balance default columns without resetting manually adjusted widths."""
+        super().showEvent(event)
+        self._balance_default_columns()
+
+    def _balance_default_columns(self) -> None:
+        """Share current viewport width until a column is manually adjusted."""
+        if self._custom_column_widths or self._balancing_columns:
+            return
+        self._balancing_columns = True
+        try:
+            width = self.viewport().width() // self.columnCount()
+            for column in range(self.columnCount()):
+                self.header().resizeSection(column, width)
+        finally:
+            self._balancing_columns = False
+
+    def _on_section_resized(self, column: int, _old_size: int, _new_size: int) -> None:
+        """Preserve explicit section changes while ignoring automatic last-column stretch."""
+        if column < self.columnCount() - 1 and not self._balancing_columns:
+            self._custom_column_widths = True
+
     def viewportEvent(self, event: QtCore.QEvent) -> bool:  # noqa: N802
-        """Resize columns when a separator is dragged anywhere in the viewport."""
+        """Balance default columns on viewport resize and handle separator dragging and hover."""
         event_type = event.type()
+        if event_type == QtCore.QEvent.Type.Resize:
+            handled = super().viewportEvent(event)
+            self._balance_default_columns()
+            return handled
         if event_type == QtCore.QEvent.Type.MouseButtonPress and self._handle_resize_press(event):
             return True
         if event_type == QtCore.QEvent.Type.MouseMove and self._handle_resize_move(event):

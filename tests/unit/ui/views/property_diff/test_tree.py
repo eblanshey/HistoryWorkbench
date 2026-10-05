@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import PropertyPresentation
@@ -134,6 +136,56 @@ def test_dragging_body_separator_resizes_column(widget) -> None:  # type: ignore
     _send_mouse_event(widget, QtCore.QEvent.Type.MouseButtonRelease, end, QtCore.Qt.MouseButton.NoButton)
 
     assert widget.columnWidth(0) == initial_width + 35
+
+    widget.resize(900, 300)
+    QtWidgets.QApplication.processEvents()
+
+    assert widget.columnWidth(0) == initial_width + 35
+
+
+@pytest.mark.parametrize("width", [360, 900])
+def test_columns_start_evenly_spaced(widget, width: int) -> None:  # type: ignore[no-untyped-def]
+    """Initial widths divide available viewport space evenly at different panel sizes."""
+    widget.resize(width, 300)
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+
+    widths = [widget.columnWidth(column) for column in range(widget.columnCount())]
+    assert max(widths) - min(widths) <= 2
+    assert sum(widths) == widget.viewport().width()
+
+
+def test_manual_column_widths_survive_redisplay_and_property_changes(widget) -> None:  # type: ignore[no-untyped-def]
+    """Showing the tree again or selecting another property preserves custom widths."""
+    widget.resize(900, 300)
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+    widget.header().resizeSection(0, 230)
+    widget.header().resizeSection(1, 270)
+
+    widget.hide()
+    widget.resize(1000, 300)
+    widget.show_property_diff([PropertyPresentation(name="Length", state=DiffState.MODIFIED)])
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+
+    assert widget.columnWidth(0) == 230
+    assert widget.columnWidth(1) == 270
+    assert sum(widget.columnWidth(column) for column in range(3)) == widget.viewport().width()
+
+
+def test_default_widths_follow_layout_changes_after_first_show(widget) -> None:  # type: ignore[no-untyped-def]
+    """Default columns stay balanced as the containing panel settles its geometry."""
+    widget.resize(180, 300)
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+
+    for width in (900, 600):
+        widget.resize(width, 300)
+        QtWidgets.QApplication.processEvents()
+        widths = [widget.columnWidth(column) for column in range(3)]
+        assert max(widths) - min(widths) <= 2
+        assert sum(widths) == widget.viewport().width()
 
 
 def _send_mouse_event(

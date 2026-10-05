@@ -118,7 +118,7 @@ def test_node_selection_requested_signal_routes_tree_selection(panel) -> None:  
     child_item = root_item.child(0)
     assert child_item is not None
 
-    tree.itemClicked.emit(child_item, 0)
+    tree.setCurrentItem(child_item)
 
     assert captured == [("parts/A.FCStd", "Body")]
 

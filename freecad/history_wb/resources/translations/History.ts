@@ -407,7 +407,7 @@ Saved history will not be affected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/tree.py" line="244"/>
+        <location filename="../../ui/views/document_diff/tree.py" line="243"/>
         <source>Open 3D comparison</source>
         <translation type="unfinished"></translation>
     </message>

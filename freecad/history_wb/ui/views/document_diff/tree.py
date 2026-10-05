@@ -116,7 +116,6 @@ class DocumentDiffTree(QtWidgets.QWidget):
         self._tree_widget.header().hide()
         self._tree_widget.setColumnCount(1)
         self._tree_widget.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self._tree_widget.itemClicked.connect(self._on_tree_item_clicked)
         self._tree_widget.currentItemChanged.connect(self._on_current_item_changed)
         self._tree_widget.installEventFilter(self)
         self._refresh_diff_stylesheet()
@@ -269,17 +268,12 @@ class DocumentDiffTree(QtWidgets.QWidget):
         if has_changed_descendants:
             item.setExpanded(True)
 
-    def _on_tree_item_clicked(self, item: QtWidgets.QTreeWidgetItem, column: int) -> None:
-        """Emit selected node coordinates for property-diff routing."""
-        del column
-        self._emit_node_selected(item)
-
     def _on_current_item_changed(
         self,
         current: QtWidgets.QTreeWidgetItem | None,
         previous: QtWidgets.QTreeWidgetItem | None,
     ) -> None:
-        """Refresh selected styling on previous and current widget-backed rows."""
+        """Refresh row styling and route mouse or keyboard selection to property diffs."""
         for item, selected in ((previous, False), (current, True)):
             if item is None:
                 continue
@@ -287,8 +281,11 @@ class DocumentDiffTree(QtWidgets.QWidget):
             if isinstance(row_widget, DiffTreeRowWidget):
                 row_widget.set_selected(selected)
 
+        if current is not None:
+            self._emit_node_selected(current)
+
     def _emit_node_selected(self, item: QtWidgets.QTreeWidgetItem) -> None:
-        """Compute git path and node path from clicked item and emit when item is a node."""
+        """Compute git path and node path from selected item and emit when item is a node."""
 
         # Top-level document rows carry git_path in UserRole for lookup, not node-path semantics.
         if item.parent() is None:
@@ -308,6 +305,9 @@ class DocumentDiffTree(QtWidgets.QWidget):
 
     def _on_node_visual_diff_requested(self, item: QtWidgets.QTreeWidgetItem, git_path: str, node_path: str) -> None:
         """Select node row, emit normal selection, then emit visual-diff request."""
-        self._tree_widget.setCurrentItem(item)
-        self._emit_node_selected(item)
+        # A current-row change emits selection; an already-current row still needs routing.
+        if self._tree_widget.currentItem() is item:
+            self._emit_node_selected(item)
+        else:
+            self._tree_widget.setCurrentItem(item)
         self.visual_diff_requested.emit(git_path, node_path)

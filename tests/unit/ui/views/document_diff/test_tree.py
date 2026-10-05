@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from PySide6.QtTest import QTest
+
 from freecad.history_wb.domain.diff.models import DiffState
-from freecad.history_wb.qt import QtGui, QtWidgets
+from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
 from freecad.history_wb.ui.views.document_diff.tree import DocumentDiffTree
 from freecad.history_wb.ui.views.theme.diff import background_for_state
@@ -113,7 +115,8 @@ def test_node_selected_emits_git_path_and_node_path(tree, simple_document_row_fa
     child_item = root_item.child(0)
     assert child_item is not None
 
-    widget.itemClicked.emit(child_item, 0)
+    tree.show()
+    QTest.mouseClick(widget.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=widget.visualItemRect(child_item).center())
 
     assert captured == [("parts/A.FCStd", "Body")]
 
@@ -127,9 +130,42 @@ def test_root_click_does_not_emit_node_selected(tree, simple_document_row_factor
     root_item = _tree_widget(tree).topLevelItem(0)
     assert root_item is not None
 
-    _tree_widget(tree).itemClicked.emit(root_item, 0)
+    widget = _tree_widget(tree)
+    tree.show()
+    QTest.mouseClick(widget.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=widget.visualItemRect(root_item).center())
 
     assert captured == []
+
+
+def test_arrow_keys_emit_selection_for_current_node(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
+    """Down and Up select visible objects and route their property diffs once per change."""
+    tree.show_doc_diffs(
+        [_diff(nodes=[_node(path="Body/Pad"), _node(path="Body/Sketch", label="Sketch")])],
+        simple_document_row_factory,
+    )
+    widget = _tree_widget(tree)
+    root_item = widget.topLevelItem(0)
+    assert root_item is not None
+    first_item = root_item.child(0)
+    second_item = root_item.child(1)
+    assert first_item is not None
+    assert second_item is not None
+    tree.show()
+    widget.setCurrentItem(first_item)
+    captured: list[tuple[str, str]] = []
+    tree.node_selected.connect(lambda git_path, node_path: captured.append((git_path, node_path)))
+
+    QTest.keyClick(widget, QtCore.Qt.Key.Key_Down)
+
+    assert widget.currentItem() is second_item
+    assert second_item.isSelected()
+    assert captured == [("parts/A.FCStd", "Body/Sketch")]
+
+    QTest.keyClick(widget, QtCore.Qt.Key.Key_Up)
+
+    assert widget.currentItem() is first_item
+    assert first_item.isSelected()
+    assert captured == [("parts/A.FCStd", "Body/Sketch"), ("parts/A.FCStd", "Body/Pad")]
 
 
 def test_visual_diff_button_selects_item_and_emits_both_signals(tree, simple_document_row_factory) -> None:  # type: ignore[no-untyped-def]
@@ -153,6 +189,13 @@ def test_visual_diff_button_selects_item_and_emits_both_signals(tree, simple_doc
     button.click()
 
     assert widget.currentItem() is child_item
+    assert selected == [("parts/A.FCStd", "Body/Pad")]
+    assert visual_diff == [("parts/A.FCStd", "Body/Pad")]
+
+    selected.clear()
+    visual_diff.clear()
+    button.click()
+
     assert selected == [("parts/A.FCStd", "Body/Pad")]
     assert visual_diff == [("parts/A.FCStd", "Body/Pad")]
 

@@ -75,8 +75,8 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         status_widget.open_document_requested.connect(self.open_document_requested.emit)
         self.add_trailing_widget(status_widget)
 
-        # Reviewed and commit selections expose restore button
-        if self._is_staging_selected() or self._is_commit_selected():
+        # Restore precedes review controls for each supported history source.
+        if self._is_working_tree_selected() or self._is_staging_selected() or self._is_commit_selected():
             self._add_restore_button()
 
         # Only working tree rows can be marked reviewed.
@@ -125,14 +125,17 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         self.add_trailing_widget(self._remove_from_reviewed_button)
 
     def _add_restore_button(self) -> None:
-        """Add restore button for reviewed or commit-backed document rows."""
-        tooltip = translate(
-            "History",
-            "Restore the selected file.\n"
-            "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
-            "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
-            "Saved history will not be affected.",
-        ).replace("%1", self._top_level_text)
+        """Add restore button with source-specific explanation."""
+        if self._is_working_tree_selected():
+            tooltip = translate("History", "Replace this file with the last reviewed or saved version.")
+        else:
+            tooltip = translate(
+                "History",
+                "Restore the selected file.\n"
+                "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
+                "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
+                "Saved history will not be affected.",
+            ).replace("%1", self._top_level_text)
         restore_button = make_row_action_button(
             icon_name="Restore.svg",
             tooltip=tooltip,

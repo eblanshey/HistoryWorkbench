@@ -294,14 +294,14 @@ class DiffPresenter:
         )
 
     def restore_document(self, git_path: str) -> None:
-        """Restore one document for current staging/commit source."""
+        """Restore one document from index or selected commit."""
         current = self._current_history_selection
         repo = self._application_state.git_repository
 
         if current is None or repo is None:
             return
 
-        if current.item_kind not in ("STAGING", "COMMIT"):
+        if current.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
             return
 
         restore_success = self._restore_handler.restore_document(repo, current, git_path)

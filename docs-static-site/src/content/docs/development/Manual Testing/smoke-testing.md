@@ -51,6 +51,7 @@ description: Checklist for project detection, iteration operations, settings, an
 - Existing diff rows update after switching between light and dark themes
 - Each document and node label renders once with OpenTheme enabled
 - Right-click Current Files Area: mark all reviewed
+- Each Current Files document row shows Restore to the left of Plus, restores the indexed version, reopen documents, and refresh working-tree diffs; Reviewed contents and saved history stay unchanged
 
 ## Reviewed Area (Staging) View
 

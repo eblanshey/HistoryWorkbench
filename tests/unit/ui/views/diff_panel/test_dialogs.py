@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import cast
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from freecad.history_wb.qt import QtWidgets
 from freecad.history_wb.ui.views.diff_panel.dialogs import GitConfigDialogResult
 
@@ -111,7 +113,8 @@ def test_show_configure_author_dialog_disables_global_option_when_not_writable()
     )
 
 
-def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button() -> None:
+@pytest.mark.parametrize("last_reviewed_or_saved", [False, True])
+def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(last_reviewed_or_saved: bool) -> None:
     """Restore confirmation helper returns True only for destructive button."""
     from freecad.history_wb.ui.views.diff_panel.dialogs import show_restore_file_confirmation_dialog
 
@@ -134,11 +137,13 @@ def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button()
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
         patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=clicked_button),
     ):
-        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "file.FCStd") is True
+        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "file.FCStd", last_reviewed_or_saved) is True
 
     assert len(captured_text) == 1
     assert captured_text[0].startswith("file.FCStd\n\n")
-    assert "overwrite the current file(s) on disk" in captured_text[0]
+    expected_source = "last reviewed or saved version" if last_reviewed_or_saved else "selected saved copies"
+    assert expected_source in captured_text[0]
+    assert "Unsaved changes in open files will be lost" in captured_text[0]
     assert "Saved history will not be affected" in captured_text[0]
 
 
@@ -159,7 +164,7 @@ def test_show_restore_file_confirmation_dialog_keeps_generic_message_for_bulk_re
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
         patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=MagicMock()),
     ):
-        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "")
+        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "", False)
 
     assert len(captured_text) == 1
     assert captured_text[0].startswith("This operation will overwrite")

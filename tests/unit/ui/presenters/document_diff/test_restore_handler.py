@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from unittest.mock import MagicMock
+
+import pytest
 
 from freecad.history_wb.application.actions.git_history.get_committed_file_paths import GetCommittedFilePathsAction
 from freecad.history_wb.application.actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
@@ -38,13 +41,14 @@ def _make_handler() -> tuple[DocumentDiffRestoreHandler, MagicMock, MagicMock, M
     return handler, restore_documents, get_committed_paths, get_staged_paths, show_info
 
 
-def test_restore_document_builds_index_request_for_staging_selection() -> None:
-    """Single restore maps staging selection to index-source request."""
+@pytest.mark.parametrize("item_kind", ["STAGING", "WORKING_TREE"])
+def test_restore_document_builds_index_request(item_kind: Literal["STAGING", "WORKING_TREE"]) -> None:
+    """Reviewed and Current Files restore the indexed version."""
     handler, restore_documents, _, _, show_info = _make_handler()
     repo = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
     restore_documents.execute.return_value = Result.success(True)
 
-    succeeded = handler.restore_document(repo, HistorySelection(item_kind="STAGING", commit_hash=None), "doc.FCStd")
+    succeeded = handler.restore_document(repo, HistorySelection(item_kind=item_kind, commit_hash=None), "doc.FCStd")
 
     assert succeeded is True
     restore_documents.execute.assert_called_once_with(
@@ -57,6 +61,28 @@ def test_restore_document_builds_index_request_for_staging_selection() -> None:
         )
     )
     show_info.assert_called_once()
+
+
+@pytest.mark.parametrize("confirmed", [False, True])
+def test_current_files_restore_confirms_index_source_before_execution(confirmed: bool) -> None:
+    """Current Files confirmation identifies saved/reviewed source and cancellation leaves files untouched."""
+    restore_documents = MagicMock(spec=RestoreDocumentsAction)
+    restore_documents.execute.return_value = Result.success(True)
+    show_confirm = MagicMock(return_value=confirmed)
+    handler = DocumentDiffRestoreHandler(
+        restore_documents,
+        MagicMock(spec=GetCommittedFilePathsAction),
+        MagicMock(spec=GetStagedFilePathsAction),
+        show_confirm,
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+    )
+    repo = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+
+    assert handler.restore_document(repo, HistorySelection("WORKING_TREE", None), "doc.FCStd") is confirmed
+    show_confirm.assert_called_once_with("doc.FCStd", True)
+    assert restore_documents.execute.call_count == int(confirmed)
 
 
 def test_restore_all_uses_committed_paths_for_commit_selection() -> None:

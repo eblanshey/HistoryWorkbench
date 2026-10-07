@@ -146,18 +146,24 @@ def test_restore_document_click_clears_property_diff_after_handler_call() -> Non
     assert any(call["method"] == "clear_property_diff" for call in property_view.get_calls())
 
 
-def test_restore_document_focuses_history_window_after_successful_restore() -> None:
-    """Successful single-file restore refocuses history host window."""
+def test_current_files_restore_focuses_history_and_refreshes_diff() -> None:
+    """Successful Current Files restore refocuses history and reloads working-tree changes."""
     _, _, _, presenter = _make_presenter()
     presenter._application_state.git_repository = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
-    presenter._current_history_selection = HistorySelection(item_kind="STAGING", commit_hash=None)
+    selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+    presenter._current_history_selection = selection
     presenter._restore_handler = MagicMock()
     presenter._restore_handler.restore_document.return_value = True
     focused: list[bool] = []
     presenter._focus_history_window_callback = lambda: focused.append(True)
 
-    presenter.restore_document("doc.FCStd")
+    with patch.object(presenter, "_on_working_tree_selected") as refresh:
+        presenter.restore_document("doc.FCStd")
 
+    presenter._restore_handler.restore_document.assert_called_once_with(
+        presenter._application_state.git_repository, selection, "doc.FCStd"
+    )
+    refresh.assert_called_once_with()
     assert focused == [True]
 
 
@@ -206,9 +212,10 @@ def test_staging_display_state_refreshes_requested_history_mode(refresh_mode: st
     """Staging display state triggers requested follow-up history refresh."""
     _, _, _, presenter = _make_presenter()
 
-    with patch.object(presenter, "_on_working_tree_selected") as on_working_tree_selected, patch.object(
-        presenter, "_on_staging_selected"
-    ) as on_staging_selected:
+    with (
+        patch.object(presenter, "_on_working_tree_selected") as on_working_tree_selected,
+        patch.object(presenter, "_on_staging_selected") as on_staging_selected,
+    ):
         presenter._apply_staging_display_state(StagingDisplayState(refresh_mode=refresh_mode))
 
     expected_call_count = 1 if expected_method == "_on_working_tree_selected" else 0
@@ -230,7 +237,10 @@ def test_present_diffs_sorts_presentations_and_updates_summary_controls() -> Non
     counts = SummaryCounts(modified_docs=2, deleted_docs=1, added_docs=3)
 
     with (
-        patch("freecad.history_wb.ui.presenters.diff_presenter.build_document_presentations", return_value=mapped_presentations),
+        patch(
+            "freecad.history_wb.ui.presenters.diff_presenter.build_document_presentations",
+            return_value=mapped_presentations,
+        ),
         patch("freecad.history_wb.ui.presenters.diff_presenter.build_summary_button_state", return_value=button_state),
         patch("freecad.history_wb.ui.presenters.diff_presenter.count_summary_counts", return_value=counts),
     ):
@@ -267,7 +277,9 @@ def test_restore_all_from_history_clears_property_diff_after_handler_call() -> N
 
     presenter.restore_all_from_history(selection)
 
-    presenter._restore_handler.restore_all.assert_called_once_with(presenter._application_state.git_repository, selection)
+    presenter._restore_handler.restore_all.assert_called_once_with(
+        presenter._application_state.git_repository, selection
+    )
     assert any(call["method"] == "clear_property_diff" for call in property_view.get_calls())
 
 
@@ -341,7 +353,9 @@ def test_node_selected_shows_transformed_property_diff_for_valid_node() -> None:
     )
     expected_properties = [PropertyPresentation(name="Length", state=DiffState.MODIFIED)]
 
-    with patch("freecad.history_wb.ui.presenters.diff_presenter.transform_property_diffs", return_value=expected_properties):
+    with patch(
+        "freecad.history_wb.ui.presenters.diff_presenter.transform_property_diffs", return_value=expected_properties
+    ):
         presenter.select_node("doc.FCStd", "Body/Pad")
 
     show_property_call = next(call for call in property_view.get_calls() if call["method"] == "show_property_diff")

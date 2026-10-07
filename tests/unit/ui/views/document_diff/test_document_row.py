@@ -30,15 +30,21 @@ def _action_buttons(widget: DocumentDiffRowWidget) -> list[QtWidgets.QToolButton
     return cast(list[QtWidgets.QToolButton], widget.findChildren(QtWidgets.QToolButton))
 
 
-def test_working_tree_selection_shows_only_stage_button(application) -> None:  # type: ignore[no-untyped-def]
-    """Current Files Area rows show only icon-based mark-reviewed action."""
+def test_working_tree_selection_shows_restore_before_stage_button(application) -> None:  # type: ignore[no-untyped-def]
+    """Current Files Area rows restore from index before mark-reviewed action."""
     row = DocumentDiffRowWidget(
         _diff(stage_button_enabled=False),
         "parts/A.FCStd",
         HistorySelection(item_kind="WORKING_TREE", commit_hash=None),
     )
 
-    assert [button.accessibleName() for button in _action_buttons(row)] == ["Mark this document as reviewed"]
+    buttons = _action_buttons(row)
+    assert [button.accessibleName() for button in buttons] == ["Restore", "Mark this document as reviewed"]
+    assert buttons[0].toolTip() == "Replace this file with the last reviewed or saved version."
+    restored: list[str] = []
+    row.restore_requested.connect(restored.append)
+    buttons[0].click()
+    assert restored == ["parts/A.FCStd"]
     stage_button = row.stage_button
     assert stage_button is not None
     assert stage_button.text() == ""

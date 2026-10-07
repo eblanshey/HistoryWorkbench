@@ -126,9 +126,11 @@ class FakeDialogView(_CallRecorder):
         )
         return self.configure_author_dialog_result
 
-    def show_restore_file_confirmation_dialog(self, git_path: str) -> bool:
+    def show_restore_file_confirmation_dialog(self, git_path: str, last_reviewed_or_saved: bool) -> bool:
         """Capture restore confirmation dialog request."""
-        self._record_call("show_restore_file_confirmation_dialog", git_path=git_path)
+        self._record_call(
+            "show_restore_file_confirmation_dialog", git_path=git_path, last_reviewed_or_saved=last_reviewed_or_saved
+        )
         return self.restore_file_confirmation_result
 
     def show_restore_scope_dialog(self) -> str | None:

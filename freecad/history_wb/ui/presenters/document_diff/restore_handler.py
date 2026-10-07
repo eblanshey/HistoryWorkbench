@@ -24,7 +24,7 @@ class DocumentDiffRestoreHandler:
         restore_documents_action: RestoreDocumentsAction,
         get_committed_file_paths_action: GetCommittedFilePathsAction,
         get_staged_file_paths_action: GetStagedFilePathsAction,
-        show_restore_file_confirmation_dialog: Callable[[str], bool],
+        show_restore_file_confirmation_dialog: Callable[[str, bool], bool],
         show_restore_scope_dialog: Callable[[], str | None],
         show_info_message: Callable[[str, str], None],
         show_error_message: Callable[[str, str], None],
@@ -39,11 +39,11 @@ class DocumentDiffRestoreHandler:
         self._show_error_message = show_error_message
 
     def restore_document(self, repo: GitRepository, selection: HistorySelection, git_path: str) -> bool:
-        """Restore one document for staging or commit selection."""
-        if selection.item_kind not in ("STAGING", "COMMIT"):
+        """Restore one document from index or selected commit."""
+        if selection.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
             return False
 
-        if not self._show_restore_file_confirmation_dialog(git_path):
+        if not self._show_restore_file_confirmation_dialog(git_path, selection.item_kind == "WORKING_TREE"):
             return False
 
         source, commit_hash = self._restore_source_from_selection(selection)
@@ -67,7 +67,7 @@ class DocumentDiffRestoreHandler:
         if scope_text is None:
             return False
 
-        if not self._show_restore_file_confirmation_dialog(""):
+        if not self._show_restore_file_confirmation_dialog("", False):
             return False
 
         source, commit_hash = self._restore_source_from_selection(selection)
@@ -86,6 +86,8 @@ class DocumentDiffRestoreHandler:
         """Map history selection to restore source."""
         if selection.item_kind == "COMMIT":
             return RestoreSource.COMMIT, selection.commit_hash
+
+        # Item kind STAGING and WORKING_TREE both restore from the index
         return RestoreSource.INDEX, None
 
     def _listed_paths_for_selection(self, repo: GitRepository, selection: HistorySelection) -> list[str]:

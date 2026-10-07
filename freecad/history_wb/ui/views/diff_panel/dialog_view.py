@@ -54,9 +54,9 @@ class DialogView:
             global_config_writable=global_config_writable,
         )
 
-    def show_restore_file_confirmation_dialog(self, git_path: str) -> bool:
+    def show_restore_file_confirmation_dialog(self, git_path: str, last_reviewed_or_saved: bool) -> bool:
         """Show destructive confirmation dialog for file restore."""
-        return show_restore_file_confirmation_dialog(self._parent, git_path)
+        return show_restore_file_confirmation_dialog(self._parent, git_path, last_reviewed_or_saved)
 
     def show_restore_scope_dialog(self) -> str | None:
         """Show restore-all scope picker dialog."""

@@ -65,7 +65,6 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._stage_all_button.setObjectName("documentDiffStageAllButton")
         self._stage_all_button.hide()
         self._stage_all_button.clicked.connect(self.stage_all_requested.emit)
-        self._action_layout.addWidget(self._stage_all_button)
 
         self._restore_all_button = make_row_action_button(
             icon_name="Restore.svg",
@@ -83,6 +82,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._restore_all_button.hide()
         self._restore_all_button.clicked.connect(self.restore_all_requested.emit)
         self._action_layout.addWidget(self._restore_all_button)
+        self._action_layout.addWidget(self._stage_all_button)
 
         self._remove_all_button = make_row_action_button(
             icon_name="Remove.svg",
@@ -133,3 +133,16 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._remove_all_button.setEnabled(state.remove_all_enabled)
         self._restore_all_button.setVisible(state.restore_all_visible)
         self._restore_all_button.setEnabled(state.restore_all_enabled)
+        if state.restore_all_from_index:
+            self._restore_all_button.setToolTip(
+                translate("History", "Replace all files with their last reviewed or saved versions.")
+            )
+        else:
+            self._restore_all_button.setToolTip(
+                translate(
+                    "History",
+                    "Choose which files to restore from the selected iteration.\n"
+                    "Current files on disk can be overwritten or removed.\n"
+                    "Saved history will not be affected.",
+                )
+            )

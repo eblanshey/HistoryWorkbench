@@ -21,15 +21,40 @@ def build_summary_button_state(
 
     if current_selection.item_kind == "WORKING_TREE":
         any_stagable = any(p.stage_button_enabled for p in presentations)
-        return SummaryButtonState(True, any_stagable, False, False, False, False)
+
+        # Added working-tree files have no indexed version to restore.
+        any_restorable = any(p.document_state != DiffState.ADDED for p in presentations)
+        return SummaryButtonState(
+            stage_all_visible=True,
+            stage_all_enabled=any_stagable,
+            remove_all_visible=False,
+            remove_all_enabled=False,
+            restore_all_visible=True,
+            restore_all_enabled=any_restorable,
+            restore_all_from_index=True,
+        )
 
     if current_selection.item_kind == "STAGING":
         has_rows = bool(presentations)
-        return SummaryButtonState(False, False, True, has_rows, True, has_rows)
+        return SummaryButtonState(
+            stage_all_visible=False,
+            stage_all_enabled=False,
+            remove_all_visible=True,
+            remove_all_enabled=has_rows,
+            restore_all_visible=True,
+            restore_all_enabled=has_rows,
+        )
 
     if current_selection.item_kind == "COMMIT":
         has_rows = bool(presentations)
-        return SummaryButtonState(False, False, False, False, True, has_rows)
+        return SummaryButtonState(
+            stage_all_visible=False,
+            stage_all_enabled=False,
+            remove_all_visible=False,
+            remove_all_enabled=False,
+            restore_all_visible=True,
+            restore_all_enabled=has_rows,
+        )
 
     raise RuntimeError(f"Unsupported history selection kind: {current_selection.item_kind}")
 

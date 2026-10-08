@@ -14,6 +14,7 @@ class SummaryButtonState:
     remove_all_enabled: bool
     restore_all_visible: bool
     restore_all_enabled: bool
+    restore_all_from_index: bool = False
 
     @staticmethod
     def hidden() -> "SummaryButtonState":

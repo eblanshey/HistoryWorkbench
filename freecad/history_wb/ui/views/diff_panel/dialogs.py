@@ -135,13 +135,18 @@ def show_configure_author_dialog(
     )
 
 
-def show_restore_file_confirmation_dialog(
-    parent: QtWidgets.QWidget, git_path: str, last_reviewed_or_saved: bool
-) -> bool:
+def show_restore_file_confirmation_dialog(parent: QtWidgets.QWidget, git_path: str, use_index_wording: bool) -> bool:
     """Show destructive confirmation dialog for restore actions."""
 
     title = translate("History", "Restore")
-    if last_reviewed_or_saved:
+    if use_index_wording and not git_path:
+        message = translate(
+            "History",
+            "This operation will restore all FreeCAD files from their last reviewed or saved versions.\n\n"
+            "Current files on disk can be overwritten or removed.\n"
+            "Files that have not been saved or reviewed will be kept.",
+        )
+    elif use_index_wording:
         message = translate(
             "History",
             "This operation will overwrite the current file on disk with the last reviewed or saved version.",

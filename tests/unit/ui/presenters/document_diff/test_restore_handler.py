@@ -65,7 +65,7 @@ def test_restore_document_builds_index_request(item_kind: Literal["STAGING", "WO
 
 @pytest.mark.parametrize("confirmed", [False, True])
 def test_current_files_restore_confirms_index_source_before_execution(confirmed: bool) -> None:
-    """Current Files confirmation identifies saved/reviewed source and cancellation leaves files untouched."""
+    """Working-tree confirmation identifies index source and cancellation leaves files untouched."""
     restore_documents = MagicMock(spec=RestoreDocumentsAction)
     restore_documents.execute.return_value = Result.success(True)
     show_confirm = MagicMock(return_value=confirmed)
@@ -117,6 +117,48 @@ def test_restore_all_uses_staged_paths_for_staging_selection() -> None:
     handler.restore_all(repo, HistorySelection(item_kind="STAGING", commit_hash=None))
 
     get_staged_paths.execute.assert_called_once_with(repo)
+
+
+@pytest.mark.parametrize("confirmed", [False, True])
+def test_current_files_restore_all_confirms_and_restores_entire_index(confirmed: bool) -> None:
+    """Current Files bulk restore skips scope selection and restores all indexed FCStd files."""
+    restore_documents = MagicMock(spec=RestoreDocumentsAction)
+    restore_documents.execute.return_value = Result.success(True)
+    show_confirm = MagicMock(return_value=confirmed)
+    show_scope = MagicMock()
+    get_committed_paths = MagicMock(spec=GetCommittedFilePathsAction)
+    get_staged_paths = MagicMock(spec=GetStagedFilePathsAction)
+    handler = DocumentDiffRestoreHandler(
+        restore_documents,
+        get_committed_paths,
+        get_staged_paths,
+        show_confirm,
+        show_scope,
+        MagicMock(),
+        MagicMock(),
+    )
+    repo = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+
+    assert handler.restore_all(repo, HistorySelection("WORKING_TREE", None)) is confirmed
+
+    show_confirm.assert_called_once_with("", True)
+    show_scope.assert_not_called()
+    get_committed_paths.execute.assert_not_called()
+    get_staged_paths.execute.assert_not_called()
+
+    # Confirmation is the only gate before issuing the all-files index request.
+    if confirmed:
+        restore_documents.execute.assert_called_once_with(
+            RestoreDocumentsRequest(
+                repo=repo,
+                source=RestoreSource.INDEX,
+                scope=RestoreScope.ALL_FCSTD,
+                commit_hash=None,
+                paths=None,
+            )
+        )
+    else:
+        restore_documents.execute.assert_not_called()
 
 
 def test_restore_failure_shows_error_message_and_returns_false() -> None:

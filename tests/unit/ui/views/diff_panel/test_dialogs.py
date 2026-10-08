@@ -113,8 +113,8 @@ def test_show_configure_author_dialog_disables_global_option_when_not_writable()
     )
 
 
-@pytest.mark.parametrize("last_reviewed_or_saved", [False, True])
-def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(last_reviewed_or_saved: bool) -> None:
+@pytest.mark.parametrize("use_index_wording", [False, True])
+def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(use_index_wording: bool) -> None:
     """Restore confirmation helper returns True only for destructive button."""
     from freecad.history_wb.ui.views.diff_panel.dialogs import show_restore_file_confirmation_dialog
 
@@ -137,18 +137,19 @@ def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(l
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
         patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=clicked_button),
     ):
-        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "file.FCStd", last_reviewed_or_saved) is True
+        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "file.FCStd", use_index_wording) is True
 
     assert len(captured_text) == 1
     assert captured_text[0].startswith("file.FCStd\n\n")
-    expected_source = "last reviewed or saved version" if last_reviewed_or_saved else "selected saved copies"
+    expected_source = "last reviewed or saved version" if use_index_wording else "selected saved copies"
     assert expected_source in captured_text[0]
     assert "Unsaved changes in open files will be lost" in captured_text[0]
     assert "Saved history will not be affected" in captured_text[0]
 
 
-def test_show_restore_file_confirmation_dialog_keeps_generic_message_for_bulk_restore() -> None:
-    """Bulk restore confirmation omits file-path prefix from warning text."""
+@pytest.mark.parametrize("use_index_wording", [False, True])
+def test_show_restore_file_confirmation_dialog_uses_bulk_source_warning(use_index_wording: bool) -> None:
+    """Bulk restore confirmation identifies its source without a file-path prefix."""
     from freecad.history_wb.ui.views.diff_panel.dialogs import show_restore_file_confirmation_dialog
 
     _ensure_app()
@@ -164,10 +165,16 @@ def test_show_restore_file_confirmation_dialog_keeps_generic_message_for_bulk_re
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
         patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=MagicMock()),
     ):
-        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "", False)
+        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "", use_index_wording)
 
     assert len(captured_text) == 1
-    assert captured_text[0].startswith("This operation will overwrite")
+    if use_index_wording:
+        assert captured_text[0].startswith("This operation will restore all FreeCAD files")
+        assert "last reviewed or saved versions.\n\nCurrent files on disk" in captured_text[0]
+        assert "overwritten or removed" in captured_text[0]
+        assert "Files that have not been saved or reviewed will be kept" in captured_text[0]
+    else:
+        assert captured_text[0].startswith("This operation will overwrite")
     assert "Saved history will not be affected" in captured_text[0]
 
 

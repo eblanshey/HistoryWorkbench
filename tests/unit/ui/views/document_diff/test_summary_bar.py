@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
 from freecad.history_wb.ui.views.document_diff.document_row import REMOVE_REVIEWED_TOOLTIP
 from freecad.history_wb.ui.views.document_diff.summary_bar import DocumentDiffSummaryBar
@@ -113,3 +115,34 @@ def test_restore_all_button_visibility_and_callback(application) -> None:  # typ
     assert "Choose which files to restore" in widget._restore_all_button.toolTip()
     assert not widget._restore_all_button.isHidden()
     assert captured == ["restore"]
+
+
+def test_restore_all_precedes_stage_all_in_bulk_action_layout(application) -> None:  # type: ignore[no-untyped-def]
+    """Current Files puts destructive restore before mark-reviewed action."""
+    widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
+
+    assert widget._action_layout.indexOf(widget._restore_all_button) < widget._action_layout.indexOf(
+        widget._stage_all_button
+    )
+
+
+@pytest.mark.parametrize("restore_enabled", [False, True])
+def test_restore_all_tooltip_tracks_source_when_switching_modes(application, restore_enabled: bool) -> None:  # type: ignore[no-untyped-def]
+    """Current Files explains index restore; other modes regain scope-picker tooltip."""
+    widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
+    history_state = SummaryButtonState(False, False, False, False, True, True)
+    widget.set_button_states(history_state)
+    history_tooltip = widget._restore_all_button.toolTip()
+
+    widget.set_button_states(
+        SummaryButtonState(True, False, False, False, True, restore_enabled, restore_all_from_index=True)
+    )
+
+    assert not widget._restore_all_button.isHidden()
+    assert widget._restore_all_button.isEnabled() is restore_enabled
+    assert widget._restore_all_button.toolTip() == "Replace all files with their last reviewed or saved versions."
+
+    widget.set_button_states(history_state)
+
+    assert widget._restore_all_button.toolTip() == history_tooltip
+    assert "Choose which files to restore" in history_tooltip

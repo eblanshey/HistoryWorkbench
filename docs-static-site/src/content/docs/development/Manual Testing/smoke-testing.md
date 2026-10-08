@@ -1,6 +1,6 @@
 ---
 title: Smoke Testing
-description: Checklist for project detection, iteration operations, settings, and native History panel behavior.
+description: Checklist for project detection, iteration operations, settings, and native History panel behavior. Keep the list as succinct as possible.
 ---
 ## Project Detection
 
@@ -51,7 +51,8 @@ description: Checklist for project detection, iteration operations, settings, an
 - Existing diff rows update after switching between light and dark themes
 - Each document and node label renders once with OpenTheme enabled
 - Right-click Current Files Area: mark all reviewed
-- Each Current Files document row shows Restore to the left of Plus, restores the indexed version, reopen documents, and refresh working-tree diffs; Reviewed contents and saved history stay unchanged
+- Each Current Files document row shows Restore to the left of Plus, restores the indexed version, reopens documents, and refreshes working-tree diffs; Reviewed contents and saved history stay unchanged
+- Restore All from Current Files: restore all indexed FreeCAD files, reopen documents, and refresh diffs; index and saved history stay unchanged
 
 ## Reviewed Area (Staging) View
 

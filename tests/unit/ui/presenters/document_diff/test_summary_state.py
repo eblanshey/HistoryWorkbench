@@ -1,5 +1,7 @@
 # File responsibility: Unit tests for pure summary-state helpers used by diff presenter.
 
+import pytest
+
 from freecad.history_wb.application.actions.result_models import DiffIssues, DocumentDiffResult
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.ui.presenters.document_diff.summary_state import (
@@ -26,14 +28,39 @@ def test_count_summary_counts_counts_document_states() -> None:
     assert counts == SummaryCounts(modified_docs=1, deleted_docs=1, added_docs=1)
 
 
-def test_build_summary_button_state_for_working_tree() -> None:
-    """Working tree shows stage-all only and enables it when any row stages."""
+@pytest.mark.parametrize(
+    ("document_state", "stage_enabled", "restore_enabled"),
+    [
+        (None, False, False),
+        (DiffState.ADDED, True, False),
+        (DiffState.MODIFIED, False, True),
+        (DiffState.MODIFIED, True, True),
+        (DiffState.DELETED, True, True),
+    ],
+)
+def test_build_summary_button_state_for_working_tree(
+    document_state: DiffState | None, stage_enabled: bool, restore_enabled: bool
+) -> None:
+    """Current Files enables restore for indexed rows, independently of review eligibility."""
+    presentations = (
+        [
+            DiffTreePresentation(
+                nodes=[],
+                git_path="a.FCStd",
+                indicators=[],
+                document_state=document_state,
+                stage_button_enabled=stage_enabled,
+            )
+        ]
+        if document_state is not None
+        else []
+    )
     state = build_summary_button_state(
         HistorySelection(item_kind="WORKING_TREE", commit_hash=None),
-        [DiffTreePresentation(nodes=[], git_path="a.FCStd", indicators=[], stage_button_enabled=True)],
+        presentations,
     )
 
-    assert state == SummaryButtonState(True, True, False, False, False, False)
+    assert state == SummaryButtonState(True, stage_enabled, False, False, True, restore_enabled, True)
 
 
 def test_build_summary_button_state_for_staging() -> None:

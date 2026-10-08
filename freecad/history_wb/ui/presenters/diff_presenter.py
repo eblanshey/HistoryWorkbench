@@ -169,6 +169,10 @@ class DiffPresenter:
         self._result_store.clear()
         self._document_view.clear_doc_diffs()
 
+        # Current Files keeps bulk actions visible but disabled when its tree is empty.
+        if self._current_history_selection is not None and self._current_history_selection.item_kind == "WORKING_TREE":
+            self._document_view.set_button_states(build_summary_button_state(self._current_history_selection, []))
+
         # Property panel belongs to selected document tree node and must clear with the tree.
         self._property_view.clear_property_diff()
 
@@ -318,7 +322,7 @@ class DiffPresenter:
             self._on_working_tree_selected()
 
     def restore_all_documents(self) -> None:
-        """Restore listed/all files for current staging/commit source."""
+        """Restore files from index or selected commit."""
         current = self._current_history_selection
         if current is None:
             return
@@ -331,7 +335,7 @@ class DiffPresenter:
         if repo is None:
             return
 
-        if selection.item_kind not in ("STAGING", "COMMIT"):
+        if selection.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
             return
 
         restore_success = self._restore_handler.restore_all(repo, selection)

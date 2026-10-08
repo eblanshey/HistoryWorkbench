@@ -57,9 +57,17 @@ class DocumentDiffRestoreHandler:
         return self._execute_restore(request)
 
     def restore_all(self, repo: GitRepository, selection: HistorySelection) -> bool:
-        """Restore listed or all files for staging or commit selection."""
-        if selection.item_kind not in ("STAGING", "COMMIT"):
+        """Restore all indexed files or selected scope from history."""
+        if selection.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
             return False
+
+        # Working-tree selection restores the complete index without a commit scope picker.
+        if selection.item_kind == "WORKING_TREE":
+            if not self._show_restore_file_confirmation_dialog("", True):
+                return False
+            return self._execute_restore(
+                RestoreDocumentsRequest(repo=repo, source=RestoreSource.INDEX, scope=RestoreScope.ALL_FCSTD)
+            )
 
         # The restore dialog provides the option to restore just the listed files with diffs, or all files
         # like a normal git checkout

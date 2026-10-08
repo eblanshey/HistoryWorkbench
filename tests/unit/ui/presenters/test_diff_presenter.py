@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -184,10 +185,8 @@ def test_clear_doc_diff_clears_document_and_property_panels() -> None:
 
     presenter.clear_doc_diff()
 
-    assert [document_view.get_calls()[-1]["method"], property_view.get_calls()[-1]["method"]] == [
-        "clear_doc_diffs",
-        "clear_property_diff",
-    ]
+    assert any(call["method"] == "clear_doc_diffs" for call in document_view.get_calls())
+    assert any(call["method"] == "clear_property_diff" for call in property_view.get_calls())
     assert presenter._result_store.get_document_result("doc.FCStd") is None
     assert presenter._result_store.has_diff_results() is False
 
@@ -198,10 +197,8 @@ def test_staging_display_state_doc_clear_also_clears_property_panel() -> None:
 
     presenter._apply_staging_display_state(StagingDisplayState(clear_doc_diff=True))
 
-    assert [document_view.get_calls()[-1]["method"], property_view.get_calls()[-1]["method"]] == [
-        "clear_doc_diffs",
-        "clear_property_diff",
-    ]
+    assert any(call["method"] == "clear_doc_diffs" for call in document_view.get_calls())
+    assert any(call["method"] == "clear_property_diff" for call in property_view.get_calls())
 
 
 @pytest.mark.parametrize(
@@ -255,16 +252,51 @@ def test_present_diffs_sorts_presentations_and_updates_summary_controls() -> Non
     assert summary_counts_call["counts"] == counts
 
 
-def test_restore_all_documents_delegates_current_selection_to_history_context_restore() -> None:
+@pytest.mark.parametrize("item_kind", ["STAGING", "WORKING_TREE"])
+def test_restore_all_documents_delegates_current_selection_to_history_context_restore(
+    item_kind: Literal["STAGING", "WORKING_TREE"],
+) -> None:
     """Restore-all button reuses context-restore path with current history selection."""
     _, _, _, presenter = _make_presenter()
-    selection = HistorySelection(item_kind="STAGING", commit_hash=None)
+    selection = HistorySelection(item_kind=item_kind, commit_hash=None)
     presenter._current_history_selection = selection
 
     with patch.object(presenter, "restore_all_from_history") as restore_all_from_history:
         presenter.restore_all_documents()
 
     restore_all_from_history.assert_called_once_with(selection)
+
+
+@pytest.mark.parametrize("succeeded", [False, True])
+def test_current_files_restore_all_refreshes_and_focuses_only_after_success(succeeded: bool) -> None:
+    """Bulk Current Files restore forwards selection and reloads working diffs after success."""
+    _, _, _, presenter = _make_presenter()
+    repo = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+    selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+    presenter._application_state.git_repository = repo
+    presenter._current_history_selection = selection
+    presenter._restore_handler = MagicMock()
+    presenter._restore_handler.restore_all.return_value = succeeded
+    focused: list[bool] = []
+    presenter._focus_history_window_callback = lambda: focused.append(True)
+
+    with patch.object(presenter, "_on_working_tree_selected") as refresh:
+        presenter.restore_all_documents()
+
+    presenter._restore_handler.restore_all.assert_called_once_with(repo, selection)
+    assert refresh.call_count == int(succeeded)
+    assert focused == ([True] if succeeded else [])
+
+
+def test_present_empty_current_files_keeps_restore_all_visible_disabled() -> None:
+    """Empty Current Files uses real summary mapping without hiding Restore All."""
+    document_view, _, _, presenter = _make_presenter()
+    presenter._current_history_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
+
+    presenter.present_diffs([])
+
+    button_states_call = next(call for call in document_view.get_calls() if call["method"] == "set_button_states")
+    assert button_states_call["state"] == SummaryButtonState(True, False, False, False, True, False, True)
 
 
 def test_restore_all_from_history_clears_property_diff_after_handler_call() -> None:

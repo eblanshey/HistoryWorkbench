@@ -30,8 +30,8 @@ def _action_buttons(widget: DocumentDiffRowWidget) -> list[QtWidgets.QToolButton
     return cast(list[QtWidgets.QToolButton], widget.findChildren(QtWidgets.QToolButton))
 
 
-def test_working_tree_selection_shows_restore_before_stage_button(application) -> None:  # type: ignore[no-untyped-def]
-    """Current Files Area rows restore from index before mark-reviewed action."""
+def test_working_tree_selection_shows_discard_before_stage_button(application) -> None:  # type: ignore[no-untyped-def]
+    """Working-tree rows discard edits before the staging action."""
     row = DocumentDiffRowWidget(
         _diff(stage_button_enabled=False),
         "parts/A.FCStd",
@@ -39,10 +39,13 @@ def test_working_tree_selection_shows_restore_before_stage_button(application) -
     )
 
     buttons = _action_buttons(row)
-    assert [button.accessibleName() for button in buttons] == ["Restore", "Mark this document as reviewed"]
-    assert buttons[0].toolTip() == "Replace this file with the last reviewed or saved version."
+    assert [button.accessibleName() for button in buttons] == ["Discard Changes", "Mark this document as reviewed"]
+    assert buttons[0].toolTip() == "Discard edits to this file and restore the last reviewed or saved version."
+    image = buttons[0].icon().pixmap(24, 24).toImage()
+    assert image.pixelColor(6, 6).alpha() > 0
+    assert image.pixelColor(6, 12).alpha() == 0
     restored: list[str] = []
-    row.restore_requested.connect(restored.append)
+    row.discard_requested.connect(restored.append)
     buttons[0].click()
     assert restored == ["parts/A.FCStd"]
     stage_button = row.stage_button
@@ -56,8 +59,8 @@ def test_working_tree_selection_shows_restore_before_stage_button(application) -
     assert stage_button.property("historyDarkTheme") is not None
 
 
-def test_staging_selection_shows_restore_and_remove(application) -> None:  # type: ignore[no-untyped-def]
-    """Reviewed Area rows show icon-based restore and remove actions."""
+def test_staging_selection_shows_only_remove(application) -> None:  # type: ignore[no-untyped-def]
+    """Reviewed Area rows offer only removal from review, leaving current files unchanged."""
     row = DocumentDiffRowWidget(
         _diff(),
         "parts/A.FCStd",
@@ -65,7 +68,7 @@ def test_staging_selection_shows_restore_and_remove(application) -> None:  # typ
     )
 
     action_buttons = _action_buttons(row)
-    assert [button.accessibleName() for button in action_buttons] == ["Restore", "Remove"]
+    assert [button.accessibleName() for button in action_buttons] == ["Remove"]
     assert all(button.text() == "" and not button.icon().isNull() for button in action_buttons)
     remove_button = row.remove_from_reviewed_button
     assert remove_button is not None
@@ -85,11 +88,15 @@ def test_commit_selection_shows_only_restore(application) -> None:  # type: igno
     assert action_buttons[0].text() == ""
     assert not action_buttons[0].icon().isNull()
     assert "Restore the selected file" in action_buttons[0].toolTip()
+    restored: list[str] = []
+    row.restore_requested.connect(restored.append)
+    action_buttons[0].click()
+    assert restored == ["parts/A.FCStd"]
     assert row.stage_button is None
     assert row.remove_from_reviewed_button is None
 
 
-def test_row_routes_stage_remove_restore_and_open_document(application) -> None:  # type: ignore[no-untyped-def]
+def test_reviewed_row_routes_remove_and_open_document(application) -> None:  # type: ignore[no-untyped-def]
     """Row signals route per-document actions through extracted child widgets."""
     captured: list[tuple[str, str]] = []
     row = DocumentDiffRowWidget(
@@ -106,7 +113,6 @@ def test_row_routes_stage_remove_restore_and_open_document(application) -> None:
 
     assert captured == [
         ("open", "parts/A.FCStd"),
-        ("restore", "parts/A.FCStd"),
         ("remove", "parts/A.FCStd"),
     ]
 

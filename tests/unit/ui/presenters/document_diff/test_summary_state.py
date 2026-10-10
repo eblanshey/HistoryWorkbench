@@ -60,17 +60,18 @@ def test_build_summary_button_state_for_working_tree(
         presentations,
     )
 
-    assert state == SummaryButtonState(True, stage_enabled, False, False, True, restore_enabled, True)
+    assert state == SummaryButtonState(True, stage_enabled, False, False, False, False, True, restore_enabled)
 
 
-def test_build_summary_button_state_for_staging() -> None:
-    """Staging shows remove-all and restore-all when rows exist."""
+@pytest.mark.parametrize("has_rows", [False, True])
+def test_build_summary_button_state_for_staging(has_rows: bool) -> None:
+    """Staging offers only remove-all, enabled when rows exist."""
     state = build_summary_button_state(
         HistorySelection(item_kind="STAGING", commit_hash=None),
-        [DiffTreePresentation(nodes=[], git_path="a.FCStd", indicators=[])],
+        [DiffTreePresentation(nodes=[], git_path="a.FCStd", indicators=[])] if has_rows else [],
     )
 
-    assert state == SummaryButtonState(False, False, True, True, True, True)
+    assert state == SummaryButtonState(False, False, True, has_rows, False, False)
 
 
 def test_build_summary_button_state_for_commit() -> None:

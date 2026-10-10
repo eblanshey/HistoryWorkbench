@@ -22,6 +22,8 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
     remove_all_requested = QtCore.Signal()
     restore_requested = QtCore.Signal(str)  # git_path
     restore_all_requested = QtCore.Signal()
+    discard_requested = QtCore.Signal(str)  # git_path
+    discard_all_requested = QtCore.Signal()
     remove_from_reviewed_requested = QtCore.Signal(str)  # git_path
     node_selection_requested = QtCore.Signal(str, str)  # git_path, node_path
     visual_diff_requested = QtCore.Signal(str, str)  # git_path, node_path
@@ -38,6 +40,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         self._summary_bar = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP, self)
         self._summary_bar.stage_all_requested.connect(self._on_stage_all_clicked)
         self._summary_bar.restore_all_requested.connect(self._on_restore_all_clicked)
+        self._summary_bar.discard_all_requested.connect(self.discard_all_requested.emit)
         self._summary_bar.remove_all_requested.connect(self._on_remove_all_clicked)
         self._tree = DocumentDiffTree(self)
         self._tree.node_selected.connect(self._on_tree_node_selected)
@@ -82,6 +85,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         container.stage_requested.connect(self.add_requested.emit)
         container.remove_from_reviewed_requested.connect(self.remove_from_reviewed_requested.emit)
         container.restore_requested.connect(self.restore_requested.emit)
+        container.discard_requested.connect(self.discard_requested.emit)
         container.open_document_requested.connect(self.open_document_for_comparison_requested.emit)
 
         if diff.git_path and container.stage_button is not None:

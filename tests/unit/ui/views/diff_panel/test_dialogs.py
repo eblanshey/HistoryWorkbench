@@ -113,8 +113,12 @@ def test_show_configure_author_dialog_disables_global_option_when_not_writable()
     )
 
 
-@pytest.mark.parametrize("use_index_wording", [False, True])
-def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(use_index_wording: bool) -> None:
+@pytest.mark.parametrize("discard_changes", [False, True])
+@pytest.mark.parametrize("git_path", ["file.FCStd", ""])
+@pytest.mark.parametrize("confirmed", [False, True])
+def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(
+    discard_changes: bool, git_path: str, confirmed: bool
+) -> None:
     """Restore confirmation helper returns True only for destructive button."""
     from freecad.history_wb.ui.views.diff_panel.dialogs import show_restore_file_confirmation_dialog
 
@@ -122,9 +126,12 @@ def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(u
 
     clicked_button = MagicMock()
     captured_text: list[str] = []
+    captured_titles: list[str] = []
+    expected_title = ("Discard Changes" if git_path else "Discard All Changes") if discard_changes else "Restore"
 
     def _fake_add_button(_self: QtWidgets.QMessageBox, text: str, _role: QtWidgets.QMessageBox.ButtonRole) -> object:
-        if text == "Restore":
+        if _role == QtWidgets.QMessageBox.ButtonRole.DestructiveRole:
+            assert text == expected_title
             return clicked_button
         return MagicMock()
 
@@ -134,21 +141,27 @@ def test_show_restore_file_confirmation_dialog_returns_true_for_restore_button(u
     with (
         patch.object(QtWidgets.QMessageBox, "addButton", new=_fake_add_button),
         patch.object(QtWidgets.QMessageBox, "setText", new=_capture_text),
+        patch.object(QtWidgets.QMessageBox, "setWindowTitle", new=lambda _self, title: captured_titles.append(title)),
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
-        patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=clicked_button),
+        patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=clicked_button if confirmed else None),
     ):
-        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "file.FCStd", use_index_wording) is True
+        assert show_restore_file_confirmation_dialog(QtWidgets.QWidget(), git_path, discard_changes) is confirmed
 
     assert len(captured_text) == 1
-    assert captured_text[0].startswith("file.FCStd\n\n")
-    expected_source = "last reviewed or saved version" if use_index_wording else "selected saved copies"
+    assert captured_titles == [expected_title]
+    if git_path:
+        assert captured_text[0].startswith("file.FCStd\n\n")
+    expected_source = "last reviewed or saved version" if discard_changes else "selected saved copies"
     assert expected_source in captured_text[0]
-    assert "Unsaved changes in open files will be lost" in captured_text[0]
+    assert "All eligible open project documents will be closed and reopened" in captured_text[0]
+    assert "even when only one file is selected" in captured_text[0]
+    assert "save ALL project documents to preserve unsaved changes" in captured_text[0]
+    assert "Selected target files will still be overwritten even if you save them first" in captured_text[0]
     assert "Saved history will not be affected" in captured_text[0]
 
 
-@pytest.mark.parametrize("use_index_wording", [False, True])
-def test_show_restore_file_confirmation_dialog_uses_bulk_source_warning(use_index_wording: bool) -> None:
+@pytest.mark.parametrize("discard_changes", [False, True])
+def test_show_restore_file_confirmation_dialog_uses_bulk_source_warning(discard_changes: bool) -> None:
     """Bulk restore confirmation identifies its source without a file-path prefix."""
     from freecad.history_wb.ui.views.diff_panel.dialogs import show_restore_file_confirmation_dialog
 
@@ -165,11 +178,11 @@ def test_show_restore_file_confirmation_dialog_uses_bulk_source_warning(use_inde
         patch.object(QtWidgets.QMessageBox, "exec", return_value=0),
         patch.object(QtWidgets.QMessageBox, "clickedButton", return_value=MagicMock()),
     ):
-        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "", use_index_wording)
+        show_restore_file_confirmation_dialog(QtWidgets.QWidget(), "", discard_changes)
 
     assert len(captured_text) == 1
-    if use_index_wording:
-        assert captured_text[0].startswith("This operation will restore all FreeCAD files")
+    if discard_changes:
+        assert captured_text[0].startswith("This operation will discard edits to all current FreeCAD files")
         assert "last reviewed or saved versions.\n\nCurrent files on disk" in captured_text[0]
         assert "overwritten or removed" in captured_text[0]
         assert "Files that have not been saved or reviewed will be kept" in captured_text[0]

@@ -43,7 +43,7 @@ class RestoreDocumentsRequest:
 
 @dataclass(frozen=True)
 class RestoreDocumentsSummary:
-    """Restore outcome metadata."""
+    """Restore outcome metadata; empty paths denote bulk index discard with no indexed files."""
 
     restored_paths: list[str]
     reopened_count: int
@@ -74,9 +74,19 @@ class RestoreDocumentsAction:
 
         commit_or_none = request.commit_hash if request.source == RestoreSource.COMMIT else None
         restore_paths = self._resolve_paths(request, commit_or_none)
+
+        # An empty index is a normal bulk-discard outcome, not a historical restore failure.
         if not restore_paths:
+            if request.source == RestoreSource.INDEX and request.scope == RestoreScope.ALL_FCSTD:
+                return Result.success(RestoreDocumentsSummary(restored_paths=[], reopened_count=0))
             return Result.failure("No files available to restore from selected source")
 
+        return self._restore_resolved_paths(request, commit_or_none, restore_paths)
+
+    def _restore_resolved_paths(
+        self, request: RestoreDocumentsRequest, commit_or_none: str | None, restore_paths: list[str]
+    ) -> Result:
+        """Restore resolved targets and recover the open project documents."""
         filter_error, filtered_paths = self._filter_existing_source_paths(
             request,
             commit_or_none,
@@ -108,7 +118,8 @@ class RestoreDocumentsAction:
         """Resolve concrete restore path set for selected restore scope.
 
         For single/listed scope, returns provided path list.
-        For all-FCStd scope, returns union of source FCStd paths and
+        For bulk index discard, returns indexed FCStd paths only.
+        For historical all-FCStd scope, returns union of source FCStd paths and
         current saved FCStd paths so source-missing historical files can
         be removed by git restore.
         """
@@ -116,6 +127,11 @@ class RestoreDocumentsAction:
             return list(request.paths or [])
 
         source_paths = set(self._git_service.get_all_fcstd_paths(request.repo, commit_or_none))
+
+        # Index discard must keep files without an indexed version untouched.
+        if request.source == RestoreSource.INDEX:
+            return sorted(source_paths)
+
         current_saved = set(self._git_service.get_current_saved_fcstd_paths(request.repo))
         return sorted(source_paths | current_saved)
 

@@ -13,8 +13,8 @@ from freecad.history_wb.application.actions.diffs.open_visual_diff import OpenVi
 from freecad.history_wb.application.actions.documents.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from freecad.history_wb.application.actions.documents.open_document import OpenDocumentAction
 from freecad.history_wb.application.actions.git_history.get_committed_file_paths import GetCommittedFilePathsAction
-from freecad.history_wb.application.actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
-from freecad.history_wb.application.actions.git_workflow.restore_documents import RestoreDocumentsAction
+from freecad.history_wb.application.actions.git_workflow.restore_documents import RestoreDocumentsAction, RestoreDocumentsSummary
+from freecad.history_wb.application.actions.git_workflow.restore_documents import RestoreScope, RestoreSource
 from freecad.history_wb.application.actions.git_workflow.stage_documents import StageDocumentsAction
 from freecad.history_wb.application.actions.git_workflow.unstage_documents import UnstageDocumentsAction
 from freecad.history_wb.application.actions.result_models import DiffIssues, DocumentDiffResult, Result
@@ -23,6 +23,7 @@ from freecad.history_wb.domain.git.models import GitRepository
 from freecad.history_wb.domain.snapshots.models import Snapshot
 from freecad.history_wb.ui.presenters.diff_presenter import DiffPresenter
 from freecad.history_wb.ui.presenters.document_diff.staging_handler import StagingDisplayState
+from freecad.history_wb.ui.presenters.document_diff.restore_handler import DocumentDiffRestoreHandler
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, PropertyPresentation
 from freecad.history_wb.ui.state import ApplicationState
 from freecad.history_wb.ui.views.document_diff.summary_state import SummaryButtonState, SummaryCounts
@@ -43,7 +44,6 @@ def _make_presenter() -> tuple[FakeDocumentDiffView, FakePropertyDiffView, FakeD
         create_document_diffs_action=MagicMock(spec=CreateDocumentDiffsAction),
         stage_documents_action=MagicMock(spec=StageDocumentsAction),
         unstage_documents_action=MagicMock(spec=UnstageDocumentsAction),
-        get_staged_file_paths_action=MagicMock(spec=GetStagedFilePathsAction),
         get_committed_file_paths_action=MagicMock(spec=GetCommittedFilePathsAction),
         open_visual_feature_diff_action=MagicMock(spec=OpenVisualDiffAction),
         open_document_action=MagicMock(spec=OpenDocumentAction),
@@ -252,13 +252,13 @@ def test_present_diffs_sorts_presentations_and_updates_summary_controls() -> Non
     assert summary_counts_call["counts"] == counts
 
 
-@pytest.mark.parametrize("item_kind", ["STAGING", "WORKING_TREE"])
+@pytest.mark.parametrize("item_kind", ["COMMIT", "WORKING_TREE"])
 def test_restore_all_documents_delegates_current_selection_to_history_context_restore(
-    item_kind: Literal["STAGING", "WORKING_TREE"],
+    item_kind: Literal["COMMIT", "WORKING_TREE"],
 ) -> None:
     """Restore-all button reuses context-restore path with current history selection."""
     _, _, _, presenter = _make_presenter()
-    selection = HistorySelection(item_kind=item_kind, commit_hash=None)
+    selection = HistorySelection(item_kind=item_kind, commit_hash="abc123" if item_kind == "COMMIT" else None)
     presenter._current_history_selection = selection
 
     with patch.object(presenter, "restore_all_from_history") as restore_all_from_history:
@@ -288,15 +288,74 @@ def test_current_files_restore_all_refreshes_and_focuses_only_after_success(succ
     assert focused == ([True] if succeeded else [])
 
 
-def test_present_empty_current_files_keeps_restore_all_visible_disabled() -> None:
-    """Empty Current Files uses real summary mapping without hiding Restore All."""
+@pytest.mark.parametrize("confirmed", [False, True])
+def test_context_discard_targets_index_and_preserves_selected_commit(confirmed: bool) -> None:
+    """Current Files context intent uses bulk index confirmation even with a commit selected."""
+    _, _, _, presenter = _make_presenter()
+    repo = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+    presenter._application_state.git_repository = repo
+    selection = HistorySelection("COMMIT", "abc123")
+    presenter.track_history_selection(selection)
+    restore = MagicMock(spec=RestoreDocumentsAction)
+    restore.execute.return_value = Result.success(RestoreDocumentsSummary(["doc.FCStd"], 0))
+    confirm = MagicMock(return_value=confirmed)
+    scope = MagicMock()
+    presenter._restore_handler = DocumentDiffRestoreHandler(
+        restore, MagicMock(), confirm, scope, MagicMock(), MagicMock()
+    )
+
+    presenter.discard_all_from_current_files()
+
+    confirm.assert_called_once_with("", True)
+    scope.assert_not_called()
+    assert restore.execute.call_count == int(confirmed)
+
+    # Confirmed discard must never use the selected commit as its restore source.
+    if confirmed:
+        request = restore.execute.call_args.args[0]
+        assert request.repo == repo
+        assert request.source == RestoreSource.INDEX
+        assert request.scope == RestoreScope.ALL_FCSTD
+        assert request.commit_hash is None
+
+    with patch.object(presenter, "restore_all_from_history") as subsequent_restore:
+        presenter.restore_all_documents()
+    subsequent_restore.assert_called_once_with(selection)
+
+
+@pytest.mark.parametrize("selection", [HistorySelection("WORKING_TREE", None), HistorySelection("COMMIT", "abc123")])
+def test_empty_index_context_discard_does_not_reload_or_focus(selection: HistorySelection) -> None:
+    """No-op discard preserves selection and avoids a post-operation full diff load."""
+    _, _, _, presenter = _make_presenter()
+    presenter._application_state.git_repository = GitRepository("repo", "/home/user/dir/repo")
+    presenter.track_history_selection(selection)
+    restore = MagicMock(spec=RestoreDocumentsAction)
+    restore.execute.return_value = Result.success(RestoreDocumentsSummary([], 0))
+    presenter._restore_handler = DocumentDiffRestoreHandler(
+        restore, MagicMock(), MagicMock(return_value=True), MagicMock(), MagicMock(), MagicMock()
+    )
+    focus = MagicMock()
+    presenter._focus_history_window_callback = focus
+
+    with patch.object(presenter._diff_loader, "load_working_tree") as load:
+        presenter.discard_all_from_current_files()
+
+    load.assert_not_called()
+    focus.assert_not_called()
+    with patch.object(presenter, "restore_all_from_history") as subsequent_restore:
+        presenter.restore_all_documents()
+    subsequent_restore.assert_called_once_with(selection)
+
+
+def test_present_empty_current_files_keeps_discard_all_visible_disabled() -> None:
+    """Empty Current Files uses real summary mapping without hiding Discard All."""
     document_view, _, _, presenter = _make_presenter()
     presenter._current_history_selection = HistorySelection(item_kind="WORKING_TREE", commit_hash=None)
 
     presenter.present_diffs([])
 
     button_states_call = next(call for call in document_view.get_calls() if call["method"] == "set_button_states")
-    assert button_states_call["state"] == SummaryButtonState(True, False, False, False, True, False, True)
+    assert button_states_call["state"] == SummaryButtonState(True, False, False, False, False, False, True, False)
 
 
 def test_restore_all_from_history_clears_property_diff_after_handler_call() -> None:
@@ -318,7 +377,7 @@ def test_restore_all_from_history_clears_property_diff_after_handler_call() -> N
 @pytest.mark.parametrize(
     "selection",
     [
-        HistorySelection(item_kind="STAGING", commit_hash=None),
+        HistorySelection(item_kind="WORKING_TREE", commit_hash=None),
         HistorySelection(item_kind="COMMIT", commit_hash="abc123"),
     ],
 )

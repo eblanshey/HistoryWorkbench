@@ -61,7 +61,7 @@ When a FreeCAD document is marked as Reviewed, a copy of the document is saved a
 
 "What's the point of that? I can just save an iteration whenever I want!" you may ask. The idea behind the Reviewed area is that it's used as an intentional, temporary "save" for something that you believe is a good change (e.g. a good savepoint.) From that point forward, when you continue making model changes, the changes displayed in the Current Files area are compared to the documents in the *Reviewed* area, if they exist (and if they don't, they're compared to the latest Iteration.) This allows you to review changes incrementally, rather than everything at once when you're ready to save an iteration. For all but the smallest changes, it's a huge time saver.
 
-Additionally, if you make a modeling mistake, you can restore the file as it was when you last reviewed it. You will be thankful for the peace of mind this provides!
+If you make a modeling mistake, use **Discard Changes** in the **Current Files Area** to recover the last reviewed or saved version. **Remove** in the **Reviewed Area** only removes a document from review; it does not change the current file. Restore controls belong to saved iterations.
 
 TODO
 ___

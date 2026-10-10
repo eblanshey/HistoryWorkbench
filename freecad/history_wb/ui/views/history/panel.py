@@ -26,6 +26,7 @@ class HistoryPanelWidget(QtWidgets.QWidget):
     remove_all_from_reviewed_requested = QtCore.Signal()
     mark_all_reviewed_from_in_progress_requested = QtCore.Signal()
     restore_all_from_history_context_requested = QtCore.Signal(HistorySelection)
+    discard_all_from_current_files_requested = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
@@ -107,6 +108,9 @@ class HistoryPanelWidget(QtWidgets.QWidget):
         )
         self._history_list.restore_all_from_history_context_requested.connect(
             self.restore_all_from_history_context_requested.emit
+        )
+        self._history_list.discard_all_from_current_files_requested.connect(
+            self.discard_all_from_current_files_requested.emit
         )
         self._repository_header.refresh_requested.connect(self._on_refresh_requested)
         self._repository_header.save_iteration_requested.connect(self._on_save_iteration_requested)

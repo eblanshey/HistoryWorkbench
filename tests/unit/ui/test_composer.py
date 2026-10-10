@@ -28,6 +28,7 @@ class _HistoryPanelMock:
         self.remove_all_from_reviewed_requested = _SignalMock()
         self.mark_all_reviewed_from_in_progress_requested = _SignalMock()
         self.restore_all_from_history_context_requested = _SignalMock()
+        self.discard_all_from_current_files_requested = _SignalMock()
 
 
 class _DocumentDiffPanelMock:
@@ -40,6 +41,8 @@ class _DocumentDiffPanelMock:
         self.remove_from_reviewed_requested = _SignalMock()
         self.restore_requested = _SignalMock()
         self.restore_all_requested = _SignalMock()
+        self.discard_requested = _SignalMock()
+        self.discard_all_requested = _SignalMock()
         self.node_selection_requested = _SignalMock()
         self.visual_diff_requested = _SignalMock()
         self.open_document_for_comparison_requested = _SignalMock()
@@ -207,7 +210,6 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         assert diff_kwargs["create_document_diffs_action"] is mock_container.create_document_diffs_action
         assert diff_kwargs["stage_documents_action"] is mock_container.stage_documents_action
         assert diff_kwargs["unstage_documents_action"] is mock_container.unstage_documents_action
-        assert diff_kwargs["get_staged_file_paths_action"] is mock_container.get_staged_file_paths_action
         assert diff_kwargs["get_committed_file_paths_action"] is mock_container.get_committed_file_paths_action
         assert diff_kwargs["open_visual_feature_diff_action"] is mock_container.open_visual_feature_diff_action
         assert diff_kwargs["open_document_action"] is mock_container.open_document_action
@@ -264,9 +266,18 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         mock_view.document_diff_panel.restore_all_requested.connect.assert_called_once_with(
             mock_diff_presenter.restore_all_documents
         )
+        mock_view.document_diff_panel.discard_requested.connect.assert_called_once_with(
+            mock_diff_presenter.restore_document
+        )
+        mock_view.document_diff_panel.discard_all_requested.connect.assert_called_once_with(
+            mock_diff_presenter.restore_all_documents
+        )
         mock_view.history_panel.restore_all_from_history_context_requested.connect.assert_called_once_with(
             mock_diff_presenter.restore_all_from_history
         )
+        discard_slot = mock_view.history_panel.discard_all_from_current_files_requested.connect.call_args.args[0]
+        discard_slot()
+        mock_diff_presenter.discard_all_from_current_files.assert_called_once_with()
         mock_view.document_diff_panel.open_document_for_comparison_requested.connect.assert_called_once_with(
             mock_diff_presenter.open_document_for_comparison
         )

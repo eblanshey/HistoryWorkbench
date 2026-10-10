@@ -54,7 +54,12 @@ def test_bulk_action_buttons_use_theme_aware_style(application) -> None:  # type
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
 
     assert widget._action_layout.spacing() == 4
-    for button in (widget._stage_all_button, widget._restore_all_button, widget._remove_all_button):
+    for button in (
+        widget._stage_all_button,
+        widget._restore_all_button,
+        widget._discard_all_button,
+        widget._remove_all_button,
+    ):
         assert button.property("historyDarkTheme") is not None
 
 
@@ -97,6 +102,10 @@ def test_remove_all_button_visibility_and_callback(application) -> None:  # type
     assert widget._remove_all_button.accessibleName() == "Remove All"
     assert "will not be saved in the next iteration" in widget._remove_all_button.toolTip()
     assert not widget._remove_all_button.isHidden()
+    assert widget._restore_all_button.isHidden()
+    assert not widget._restore_all_button.isEnabled()
+    assert widget._discard_all_button.isHidden()
+    assert widget._stage_all_button.isHidden()
     assert captured == ["remove"]
 
 
@@ -117,32 +126,43 @@ def test_restore_all_button_visibility_and_callback(application) -> None:  # typ
     assert captured == ["restore"]
 
 
-def test_restore_all_precedes_stage_all_in_bulk_action_layout(application) -> None:  # type: ignore[no-untyped-def]
-    """Current Files puts destructive restore before mark-reviewed action."""
+def test_discard_all_precedes_stage_all_in_bulk_action_layout(application) -> None:  # type: ignore[no-untyped-def]
+    """Working-tree controls put discard before staging."""
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
 
-    assert widget._action_layout.indexOf(widget._restore_all_button) < widget._action_layout.indexOf(
+    assert widget._action_layout.indexOf(widget._discard_all_button) < widget._action_layout.indexOf(
         widget._stage_all_button
     )
 
 
 @pytest.mark.parametrize("restore_enabled", [False, True])
-def test_restore_all_tooltip_tracks_source_when_switching_modes(application, restore_enabled: bool) -> None:  # type: ignore[no-untyped-def]
-    """Current Files explains index restore; other modes regain scope-picker tooltip."""
+def test_discard_all_controls_when_switching_modes(application, restore_enabled: bool) -> None:  # type: ignore[no-untyped-def]
+    """Discard controls retain distinct wording and dispatch across selection changes."""
     widget = DocumentDiffSummaryBar(REMOVE_REVIEWED_TOOLTIP)
     history_state = SummaryButtonState(False, False, False, False, True, True)
     widget.set_button_states(history_state)
     history_tooltip = widget._restore_all_button.toolTip()
 
     widget.set_button_states(
-        SummaryButtonState(True, False, False, False, True, restore_enabled, restore_all_from_index=True)
+        SummaryButtonState(True, False, False, False, False, False, True, restore_enabled)
     )
 
-    assert not widget._restore_all_button.isHidden()
-    assert widget._restore_all_button.isEnabled() is restore_enabled
-    assert widget._restore_all_button.toolTip() == "Replace all files with their last reviewed or saved versions."
+    button = widget.findChild(QtWidgets.QToolButton, "documentDiffDiscardAllButton")
+    assert button is not None
+    assert not button.isHidden()
+    assert button.isEnabled() is restore_enabled
+    assert button.accessibleName() == "Discard All Changes"
+    assert button.toolTip() == "Discard edits to all current files and restore their last reviewed or saved versions."
+    image = button.icon().pixmap(24, 24).toImage()
+    assert image.pixelColor(6, 6).alpha() > 0
+    assert image.pixelColor(6, 12).alpha() == 0
+    captured: list[str] = []
+    widget.discard_all_requested.connect(lambda: captured.append("discard"))
+    button.click()
+    assert captured == (["discard"] if restore_enabled else [])
 
     widget.set_button_states(history_state)
 
     assert widget._restore_all_button.toolTip() == history_tooltip
     assert "Choose which files to restore" in history_tooltip
+    assert button.isHidden()

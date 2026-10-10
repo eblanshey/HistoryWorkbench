@@ -135,21 +135,27 @@ def show_configure_author_dialog(
     )
 
 
-def show_restore_file_confirmation_dialog(parent: QtWidgets.QWidget, git_path: str, use_index_wording: bool) -> bool:
-    """Show destructive confirmation dialog for restore actions."""
+def show_restore_file_confirmation_dialog(parent: QtWidgets.QWidget, git_path: str, discard_changes: bool) -> bool:
+    """Confirm historical restore or working-tree discard intent."""
 
     title = translate("History", "Restore")
-    if use_index_wording and not git_path:
+
+    # Discard has separate single-file and bulk destructive labels.
+    if discard_changes and not git_path:
+        title = translate("History", "Discard All Changes")
         message = translate(
             "History",
-            "This operation will restore all FreeCAD files from their last reviewed or saved versions.\n\n"
+            "This operation will discard edits to all current FreeCAD files "
+            "and restore their last reviewed or saved versions.\n\n"
             "Current files on disk can be overwritten or removed.\n"
             "Files that have not been saved or reviewed will be kept.",
         )
-    elif use_index_wording:
+    elif discard_changes:
+        title = translate("History", "Discard Changes")
         message = translate(
             "History",
-            "This operation will overwrite the current file on disk with the last reviewed or saved version.",
+            "This operation will discard edits to this file "
+            "and overwrite it on disk with the last reviewed or saved version.",
         )
     else:
         message = translate(
@@ -158,8 +164,11 @@ def show_restore_file_confirmation_dialog(parent: QtWidgets.QWidget, git_path: s
         )
     message += "\n\n" + translate(
         "History",
-        "All open FreeCAD documents will be closed and reopened to ensure links are updated.\n\n"
-        "Unsaved changes in open files will be lost. Before proceeding, save any documents that will not be restored."
+        "All eligible open project documents will be closed and reopened to update links, "
+        "even when only one file is selected.\n\n"
+        "Unsaved changes in those documents will be lost. "
+        "Before proceeding, save ALL project documents to preserve unsaved changes.\n"
+        "Selected target files will still be overwritten even if you save them first."
         "\n\nSaved history will not be affected.",
     )
 
@@ -167,7 +176,7 @@ def show_restore_file_confirmation_dialog(parent: QtWidgets.QWidget, git_path: s
     if git_path:
         message = f"{git_path}\n\n{message}"
 
-    restore_button_text = translate("History", "Restore")
+    restore_button_text = title
     cancel_button_text = translate("History", "Cancel")
     dialog = QtWidgets.QMessageBox(parent)
     dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)

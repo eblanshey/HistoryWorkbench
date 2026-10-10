@@ -18,6 +18,7 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
 
     stage_all_requested = QtCore.Signal()
     restore_all_requested = QtCore.Signal()
+    discard_all_requested = QtCore.Signal()
     remove_all_requested = QtCore.Signal()
 
     def __init__(self, remove_reviewed_tooltip: str, parent: QtWidgets.QWidget | None = None) -> None:
@@ -82,6 +83,19 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._restore_all_button.hide()
         self._restore_all_button.clicked.connect(self.restore_all_requested.emit)
         self._action_layout.addWidget(self._restore_all_button)
+        self._discard_all_button = make_row_action_button(
+            icon_name="Discard.svg",
+            tooltip=translate(
+                "History", "Discard edits to all current files and restore their last reviewed or saved versions."
+            ),
+            accessible_name=translate("History", "Discard All Changes"),
+            width=SUMMARY_ACTION_BUTTON_WIDTH,
+            parent=self,
+        )
+        self._discard_all_button.setObjectName("documentDiffDiscardAllButton")
+        self._discard_all_button.hide()
+        self._discard_all_button.clicked.connect(self.discard_all_requested.emit)
+        self._action_layout.addWidget(self._discard_all_button)
         self._action_layout.addWidget(self._stage_all_button)
 
         self._remove_all_button = make_row_action_button(
@@ -133,16 +147,5 @@ class DocumentDiffSummaryBar(QtWidgets.QWidget):
         self._remove_all_button.setEnabled(state.remove_all_enabled)
         self._restore_all_button.setVisible(state.restore_all_visible)
         self._restore_all_button.setEnabled(state.restore_all_enabled)
-        if state.restore_all_from_index:
-            self._restore_all_button.setToolTip(
-                translate("History", "Replace all files with their last reviewed or saved versions.")
-            )
-        else:
-            self._restore_all_button.setToolTip(
-                translate(
-                    "History",
-                    "Choose which files to restore from the selected iteration.\n"
-                    "Current files on disk can be overwritten or removed.\n"
-                    "Saved history will not be affected.",
-                )
-            )
+        self._discard_all_button.setVisible(state.discard_all_visible)
+        self._discard_all_button.setEnabled(state.discard_all_enabled)

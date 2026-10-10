@@ -48,6 +48,7 @@ def bind_history_events(
         (history_panel.remove_all_from_reviewed_requested, diff_presenter.remove_all_from_reviewed),
         (history_panel.mark_all_reviewed_from_in_progress_requested, diff_presenter.stage_all_documents),
         (history_panel.restore_all_from_history_context_requested, diff_presenter.restore_all_from_history),
+        (history_panel.discard_all_from_current_files_requested, diff_presenter.discard_all_from_current_files),
     ]
 
     _bind_signal_pairs(signal_bindings)
@@ -64,6 +65,8 @@ def bind_document_diff_events(view: HistoryPanelView, diff_presenter: DiffPresen
         (document_diff_panel.remove_from_reviewed_requested, diff_presenter.remove_document_from_reviewed),
         (document_diff_panel.restore_requested, diff_presenter.restore_document),
         (document_diff_panel.restore_all_requested, diff_presenter.restore_all_documents),
+        (document_diff_panel.discard_requested, diff_presenter.restore_document),
+        (document_diff_panel.discard_all_requested, diff_presenter.restore_all_documents),
         (document_diff_panel.node_selection_requested, diff_presenter.select_node),
         (document_diff_panel.visual_diff_requested, diff_presenter.open_visual_diff),
         (document_diff_panel.open_document_for_comparison_requested, diff_presenter.open_document_for_comparison),

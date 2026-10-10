@@ -6,6 +6,7 @@ import pytest
 
 from freecad.history_wb.domain.diff.models import DiffState
 from freecad.history_wb.qt import QtWidgets
+from freecad.history_wb.ui.presenters.document_diff.summary_state import build_summary_button_state
 from freecad.history_wb.ui.presenters.presentation_models import DiffTreePresentation, NodePresentation
 from freecad.history_wb.ui.views.history.models import HistorySelection
 
@@ -186,3 +187,24 @@ def test_set_stage_button_enabled_updates_button(panel) -> None:  # type: ignore
     panel.set_stage_button_enabled("parts/A.FCStd", False)
 
     assert not stage_button.isEnabled()
+
+
+@pytest.mark.parametrize("state", [DiffState.ADDED, DiffState.MODIFIED, DiffState.DELETED])
+def test_discard_actions_forward_working_tree_intent(panel, state: DiffState) -> None:  # type: ignore[no-untyped-def]
+    """Facade forwards eligible discard actions and protects newly added files."""
+    selection = HistorySelection("WORKING_TREE", None)
+    presentations = [_diff(state=state)]
+    panel.set_current_history_selection(selection)
+    panel.show_doc_diffs(presentations)
+    panel.set_button_states(build_summary_button_state(selection, presentations))
+    captured: list[str] = []
+    panel.discard_requested.connect(captured.append)
+    panel.discard_all_requested.connect(lambda: captured.append("all"))
+    row_button = _first_document_row_button(panel, "Discard Changes")
+    bulk_button = panel.findChild(QtWidgets.QToolButton, "documentDiffDiscardAllButton")
+    assert bulk_button is not None
+
+    row_button.click()
+    bulk_button.click()
+
+    assert captured == ([] if state == DiffState.ADDED else ["parts/A.FCStd", "all"])

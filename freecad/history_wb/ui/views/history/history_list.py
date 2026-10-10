@@ -21,6 +21,7 @@ class HistoryList(QtWidgets.QListWidget):
     remove_all_from_reviewed_requested = QtCore.Signal()
     mark_all_reviewed_from_in_progress_requested = QtCore.Signal()
     restore_all_from_history_context_requested = QtCore.Signal(HistorySelection)
+    discard_all_from_current_files_requested = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
@@ -102,7 +103,7 @@ class HistoryList(QtWidgets.QListWidget):
             return
 
         if self._is_staging_selection(item_data):
-            self._show_reviewed_context_menu(pos, item_data)
+            self._show_reviewed_context_menu(pos)
             return
 
         if item_data.item_kind == "COMMIT" and item_data.commit_hash:
@@ -135,16 +136,25 @@ class HistoryList(QtWidgets.QListWidget):
         return selection.item_kind == "STAGING" and selection.commit_hash is None
 
     def _show_working_tree_context_menu(self, pos: QtCore.QPoint) -> None:
-        """Show Current Files Area bulk-review context action."""
+        """Show always-available Current Files bulk actions without querying file state."""
         menu = QtWidgets.QMenu(self)
         menu.setToolTipsVisible(True)
-        action = menu.addAction(translate("History", "Mark All Files Reviewed"))
+        review_all_action = menu.addAction(translate("History", "Mark All Files Reviewed"))
+        discard_action = menu.addAction(translate("History", "Discard All Changes"))
+        tooltip = translate(
+            "History", "Discard edits to all current files and restore their last reviewed or saved versions."
+        )
+        discard_action.setToolTip(tooltip)
+        discard_action.setStatusTip(tooltip)
         selected_action = menu.exec(self.mapToGlobal(pos))
 
-        if selected_action == action:
+        if selected_action == review_all_action:
             self.mark_all_reviewed_from_in_progress_requested.emit()
 
-    def _show_reviewed_context_menu(self, pos: QtCore.QPoint, selection: HistorySelection) -> None:
+        if selected_action == discard_action:
+            self.discard_all_from_current_files_requested.emit()
+
+    def _show_reviewed_context_menu(self, pos: QtCore.QPoint) -> None:
         """Show Reviewed Area context menu actions."""
         tooltip = translate(
             "History",
@@ -154,13 +164,9 @@ class HistoryList(QtWidgets.QListWidget):
         menu = QtWidgets.QMenu(self)
         menu.setToolTipsVisible(True)
         action = menu.addAction(translate("History", "Remove All Files From Reviewed"))
-        restore_action = menu.addAction(translate("History", "Restore All Reviewed Files"))
         action.setToolTip(tooltip)
         action.setStatusTip(tooltip)
         selected_action = menu.exec(self.mapToGlobal(pos))
-
-        if selected_action == restore_action:
-            self.restore_all_from_history_context_requested.emit(selection)
 
         if selected_action == action:
             self.remove_all_from_reviewed_requested.emit()

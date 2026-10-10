@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
+from freecad.history_wb.ui.presenters.diff_presenter import DiffPresenter
+from freecad.history_wb.ui.wiring import bind_history_events
 from freecad.history_wb.ui.views.history.history_row import create_commit_history_item, create_special_history_item
 from freecad.history_wb.ui.views.history.models import HistorySelection
 
@@ -77,6 +81,7 @@ def test_reviewed_context_menu_emits_remove_all_signal(history_list_widget) -> N
     assert fake_menu.created is True
     assert fake_menu.exec_called is True
     assert called["count"] == 1
+    assert fake_menu.action_texts == ["Remove All Files From Reviewed"]
 
 
 def test_commit_context_menu_emits_restore_signal(history_list_widget) -> None:  # type: ignore[no-untyped-def]
@@ -96,6 +101,7 @@ def test_commit_context_menu_emits_restore_signal(history_list_widget) -> None: 
     assert fake_menu.created is True
     assert fake_menu.exec_called is True
     assert received == [commit_selection]
+    assert fake_menu.action_texts == ["Restore All Files From Iteration", "Copy Iteration ID to Clipboard"]
 
 
 def test_commit_context_menu_copies_iteration_id_to_clipboard(history_list_widget) -> None:  # type: ignore[no-untyped-def]
@@ -141,6 +147,49 @@ def test_working_tree_context_menu_emits_mark_all_reviewed_signal(history_list_w
     assert fake_menu.created is True
     assert fake_menu.exec_called is True
     assert called["count"] == 1
+
+
+@pytest.mark.parametrize("action_index", [1, -1])
+def test_current_files_context_discard_preserves_commit_selection(
+    history_panel_widget, history_list_widget, action_index: int
+) -> None:  # type: ignore[no-untyped-def]
+    """Discard is always enabled and preserves the selected commit, including menu dismissal."""
+    history_panel_widget.show_commits([make_commit()])
+    history_list_widget.setCurrentRow(2)
+    selected_item = history_list_widget.currentItem()
+    requested: list[bool] = []
+    selection_changes: list[object] = []
+    history_panel_widget.discard_all_from_current_files_requested.connect(lambda: requested.append(True))
+    history_panel_widget.history_selection_changed.connect(selection_changes.append)
+    fake_menu = build_fake_menu_class(select_action_index=action_index)
+    pos = history_list_widget.visualItemRect(history_list_widget.item(0)).center()
+
+    with patch("freecad.history_wb.ui.views.history.history_list.QtWidgets.QMenu", fake_menu):
+        history_list_widget._on_context_menu_requested(pos)
+
+    assert fake_menu.action_texts == ["Mark All Files Reviewed", "Discard All Changes"]
+    assert fake_menu.actions[1].enabled is True
+    assert requested == ([True] if action_index == 1 else [])
+    assert history_list_widget.currentItem() is selected_item
+    assert selection_changes == []
+
+
+def test_opening_current_files_menu_does_not_request_presenter_work(history_panel_widget, history_list_widget) -> None:  # type: ignore[no-untyped-def]
+    """Wired menu opening does not load diffs or query availability before an action is chosen."""
+    presenter = MagicMock(spec=DiffPresenter)
+    view = MagicMock()
+    view.history_panel = history_panel_widget
+    bind_history_events(view, presenter, MagicMock())
+    history_panel_widget.show_commits([])
+    presenter.reset_mock()
+    fake_menu = build_fake_menu_class(select_action_index=-1)
+    pos = history_list_widget.visualItemRect(history_list_widget.item(0)).center()
+
+    with patch("freecad.history_wb.ui.views.history.history_list.QtWidgets.QMenu", fake_menu):
+        history_list_widget._on_context_menu_requested(pos)
+
+    assert fake_menu.actions[1].enabled is True
+    assert presenter.mock_calls == []
 
 
 def test_scroll_bottom_callback_fires_near_bottom_once_until_rearmed(history_list_widget) -> None:  # type: ignore[no-untyped-def]

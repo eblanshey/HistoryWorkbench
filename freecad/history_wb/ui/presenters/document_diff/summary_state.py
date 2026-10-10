@@ -29,9 +29,10 @@ def build_summary_button_state(
             stage_all_enabled=any_stagable,
             remove_all_visible=False,
             remove_all_enabled=False,
-            restore_all_visible=True,
-            restore_all_enabled=any_restorable,
-            restore_all_from_index=True,
+            restore_all_visible=False,
+            restore_all_enabled=False,
+            discard_all_visible=True,
+            discard_all_enabled=any_restorable,
         )
 
     if current_selection.item_kind == "STAGING":
@@ -41,8 +42,8 @@ def build_summary_button_state(
             stage_all_enabled=False,
             remove_all_visible=True,
             remove_all_enabled=has_rows,
-            restore_all_visible=True,
-            restore_all_enabled=has_rows,
+            restore_all_visible=False,
+            restore_all_enabled=False,
         )
 
     if current_selection.item_kind == "COMMIT":

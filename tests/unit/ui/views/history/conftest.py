@@ -58,6 +58,13 @@ def history_row_text(list_widget, row: int) -> str:  # type: ignore[no-untyped-d
 class FakeMenuAction:
     """Reusable fake QMenu action for context-menu tests."""
 
+    def __init__(self) -> None:
+        self.enabled = True
+
+    def setEnabled(self, enabled: bool) -> None:
+        """Track whether the action can be selected."""
+        self.enabled = enabled
+
     def setToolTip(self, _value: str) -> None:
         """Ignore tooltip assignment in fake action."""
         return
@@ -76,6 +83,8 @@ def build_fake_menu_class(select_action_index: int = 0) -> type:
     class _FakeMenu:
         created = False
         exec_called = False
+        action_texts: list[str] = []
+        actions: list[FakeMenuAction] = []
 
         def __init__(self, *_args, **_kwargs) -> None:
             _FakeMenu.created = True
@@ -87,13 +96,18 @@ def build_fake_menu_class(select_action_index: int = 0) -> type:
 
         def addAction(self, _text: str) -> FakeMenuAction:
             """Return tracked fake action."""
+            _FakeMenu.action_texts.append(_text)
             action = FakeMenuAction()
             self._actions.append(action)
+            _FakeMenu.actions.append(action)
             return action
 
-        def exec(self, *_args, **_kwargs) -> FakeMenuAction:
+        def exec(self, *_args, **_kwargs) -> FakeMenuAction | None:
             """Record menu execution and return the selected action."""
             _FakeMenu.exec_called = True
-            return self._actions[select_action_index] if self._actions else FakeMenuAction()
+            # Dismissal and disabled actions cannot emit an intent.
+            if select_action_index < 0 or not self._actions[select_action_index].enabled:
+                return None
+            return self._actions[select_action_index]
 
     return _FakeMenu

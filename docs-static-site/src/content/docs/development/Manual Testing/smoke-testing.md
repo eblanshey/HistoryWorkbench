@@ -50,23 +50,21 @@ description: Checklist for project detection, iteration operations, settings, an
 - Diff row colors, hover, and selection remain visible with OpenTheme enabled
 - Existing diff rows update after switching between light and dark themes
 - Each document and node label renders once with OpenTheme enabled
-- Right-click Current Files Area: mark all reviewed
-- Each Current Files document row shows Restore to the left of Plus, restores the indexed version, reopens documents, and refreshes working-tree diffs; Reviewed contents and saved history stay unchanged
-- Restore All from Current Files: restore all indexed FreeCAD files, reopen documents, and refresh diffs; index and saved history stay unchanged
+- Right-click Current Files Area: Mark All Files Reviewed works
+- Right-click Current Files Area: Discard All Changes works
 
 ## Reviewed Area (Staging) View
 
 - Select Reviewed Area row to show staged diffs
 - Display staged document diff tree
-- Right-click Reviewed Area: restore reviewed files
 - Right-click Reviewed Area: remove all from Reviewed
 
 ## Document Staging
 
 - Stage single document: plus icon button per document row with tooltip
 - Stage all documents: plus icon button in summary bar with tooltip
-- Remove single document from Reviewed: minus icon button per document row with removal tooltip
-- Remove all from Reviewed: minus icon button in summary bar with removal tooltip
+- Remove single document from Reviewed: minus icon button per document row with removal tooltip; unstage document and snapshot without changing current files
+- Remove all from Reviewed: minus icon button in summary bar with removal tooltip; unstage documents and snapshots without changing current files
 - Stage button disabled for non-stageable documents
 - Stage deleted documents
 
@@ -88,9 +86,8 @@ description: Checklist for project detection, iteration operations, settings, an
 
 ## Restore from History
 
-- Restore single document from Reviewed: confirmation dialog with destructive warning
+- Current files area: discard single file and discard all works
 - Restore single document from commit: confirmation dialog with destructive warning
-- Restore all from Reviewed: restore icon button opens scope selection dialog (listed FreeCAD files vs all FreeCAD files)
 - Restore all from commit: restore icon button opens scope selection dialog (listed FreeCAD files vs all FreeCAD files)
 - Restore confirmation: cancel aborts operation
 - Restore all: confirmation dialog after scope selection

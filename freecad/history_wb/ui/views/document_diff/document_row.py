@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import partial
 
+from ....domain.diff.models import DiffState
 from ....qt import QtCore, QtGui, QtWidgets
 from ....resources import get_icon_path
 from ....utils import translate
@@ -31,6 +32,7 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
     stage_requested = QtCore.Signal(str)  # git_path
     remove_from_reviewed_requested = QtCore.Signal(str)  # git_path
     restore_requested = QtCore.Signal(str)  # git_path
+    discard_requested = QtCore.Signal(str)  # git_path
     open_document_requested = QtCore.Signal(str)  # git_path
 
     def __init__(
@@ -75,8 +77,10 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         status_widget.open_document_requested.connect(self.open_document_requested.emit)
         self.add_trailing_widget(status_widget)
 
-        # Restore precedes review controls for each supported history source.
-        if self._is_working_tree_selected() or self._is_staging_selected() or self._is_commit_selected():
+        # Working-tree edits use discard intent; only saved iterations offer restore.
+        if self._is_working_tree_selected():
+            self._add_discard_button()
+        elif self._is_commit_selected():
             self._add_restore_button()
 
         # Only working tree rows can be marked reviewed.
@@ -126,16 +130,13 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
 
     def _add_restore_button(self) -> None:
         """Add restore button with source-specific explanation."""
-        if self._is_working_tree_selected():
-            tooltip = translate("History", "Replace this file with the last reviewed or saved version.")
-        else:
-            tooltip = translate(
-                "History",
-                "Restore the selected file.\n"
-                "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
-                "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
-                "Saved history will not be affected.",
-            ).replace("%1", self._top_level_text)
+        tooltip = translate(
+            "History",
+            "Restore the selected file.\n"
+            "This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.\n"
+            "THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.\n"
+            "Saved history will not be affected.",
+        ).replace("%1", self._top_level_text)
         restore_button = make_row_action_button(
             icon_name="Restore.svg",
             tooltip=tooltip,
@@ -145,3 +146,18 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
             parent=self,
         )
         self.add_trailing_widget(restore_button)
+
+    def _add_discard_button(self) -> None:
+        """Discard working-tree edits without changing the index."""
+        button = make_row_action_button(
+            icon_name="Discard.svg",
+            tooltip=translate("History", "Discard edits to this file and restore the last reviewed or saved version."),
+            accessible_name=translate("History", "Discard Changes"),
+            width=ROW_ACTION_BUTTON_WIDTH,
+            on_clicked=partial(self.discard_requested.emit, self._diff.git_path),
+            parent=self,
+        )
+
+        # New working-tree files have no indexed version to recover.
+        button.setEnabled(self._diff.document_state != DiffState.ADDED)
+        self.add_trailing_widget(button)

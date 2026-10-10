@@ -16,7 +16,6 @@ from ...application.actions.diffs.open_visual_diff import OpenVisualDiffAction
 from ...application.actions.documents.get_open_eligible_documents import GetOpenEligibleDocumentsAction
 from ...application.actions.documents.open_document import OpenDocumentAction
 from ...application.actions.git_history.get_committed_file_paths import GetCommittedFilePathsAction
-from ...application.actions.git_history.get_staged_file_paths import GetStagedFilePathsAction
 from ...application.actions.git_workflow.restore_documents import RestoreDocumentsAction
 from ...application.actions.git_workflow.stage_documents import StageDocumentsAction
 from ...application.actions.git_workflow.unstage_documents import UnstageDocumentsAction
@@ -66,7 +65,6 @@ class DiffPresenter:
         create_document_diffs_action: CreateDocumentDiffsAction,
         stage_documents_action: StageDocumentsAction,
         unstage_documents_action: UnstageDocumentsAction,
-        get_staged_file_paths_action: GetStagedFilePathsAction,
         get_committed_file_paths_action: GetCommittedFilePathsAction,
         open_visual_feature_diff_action: OpenVisualDiffAction,
         open_document_action: OpenDocumentAction,
@@ -105,7 +103,6 @@ class DiffPresenter:
         self._restore_handler = DocumentDiffRestoreHandler(
             restore_documents_action,
             get_committed_file_paths_action,
-            get_staged_file_paths_action,
             self._dialog_view.show_restore_file_confirmation_dialog,
             self._dialog_view.show_restore_scope_dialog,
             self._dialog_view.show_info_message,
@@ -305,9 +302,6 @@ class DiffPresenter:
         if current is None or repo is None:
             return
 
-        if current.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
-            return
-
         restore_success = self._restore_handler.restore_document(repo, current, git_path)
         self._property_view.clear_property_diff()
 
@@ -321,6 +315,10 @@ class DiffPresenter:
         ):
             self._on_working_tree_selected()
 
+    def discard_all_from_current_files(self) -> None:
+        """Discard from index regardless of selected history row, preserving selection."""
+        self.restore_all_from_history(HistorySelection(item_kind="WORKING_TREE", commit_hash=None))
+
     def restore_all_documents(self) -> None:
         """Restore files from index or selected commit."""
         current = self._current_history_selection
@@ -333,9 +331,6 @@ class DiffPresenter:
         repo = self._application_state.git_repository
 
         if repo is None:
-            return
-
-        if selection.item_kind not in ("WORKING_TREE", "STAGING", "COMMIT"):
             return
 
         restore_success = self._restore_handler.restore_all(repo, selection)

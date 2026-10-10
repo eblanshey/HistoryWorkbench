@@ -18,11 +18,21 @@ Use History Workbench as a review loop after normal CAD work.
 > [!NOTE]
 > Tree comparisons focus on structured FreeCAD object and property data, but may not capture every CAD model change yet. Use 3D comparisons as an additional review step before saving an iteration.
 
-## Restoring Files from Reviewed or Saved Iterations
+## Removing Files from Reviewed
+
+Select **Reviewed Area** and use **Remove** for one document or **Remove All** for every reviewed document. Current files on disk are not affected by this operation. The files removed will not be included in the next iteration until reviewed again.
+
+## Discarding Current File Changes
+
+Select **Current Files Area** and use **Discard Changes** for one document or **Discard All Changes** for all indexed FreeCAD files. The file on disk will be replaced with the version that was last reviewed, if one is available; otherwise it will use the version of the file from the last saved iteration.
+
+During this operation, all eligible open project documents are closed and reopened, including documents not selected for discard. This ensures links are updated. **Save all project documents first** prior to discarding any files.
+
+## Restoring Files from Saved Iterations
 
 Use restore when you want to bring one file, or many files, back to a prior saved state on disk.
 
-1. Select **Reviewed** or a specific saved iteration in the history list.
+1. Select a specific saved iteration in the history list.
 2. Restore one file with the per-file **Restore** button, or restore many files with **Restore All**.
 3. For **Restore All**, choose a scope:
    - **Listed FreeCAD files:** Restore only the FreeCAD files changed in the selected iteration.
@@ -37,4 +47,4 @@ Restore behavior:
 - New FreeCAD files not yet saved in history are left unchanged during **All FreeCAD files** restore.
 
 > [!WARNING]
-> **The file restore process closes (without saving) ALL open FreeCAD files, including those not selected for restoration!** This is because any links to the restored files, such as subshape binders, expressions, etc, are not updated if the files are open, and may cause unintended consequences. Closing all files is a safety precaution, but it is imperative that you save your work first.
+> **Once again, restoring and discarding changes closes all eligible open project documents, including those not selected for replacement. Make sure to save all your documents first!**

@@ -38,10 +38,10 @@ def test_history_click_updates_document_row_buttons_on_first_click() -> None:
     )
 
     history_panel._history_list.itemClicked.emit(history_panel._history_list.item(1))
-    assert _document_row_button_accessible_names(document_tree) == ["Restore", "Remove"]
+    assert _document_row_button_accessible_names(document_tree) == ["Remove"]
 
     history_panel._history_list.itemClicked.emit(history_panel._history_list.item(0))
-    assert _document_row_button_accessible_names(document_tree) == ["Restore", "Mark this document as reviewed"]
+    assert _document_row_button_accessible_names(document_tree) == ["Discard Changes", "Mark this document as reviewed"]
 
 
 def _sample_diff_tree() -> DiffTreePresentation:

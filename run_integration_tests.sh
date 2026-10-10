@@ -43,8 +43,8 @@ export PYTHONPATH="$PROJECT_ROOT:$SITE_PACKAGES:$FREECAD_LIB:${PYTHONPATH:-}"
 export QT_QPA_PLATFORM=offscreen
 
 # Isolate from user-installed FreeCAD workbenches to avoid stale module imports
-FREECAD_TEST_HOME="/tmp/kilo/freecad_test_home"
-mkdir -p "$FREECAD_TEST_HOME"
+FREECAD_TEST_HOME="$(mktemp -d "${TMPDIR:-/tmp}/history-wb-tests.XXXXXX")"
+trap 'rm -rf -- "$FREECAD_TEST_HOME"' EXIT
 export FREECAD_USER_HOME="$FREECAD_TEST_HOME"
 
 # Run pytest with FreeCAD's Python
@@ -53,4 +53,4 @@ echo "Python: $FREECAD_PYTHON"
 echo "FREECAD_ROOT: $FREECAD_ROOT"
 echo ""
 
-exec "$FREECAD_PYTHON" -m pytest "$PROJECT_ROOT/tests/integration" "$@"
+"$FREECAD_PYTHON" -m pytest "$PROJECT_ROOT/tests/integration" "$@"

@@ -1,10 +1,14 @@
 # File responsibility: Pure property-diff to property-presentation mapping.
 """Pure property-diff to property-presentation mapping helpers."""
 
+import re
+from dataclasses import replace
 from typing import Any
 
 from ....domain.diff.models import DiffState, NodeDiff, PropertyDiff, PropertyPathDiff
 from ....domain.tree import Property
+from ....domain.tree.data_path import PropertyPathType, PropertyPathValue
+from ....utils import format_float
 from ..presentation_models import PropertyPresentation
 from .path_tree import (
     _collect_leaf_values,
@@ -22,8 +26,71 @@ def transform_property_diffs(node_diff: NodeDiff, precision: int) -> list[Proper
     presentations: list[PropertyPresentation] = []
     for prop_diff in node_diff.property_diffs:
         group = _extract_property_group(prop_diff.new_value if prop_diff.new_value is not None else prop_diff.old_value)
-        presentations.append(_build_property_presentation(prop_diff, precision, group))
+        presentation = _build_property_presentation(prop_diff, precision, group)
+
+        if node_diff.type_id == "Spreadsheet::Sheet":
+            presentation = modify_spreadsheet_presentation(presentation, prop_diff, precision)
+
+        presentations.append(presentation)
     return presentations
+
+
+def modify_spreadsheet_presentation(
+    presentation: PropertyPresentation, prop_diff: PropertyDiff, precision: int
+) -> PropertyPresentation:
+    """Remove redundant cell expression rows without changing stored source input."""
+
+    # If spreadsheet cell values and contents (stored as expressions) are the same, don't show redundant contents
+    if _is_redundant_cell_input(prop_diff, precision):
+        return replace(presentation, children=[child for child in presentation.children if child.name != "Expression"])
+
+    return presentation
+
+
+def _is_redundant_cell_input(prop_diff: PropertyDiff, precision: int) -> bool:
+    """Hide matching literal input unless an existing cell's source input changed."""
+
+    # Match cell addresses (A1, AA10), not ordinary sheet properties such as Label.
+    if re.fullmatch(r"[A-Z]+[1-9][0-9]*", prop_diff.property_name) is None:
+        return False
+
+    root = next((path for path in prop_diff.path_diffs if path.path == "."), None)
+
+    if root is None:
+        return False
+
+    old, new = root.old_value, root.new_value
+
+    # Keep syntax-only changes visible even when both inputs match their evaluated values.
+    if old is not None and new is not None and old.expression != new.expression:
+        return False
+
+    return all(_cell_input_matches_value(value, precision) for value in (old, new) if value is not None)
+
+
+def _cell_input_matches_value(value: PropertyPathValue, precision: int) -> bool:
+    """Compare literal cell input with its displayed value without hiding formulas."""
+    expression = value.expression
+
+    if expression is None:
+        return True
+
+    if expression.startswith("="):
+        return False
+
+    literal = expression.removeprefix("'")
+
+    if literal == str(_format_path_value(value, precision)):
+        return True
+
+    # Numeric input may omit decimal places added by display formatting.
+    if value.type_ in (PropertyPathType.INT, PropertyPathType.FLOAT):
+        try:
+            return format_float(float(literal), precision) == format_float(float(value.value), precision)
+        except ValueError:
+            return False
+
+    return False
 
 
 def _build_property_presentation(

@@ -466,13 +466,13 @@ def _extract_visible_properties(obj: object) -> dict[str, Property]:
         if prop_value is not None:
             properties[prop_name] = prop_value
 
-    _include_spreadsheet_cells_with_aliases(obj, properties)
+    _include_spreadsheet_cells(obj, properties)
 
     return properties
 
 
-def _include_spreadsheet_cells_with_aliases(obj: object, properties: dict[str, Property]) -> None:
-    """Add Spreadsheet::Sheet non-empty cells and alias sub-paths.
+def _include_spreadsheet_cells(obj: object, properties: dict[str, Property]) -> None:
+    """Add Spreadsheet::Sheet cells with raw contents as expressions and alias paths.
 
     Hidden cell properties are intentionally included for spreadsheet nodes.
     """
@@ -494,8 +494,9 @@ def _include_spreadsheet_cells_with_aliases(obj: object, properties: dict[str, P
         prop_value = _extract_property_value(obj, cell_name)
         if prop_value is None:
             continue
+        contents = obj.getContents(cell_name)  # type: ignore[attr-defined]
         alias = _get_spreadsheet_alias(obj, cell_name)
-        properties[cell_name] = _with_alias_sub_path(prop_value, alias)
+        properties[cell_name] = _with_spreadsheet_sub_paths(prop_value, contents, alias)
 
 
 def _is_spreadsheet_sheet(obj: object) -> bool:
@@ -524,17 +525,20 @@ def _get_spreadsheet_alias(obj: object, cell_name: str) -> str | None:
     return None
 
 
-def _with_alias_sub_path(prop: Property, alias: str | None) -> Property:
-    """Attach optional Alias sub-path to an extracted cell Property."""
-    if not alias:
-        return prop
-
+def _with_spreadsheet_sub_paths(prop: Property, contents: str, alias: str | None) -> Property:
+    """Store raw cell input in the root expression and attach an optional Alias path."""
     value_paths = getattr(prop.value, "paths", None)
     if not isinstance(value_paths, dict):
-        return prop
+        raise RuntimeError("Spreadsheet cell value must contain property paths")
 
     updated_paths = dict(value_paths)
-    updated_paths["Alias"] = PropertyPathValue(PropertyPathType.STRING, alias)
+
+    # Spreadsheet source input includes literals as well as formulas.
+    updated_paths["."] = replace(updated_paths["."], expression=contents)
+
+    if alias:
+        updated_paths["Alias"] = PropertyPathValue(PropertyPathType.STRING, alias)
+
     data_path_value = cast(Any, prop.value)
     return Property(value=replace(data_path_value, paths=updated_paths), group=prop.group)
 

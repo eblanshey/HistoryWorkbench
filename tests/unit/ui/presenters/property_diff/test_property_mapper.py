@@ -43,6 +43,50 @@ def _nested_list_property() -> Property:
     )
 
 
+@pytest.mark.parametrize("value, source", [("var1", "'var1"), ("1a", "'1a"), (1, "1"), (1.0, "1")])
+@pytest.mark.parametrize("change", ["added", "deleted", "unchanged"])
+def test_spreadsheet_redundant_input_hidden(value, source, change) -> None:
+    """Matching cell literals stay stored but do not duplicate displayed values."""
+    prop = Property.from_freecad(value, {".": source}, "Base")
+    diff = PropertyDiff(
+        property_name="B2",
+        old_value=None if change == "added" else prop,
+        new_value=None if change == "deleted" else prop,
+    )
+    node = NodeDiff(path="Sheet", type_id="Spreadsheet::Sheet", property_diffs=[diff])
+
+    presentation = transform_property_diffs(node, precision=2)[0]
+
+    assert [child.name for child in presentation.children] == []
+    assert prop.value.paths["."].expression == source
+
+
+@pytest.mark.parametrize(
+    "type_id, name, old_source, new_source",
+    [
+        ("Spreadsheet::Sheet", "B2", "=1", "=1"),
+        ("Spreadsheet::Sheet", "B2", "1", "=1"),
+        ("Spreadsheet::Sheet", "B2", "1", "1.0"),
+        ("Spreadsheet::Sheet", "B2", None, "1"),
+        ("PartDesign::Pad", "B2", "1", "1"),
+        ("Spreadsheet::Sheet", "Label", "1", "1"),
+    ],
+)
+def test_expression_rows_retained_for_formulas_changes_and_non_cells(type_id, name, old_source, new_source) -> None:
+    """Filtering keeps meaningful source changes and ordinary property expressions visible."""
+    old = Property.from_freecad(1, {} if old_source is None else {".": old_source}, "Base")
+    new = Property.from_freecad(1, {".": new_source}, "Base")
+    diff = PropertyDiff(property_name=name, old_value=old, new_value=new)
+    node = NodeDiff(path="Object", type_id=type_id, property_diffs=[diff])
+
+    presentation = transform_property_diffs(node, precision=2)[0]
+
+    expression = _find_expr_child(presentation.children)
+    assert expression is not None
+    assert expression.old_value == old_source
+    assert expression.new_value == new_source
+
+
 class TestTransformPropertyDiffsExpressionOnly:
     """Tests that expression-only changes do not affect parent property row state."""
 

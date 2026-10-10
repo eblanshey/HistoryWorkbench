@@ -1,6 +1,5 @@
-# File responsibility: Integration test for SnapshotExtractor BasicFile.FCStd snapshot contract.
-# Verifies the complete flat node structure produced by extracting the canonical test document.
-"""Integration test for SnapshotExtractor BasicFile.FCStd snapshot contract."""
+# File responsibility: Verify real FreeCAD snapshot structure and spreadsheet YAML/diff behavior.
+"""Integration tests for snapshot extraction and spreadsheet content preservation."""
 
 from __future__ import annotations
 
@@ -8,13 +7,51 @@ from pathlib import Path
 
 import pytest
 
+from freecad.history_wb.domain.diff import DiffEngine
 from freecad.history_wb.domain.snapshots.gui_extractor import SnapshotExtractor
+from freecad.history_wb.infrastructure.persistence.snapshot_yaml import SnapshotYamlSerializer
 
 
 @pytest.fixture
 def extractor(freecad_gui: object) -> SnapshotExtractor:
     """Create a SnapshotExtractor instance."""
     return SnapshotExtractor(gui=freecad_gui)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("contents", ["=A1", "=2 + 3"])
+def test_spreadsheet_contents_change_with_same_value(freecad_app, extractor, tmp_path, contents) -> None:
+    """Raw cell changes survive YAML and produce diffs despite equal evaluated values."""
+    doc = freecad_app.newDocument("SpreadsheetContents")
+    try:
+        sheet = doc.addObject("Spreadsheet::Sheet", "Spreadsheet")
+        sheet.set("A1", "5")
+        sheet.set("B1", "5")
+        sheet.setAlias("B1", "Length")
+        sheet.set("C1", "'literal text")
+        doc.recompute()
+
+        snapshot_path = tmp_path / "spreadsheet.yaml"
+        SnapshotYamlSerializer.to_yaml(extractor.extract_tree(doc), snapshot_path)
+        before = SnapshotYamlSerializer.from_yaml_file(snapshot_path)
+        before_sheet = before.find_object("Spreadsheet")
+        assert before_sheet is not None
+        before_paths = before_sheet.properties["B1"].value.paths
+        assert before_paths["."].expression == "5"
+        assert before_paths["Alias"].value == "Length"
+        assert before_sheet.properties["C1"].value.paths["."].expression == "'literal text"
+
+        sheet.set("B1", contents)
+        doc.recompute()
+        SnapshotYamlSerializer.to_yaml(extractor.extract_tree(doc), snapshot_path)
+        after = SnapshotYamlSerializer.from_yaml_file(snapshot_path)
+        after_sheet = after.find_object("Spreadsheet")
+        assert after_sheet is not None
+        after_paths = after_sheet.properties["B1"].value.paths
+        assert before_paths["."].value == after_paths["."].value
+        assert after_paths["."].expression == contents
+        assert DiffEngine().compute_diff(before, after).has_changes
+    finally:
+        freecad_app.closeDocument(doc.Name)
 
 
 class TestBasicFileSnapshotContract:

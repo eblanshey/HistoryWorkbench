@@ -79,6 +79,7 @@ class PropertyPathValue:
     Float and Quantity values use tolerance-based equality based on the configured
     precision (rounding to N decimal places). Expressions are compared for equality,
     so two values with different expressions are never equal even if their values match.
+    Spreadsheet cell expressions store raw source input, including literal contents.
     QUANTITY types store a numeric value with an associated unit string.
     """
 

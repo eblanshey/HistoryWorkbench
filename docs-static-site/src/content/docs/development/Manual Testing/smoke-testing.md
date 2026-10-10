@@ -76,6 +76,8 @@ description: Checklist for project detection, iteration operations, settings, an
 - Highlighted property values remain selectable and copyable
 - Property diff clears when document diff clears or node changes
 - Float precision from settings applied to numeric property display
+- Spreadsheet cells show raw input through expression display and aliases through Alias sub-paths; replacing a literal with a formula that evaluates to the same value appears as a change
+- Redundant spreadsheet literal expression rows stay hidden, including leading text apostrophes; formulas and source-input changes remain visible
 
 ## Visual Diff (3D Comparison)
 

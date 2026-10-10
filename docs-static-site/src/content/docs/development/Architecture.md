@@ -335,6 +335,8 @@ HistoryPanelView
 
 Snapshots contain normalized object payloads and occurrence paths. This allows repeated or linked objects to be represented separately from object data. Diff comparison uses settings for exclusions and numeric precision.
 
+Spreadsheet cells retain evaluated values and store raw cell contents in the root path's `expression` field, including literal inputs and formulas. Cell aliases use an `Alias` sub-path. This preserves source-input changes even when evaluated values remain equal and uses the existing expression comparison and display.
+
 ## Git Workflow Integration
 
 Git support is implemented as domain service plus infrastructure adapter.

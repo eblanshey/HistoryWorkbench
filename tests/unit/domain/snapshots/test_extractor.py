@@ -96,6 +96,7 @@ class MockFreeCADObject(DocumentObjectLike):
         property_types=None,
         non_empty_cells=None,
         aliases=None,
+        cell_contents=None,
     ):
         """Initialize a mock FreeCAD object.
 
@@ -136,6 +137,7 @@ class MockFreeCADObject(DocumentObjectLike):
         object.__setattr__(self, "_property_types", property_types or {})
         object.__setattr__(self, "_non_empty_cells", non_empty_cells or [])
         object.__setattr__(self, "_aliases", aliases or {})
+        object.__setattr__(self, "_cell_contents", cell_contents or {})
         object.__setattr__(self, "_view_object", None)
 
     @property
@@ -285,6 +287,10 @@ class MockFreeCADObject(DocumentObjectLike):
         """Mimic FreeCAD spreadsheet cell alias lookup."""
         aliases = object.__getattribute__(self, "_aliases")
         return aliases.get(cell_name, "")
+
+    def getContents(self, cell_name):
+        """Mimic FreeCAD spreadsheet raw cell content lookup."""
+        return object.__getattribute__(self, "_cell_contents")[cell_name]
 
 
 class TestSnapshotExtractor:
@@ -777,8 +783,8 @@ class TestSnapshotExtractor:
         assert "ExpressionEngine" not in node["properties"]
         assert "Visibility" not in node["properties"]
 
-    def test_extract_tree_spreadsheet_cell_includes_alias_sub_path(self) -> None:
-        """Spreadsheet non-empty cells include root value and Alias path."""
+    def test_extract_tree_spreadsheet_cell_includes_contents_and_alias(self) -> None:
+        """Spreadsheet non-empty cells retain value, raw contents, and alias."""
         mock_doc = MagicMock()
         mock_doc.Name = "TestDoc"
 
@@ -790,6 +796,7 @@ class TestSnapshotExtractor:
             property_editor_modes={"ExpressionEngine": ["Hidden"]},
             non_empty_cells=["B1"],
             aliases={"B1": "MyLength"},
+            cell_contents={"B1": "=A1"},
         )
         sheet.Label = "Spreadsheet"
         sheet.B1 = "5 mm"
@@ -806,6 +813,7 @@ class TestSnapshotExtractor:
         b1_paths = b1_prop.value.paths
         assert "." in b1_paths
         assert b1_paths["."].value == "5 mm"
+        assert b1_paths["."].expression == "=A1"
         assert "Alias" in b1_paths
         assert b1_paths["Alias"].value == "MyLength"
         assert "ExpressionEngine" not in node["properties"]

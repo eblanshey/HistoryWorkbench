@@ -3,8 +3,8 @@
 
     <!--[ Versions ]―――――――――――――――――――――――――――――――――――――――――――――――――――――――――-->
 
-    <version>0.2.1</version>
-    <date>2026-10-05</date>
+    <version>0.3.0</version>
+    <date>2026-10-10</date>
     <freecadmin>1.1.0</freecadmin>
     <pythonmin>3.11</pythonmin>
 

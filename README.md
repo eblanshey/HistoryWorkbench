@@ -71,6 +71,10 @@ Done:
 - [x] Initialize new project history repositories from inside History Workbench
 - [x] 3D view comparisons
 
+## AI Transparency
+
+**This project is not vibe-coded.** AI is used as a coding companion. The author of this workbench critiques, reviews, and, when necessary, guides the AI's code to ensure it adheres to his clean code and software architectural standards. This project would not exist without the time-savings enabled by AI. Locally-hosted, energy-efficient models are used when possible.
+
 ## Contributors
 
 This workbench is shared publicly so as to serve you, the FreeCAD community. Please open an [issue](https://github.com/eblanshey/HistoryWorkbench/issues) to report bugs, confusing comparisons, or other problems, or start a [discussion](https://github.com/eblanshey/HistoryWorkbench/discussions) to ask questions or share feedback. Development so far has happened on Linux, so additional platform setup notes and test instructions are also welcome as contributions.

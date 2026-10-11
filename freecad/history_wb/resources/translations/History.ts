@@ -80,7 +80,7 @@ Files that have not been saved or reviewed will be kept.</source>
     </message>
     <message>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="154"/>
-        <location filename="../../ui/views/document_diff/document_row.py" line="155"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="166"/>
         <source>Discard Changes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -420,17 +420,27 @@ They will not be saved in the next iteration until reviewed again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="124"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="99"/>
+        <source>Open current document</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/document_diff/document_row.py" line="100"/>
+        <source>Open the current file at this path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/document_diff/document_row.py" line="135"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="154"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="165"/>
         <source>Discard edits to this file and restore the last reviewed or saved version.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../ui/views/document_diff/document_row.py" line="133"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="144"/>
         <source>Restore the selected file.
 This overwrites %1 on disk with a copy of the file as it was saved in the selected iteration.
 THE CURRENT FILE WILL BE OVERWRITTEN BY THIS OPERATION.
@@ -603,7 +613,7 @@ Saved history will not be affected.</source>
         <location filename="../../ui/presenters/document_diff/restore_handler.py" line="135"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="141"/>
         <location filename="../../ui/views/diff_panel/dialogs.py" line="245"/>
-        <location filename="../../ui/views/document_diff/document_row.py" line="143"/>
+        <location filename="../../ui/views/document_diff/document_row.py" line="154"/>
         <source>Restore</source>
         <translation type="unfinished"></translation>
     </message>
@@ -625,6 +635,18 @@ Saved history will not be affected.</source>
     <message>
         <location filename="../../ui/presenters/workbench_command_presenter.py" line="227"/>
         <source>Git executable not found or invalid. Ensure it&apos;s installed, or configure its location manually in the History Workbench preferences.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/diff_panel/dialog_view.py" line="41"/>
+        <source>Could not open the current document.
+
+%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../ui/views/diff_panel/dialog_view.py" line="42"/>
+        <source>Open Document Failed</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
+
 from freecad.history_wb.domain.diff.models import DiffState
-from freecad.history_wb.qt import QtWidgets
+from freecad.history_wb.qt import QtCore, QtGui, QtWidgets
 from freecad.history_wb.ui.presenters.presentation_models import (
     DiffTreePresentation,
     WorkingTreeDocumentClosedIndicator,
 )
 from freecad.history_wb.ui.views.document_diff.document_row import DocumentDiffRowWidget
+from freecad.history_wb.ui.views.document_diff.panel import DocumentDiffTreeWidget
 from freecad.history_wb.ui.views.history.models import HistorySelection
 
 
@@ -129,3 +132,37 @@ def test_document_row_renders_leading_document_icon(application) -> None:  # typ
 
     assert len(icon_labels) == 1
     assert row.layout().itemAt(0).widget() is icon_labels[0]
+
+
+@pytest.mark.parametrize("closed", [False, True])
+@pytest.mark.parametrize("kind", ["WORKING_TREE", "STAGING", "COMMIT"])
+def test_document_context_menu_routes_current_file_open_in_all_trees(application, monkeypatch, closed, kind) -> None:  # type: ignore[no-untyped-def]
+    """Every document diff tree opens the current file, regardless of open state."""
+    panel = DocumentDiffTreeWidget()
+    panel.set_current_history_selection(HistorySelection(item_kind=kind, commit_hash="abc123" if kind == "COMMIT" else None))
+    panel.show_doc_diffs([_diff(indicators=[WorkingTreeDocumentClosedIndicator()] if closed else [])])
+    row = panel.findChild(DocumentDiffRowWidget)
+    opened: list[str] = []
+    compared: list[str] = []
+    panel.open_document_requested.connect(opened.append)
+    panel.open_document_for_comparison_requested.connect(compared.append)
+    menus: list[list[str]] = []
+
+    class SelectingMenu(QtWidgets.QMenu):
+        """Select document-open action without blocking on a popup."""
+
+        def exec(self, position: QtCore.QPoint | None = None, at: QtGui.QAction | None = None) -> QtGui.QAction:
+            """Capture visible actions and choose document opening."""
+            menus.append([action.text() for action in self.actions()])
+            assert self.toolTipsVisible()
+            assert self.actions()[0].toolTip() == "Open the current file at this path"
+            self.actions()[0].trigger()
+            return self.actions()[0]
+
+    monkeypatch.setattr(QtWidgets, "QMenu", SelectingMenu)
+    event = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Reason.Mouse, QtCore.QPoint(5, 5))
+    application.sendEvent(row, event)
+
+    assert menus == [["Open current document"]]
+    assert opened == ["parts/A.FCStd"]
+    assert compared == []

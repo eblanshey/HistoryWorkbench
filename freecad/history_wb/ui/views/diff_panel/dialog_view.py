@@ -2,6 +2,7 @@
 
 from ....domain.git.models import GitRepositoryInitCandidate
 from ....qt import QtWidgets
+from ....utils import translate
 from .dialogs import (
     GitConfigDialogResult,
     show_configure_author_dialog,
@@ -34,6 +35,11 @@ class DialogView:
     def show_error_message(self, title: str, message: str) -> None:
         """Show error dialog anchored to panel widget."""
         show_error_message(self._parent, title, message)
+
+    def show_document_open_error(self, reason: str) -> None:
+        """Show failed document opening with the unchanged runtime reason."""
+        message = translate("History", "Could not open the current document.\n\n%1").replace("%1", reason)
+        self.show_error_message(translate("History", "Open Document Failed"), message)
 
     def show_save_iteration_dialog(self) -> str | None:
         """Show Save Iteration dialog and return notes when accepted."""

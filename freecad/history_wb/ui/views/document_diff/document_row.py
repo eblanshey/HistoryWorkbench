@@ -34,6 +34,7 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
     restore_requested = QtCore.Signal(str)  # git_path
     discard_requested = QtCore.Signal(str)  # git_path
     open_document_requested = QtCore.Signal(str)  # git_path
+    document_open_requested = QtCore.Signal(str)  # git_path
 
     def __init__(
         self,
@@ -90,6 +91,16 @@ class DocumentDiffRowWidget(DiffTreeRowWidget):
         # Only reviewed rows can be removed from reviewed staging set.
         if self._is_staging_selected():
             self._add_remove_from_reviewed_button()
+
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent) -> None:  # noqa: N802
+        """Offer opening the current file from any document diff row."""
+        menu = QtWidgets.QMenu(self)
+        menu.setToolTipsVisible(True)
+        action = menu.addAction(translate("History", "Open current document"))
+        action.setToolTip(translate("History", "Open the current file at this path"))
+        action.triggered.connect(partial(self.document_open_requested.emit, self._diff.git_path))
+        menu.exec(event.globalPos())
+        event.accept()
 
     def _is_working_tree_selected(self) -> bool:
         """Return True when Current Files Area history row selected."""

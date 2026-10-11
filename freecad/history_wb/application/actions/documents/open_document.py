@@ -14,10 +14,14 @@ class OpenDocumentAction:
     def __init__(self, freecad_port: FreeCadPort) -> None:
         self._freecad_port = freecad_port
 
-    def execute(self, path: str) -> Result:
-        """Open document at path and return action result."""
+    def execute(self, path: str, *, activate_view: bool = False) -> Result:
+        """Open document at path, optionally activate its GUI view, and return action result."""
         try:
-            self._freecad_port.open_document(path)
+            document = self._freecad_port.open_document(path)
+
+            # Comparison loading keeps History visible; explicit opening selects the document view.
+            if activate_view:
+                self._freecad_port.activate_document_view(document.Name)
             Log.debug(f"Opened document: {path}")
             return Result.success(path)
         except (RuntimeError, ValueError, OSError) as err:

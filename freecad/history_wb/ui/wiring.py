@@ -70,6 +70,7 @@ def bind_document_diff_events(view: HistoryPanelView, diff_presenter: DiffPresen
         (document_diff_panel.node_selection_requested, diff_presenter.select_node),
         (document_diff_panel.visual_diff_requested, diff_presenter.open_visual_diff),
         (document_diff_panel.open_document_for_comparison_requested, diff_presenter.open_document_for_comparison),
+        (document_diff_panel.open_document_requested, diff_presenter.open_document),
     ]
 
     _bind_signal_pairs(signal_bindings)

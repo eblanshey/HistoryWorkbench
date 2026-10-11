@@ -1,9 +1,11 @@
-"""File responsibility: Unit tests for diff panel message helper functions."""
+"""File responsibility: Unit tests for diff panel message helpers and document-open error display."""
 
 from __future__ import annotations
 
 from typing import cast
 from unittest.mock import patch
+
+import pytest
 
 from freecad.history_wb.qt import QtWidgets
 
@@ -56,3 +58,27 @@ def test_show_error_message_calls_qmessagebox_critical() -> None:
         show_error_message(parent, "error", "message")
 
     error_mock.assert_called_once_with(parent, "error", "message")
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "File '/home/user/parts/A.FCStd' does not exist!",
+        "Invalid document",
+    ],
+)
+def test_document_open_error_preserves_runtime_reason(reason: str) -> None:
+    """Failed document opening preserves the runtime reason without adding a second path."""
+    from freecad.history_wb.ui.views.diff_panel.dialog_view import DialogView
+
+    _ensure_app()
+    parent = QtWidgets.QWidget()
+
+    with patch.object(QtWidgets.QMessageBox, "critical") as error_mock:
+        DialogView(parent).show_document_open_error(reason)
+
+    error_mock.assert_called_once_with(
+        parent,
+        "Open Document Failed",
+        f"Could not open the current document.\n\n{reason}",
+    )

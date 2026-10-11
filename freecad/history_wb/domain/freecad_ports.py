@@ -81,13 +81,27 @@ class GuiDocumentLike(Protocol):
     @property
     def Modified(self) -> bool: ...
     def getViewProvider(self, obj: object) -> object | None: ...
+    def activeView(self) -> object | None:
+        """Return an existing document GUI view, without creating one."""
+        ...
+
+
+class GuiMainWindowLike(Protocol):
+    """Minimal Protocol for FreeCAD's native MDI window activation."""
+
+    def setActiveWindow(self, view: object) -> None:
+        """Activate an existing native MDI view."""
+        ...
 
 
 class GuiLike(Protocol):
     """Minimal Protocol for the FreeCAD GUI module."""
 
     def getDocument(self, doc_name: str) -> GuiDocumentLike | None: ...
-    def getMainWindow(self) -> object | None: ...
+    def getMainWindow(self) -> GuiMainWindowLike | None: ...
+    def activateView(self, type_str: str, create: bool) -> None:
+        """Activate a view of the given type in the active document, creating one when asked."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -144,6 +158,10 @@ class FreeCadPort(Protocol):
 
     def set_active_document(self, name: str) -> None:
         """Set active document by FreeCAD internal name."""
+        ...
+
+    def activate_document_view(self, name: str) -> None:
+        """Activate the document's GUI view by FreeCAD internal name."""
         ...
 
     def get_object(self, doc: DocumentLike, name: str) -> DocumentObjectLike | None:

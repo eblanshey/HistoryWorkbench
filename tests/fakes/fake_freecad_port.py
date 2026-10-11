@@ -1,5 +1,6 @@
 """File responsibility: Fake FreeCAD port for testing."""
 
+from pathlib import Path
 from typing import cast
 
 from freecad.history_wb.domain.freecad_ports import DocumentLike, DocumentObjectLike, FreeCadPort
@@ -57,6 +58,7 @@ class FakeFreeCadPort(FreeCadPort):
         self.opened_document_paths: list[str] = []
         self.closed_document_names: list[str] = []
         self.active_document_names: list[str] = []
+        self.activated_view_document_names: list[str] = []
         self._call_log: list[str] = []  # Track method calls for verification
 
     def get_active_document(self) -> DocumentLike | None:
@@ -80,6 +82,7 @@ class FakeFreeCadPort(FreeCadPort):
                 (),
                 {
                     "FileName": path,
+                    "Name": Path(path).stem,
                     "Objects": [],
                     "getObject": lambda self, name: None,
                     "recompute": lambda self: None,
@@ -100,6 +103,10 @@ class FakeFreeCadPort(FreeCadPort):
         """Track set active document calls."""
         self._call_log.append(f"set_active_document:{name}")
         self.active_document_names.append(name)
+
+    def activate_document_view(self, name: str) -> None:
+        """Track document GUI view activation."""
+        self.activated_view_document_names.append(name)
 
     def get_object(self, doc: DocumentLike, name: str) -> DocumentObjectLike | None:
         """Return None (not implemented in fake)."""

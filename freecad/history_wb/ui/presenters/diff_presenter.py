@@ -116,17 +116,26 @@ class DiffPresenter:
         """Track effective history selection state for non-click refresh paths."""
         self._current_history_selection = selection
 
-    def open_document_for_comparison(self, git_path: str) -> None:
-        """Open missing working-tree document in FreeCAD, then recompute Current Files Area diff."""
+    def open_document(self, git_path: str) -> None:
+        """Open the working-tree document and activate its GUI view."""
+        self._open_current_document(git_path, activate_view=True)
+
+    def _open_current_document(self, git_path: str, *, activate_view: bool) -> bool:
+        """Open a repository file and report failure through the dialog view."""
         repo = self._application_state.git_repository
         if repo is None:
-            Log.warning("No git repository detected")
-            return
+            raise RuntimeError("Opening a document requires a git repository")
         document_path = str(Path(repo.absolute_path) / git_path)
-        result = self._open_document.execute(document_path)
+        result = self._open_document.execute(document_path, activate_view=activate_view)
         if not result.is_success:
-            if result.message:
-                Log.warning(result.message)
+            if result.message is None:
+                raise RuntimeError("Document-open failure requires an error message")
+            self._dialog_view.show_document_open_error(result.message)
+        return result.is_success
+
+    def open_document_for_comparison(self, git_path: str) -> None:
+        """Open missing working-tree document in FreeCAD, then recompute Current Files Area diff."""
+        if not self._open_current_document(git_path, activate_view=False):
             return
         self._on_working_tree_selected()
         self._focus_history_window_callback()

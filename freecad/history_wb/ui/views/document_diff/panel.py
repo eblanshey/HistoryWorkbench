@@ -28,6 +28,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
     node_selection_requested = QtCore.Signal(str, str)  # git_path, node_path
     visual_diff_requested = QtCore.Signal(str, str)  # git_path, node_path
     open_document_for_comparison_requested = QtCore.Signal(str)  # git_path
+    open_document_requested = QtCore.Signal(str)  # git_path
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
@@ -87,6 +88,7 @@ class DocumentDiffTreeWidget(QtWidgets.QWidget):
         container.restore_requested.connect(self.restore_requested.emit)
         container.discard_requested.connect(self.discard_requested.emit)
         container.open_document_requested.connect(self.open_document_for_comparison_requested.emit)
+        container.document_open_requested.connect(self.open_document_requested.emit)
 
         if diff.git_path and container.stage_button is not None:
             self._stage_buttons[diff.git_path] = container.stage_button

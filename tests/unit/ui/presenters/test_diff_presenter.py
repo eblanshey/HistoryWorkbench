@@ -111,7 +111,42 @@ def test_open_document_click_focuses_history_window_after_refresh() -> None:
         presenter.open_document_for_comparison("doc.FCStd")
 
     on_working_tree_selected.assert_called_once_with()
+    presenter._open_document.execute.assert_called_once_with("/home/user/dir/repo/doc.FCStd", activate_view=False)
     assert focused == [True]
+
+
+def test_open_document_opens_repository_path_without_refresh_or_history_focus() -> None:
+    """Opening from the document menu requests GUI activation without refreshing History."""
+    document_view, property_view, _, presenter = _make_presenter()
+    presenter._application_state.git_repository = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+    presenter._open_document.execute.return_value = Result.success("/home/user/dir/repo/parts/A.FCStd")
+    focused: list[bool] = []
+    presenter._focus_history_window_callback = lambda: focused.append(True)
+
+    presenter.open_document("parts/A.FCStd")
+
+    presenter._open_document.execute.assert_called_once_with("/home/user/dir/repo/parts/A.FCStd", activate_view=True)
+    assert focused == []
+    assert document_view.get_calls() == []
+    assert property_view.get_calls() == []
+
+
+@pytest.mark.parametrize("method", ["open_document", "open_document_for_comparison"])
+@pytest.mark.parametrize("reason", ["File does not exist", "Invalid document"])
+def test_document_open_failure_shows_reason_without_refresh(method: str, reason: str) -> None:
+    """Both user-driven open flows report failures without changing diff views or focus."""
+    document_view, property_view, dialog_view, presenter = _make_presenter()
+    presenter._application_state.git_repository = GitRepository(name="repo", absolute_path="/home/user/dir/repo")
+    presenter._open_document.execute.return_value = Result.failure(reason)
+    focused: list[bool] = []
+    presenter._focus_history_window_callback = lambda: focused.append(True)
+
+    getattr(presenter, method)("parts/A.FCStd")
+
+    assert dialog_view.get_calls() == [{"method": "show_document_open_error", "reason": reason}]
+    assert document_view.get_calls() == []
+    assert property_view.get_calls() == []
+    assert focused == []
 
 
 def test_add_button_click_applies_staging_handler_remaining_results() -> None:

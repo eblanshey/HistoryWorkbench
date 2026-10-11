@@ -46,6 +46,7 @@ class _DocumentDiffPanelMock:
         self.node_selection_requested = _SignalMock()
         self.visual_diff_requested = _SignalMock()
         self.open_document_for_comparison_requested = _SignalMock()
+        self.open_document_requested = _SignalMock()
 
 
 def _mock_view() -> MagicMock:
@@ -280,6 +281,9 @@ def test_compose_wires_action_dependencies_and_callbacks() -> None:
         mock_diff_presenter.discard_all_from_current_files.assert_called_once_with()
         mock_view.document_diff_panel.open_document_for_comparison_requested.connect.assert_called_once_with(
             mock_diff_presenter.open_document_for_comparison
+        )
+        mock_view.document_diff_panel.open_document_requested.connect.assert_called_once_with(
+            mock_diff_presenter.open_document
         )
 
 

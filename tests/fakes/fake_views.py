@@ -105,6 +105,10 @@ class FakeDialogView(_CallRecorder):
         """Capture error dialog call."""
         self._record_call("show_error_message", title=title, message=message)
 
+    def show_document_open_error(self, reason: str) -> None:
+        """Capture failed document opening with the runtime reason."""
+        self._record_call("show_document_open_error", reason=reason)
+
     def show_save_iteration_dialog(self) -> str | None:
         """Capture save-iteration dialog request."""
         self._record_call("show_save_iteration_dialog")

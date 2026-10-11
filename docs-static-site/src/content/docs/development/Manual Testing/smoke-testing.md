@@ -108,7 +108,9 @@ description: Checklist for project detection, iteration operations, settings, an
 
 ## Document Management
 
-- Open document for comparison: Open button on closed working-tree file indicator
+- Right-click a document row in Current Files, Reviewed, or an iteration diff tree: Open current document opens the current file and switches from History to its document view, whether already open or closed
+- Failed opening from the closed-document indicator shows an error dialog without refreshing the diff or refocusing History
+- Open document for comparison: Open button on closed working-tree file indicator opens the file, refreshes the diff, and keeps History visible
 - Open all documents in repository
 - Open all documents in repository: no project warning
 - Recompute active document

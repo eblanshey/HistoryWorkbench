@@ -63,6 +63,29 @@ class FreeCadPortAdapter:
     def set_active_document(self, name: str) -> None:
         self._ctx.app.setActiveDocument(name)
 
+    def activate_document_view(self, name: str) -> None:
+        """Switch the foreground MDI window to the document's view, matching a model-tree double-click."""
+        gui_document = self._ctx.gui.getDocument(name)
+        if gui_document is None:
+            raise RuntimeError(f"No GUI document found for '{name}'")
+        main_window = self._ctx.gui.getMainWindow()
+        if main_window is None:
+            raise RuntimeError("No FreeCAD main window available")
+
+        view = gui_document.activeView()
+
+        # A closed document tab leaves the document open without any GUI view. Double-clicking
+        # such a row creates a 3D view, so recreate one before activating it.
+        if view is None:
+            self._ctx.app.setActiveDocument(name)
+            self._ctx.gui.activateView("Gui::View3DInventor", True)
+            view = gui_document.activeView()
+        if view is None:
+            raise RuntimeError(f"Document '{name}' has no activatable GUI view")
+
+        # A passive History view can be foreground while this document is already logically active.
+        main_window.setActiveWindow(view)
+
     def get_object(self, doc: DocumentLike, name: str) -> object | None:
         return doc.getObject(name)
 

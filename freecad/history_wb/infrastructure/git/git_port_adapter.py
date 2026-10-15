@@ -327,8 +327,8 @@ class GitPortAdapter(GitPort):
     def is_path_in_repository(self, git_root: str, path: str) -> bool:
         """Check if a path is within the git repository.
 
-        This method normalizes both paths and checks if the given path starts
-        with the git repository root path.
+        Resolve filesystem aliases before comparing paths so mapped drives,
+        UNC paths, and symlinked directories share repository membership.
 
         Args:
             git_root: Absolute path to git repository root.
@@ -340,8 +340,8 @@ class GitPortAdapter(GitPort):
         if not git_root or not path:
             return False
 
-        normalized_git_root = os.path.normcase(os.path.abspath(git_root))
-        normalized_path = os.path.normcase(os.path.abspath(path))
+        normalized_git_root = os.path.normcase(os.path.realpath(git_root))
+        normalized_path = os.path.normcase(os.path.realpath(path))
 
         try:
             return os.path.commonpath([normalized_git_root, normalized_path]) == normalized_git_root

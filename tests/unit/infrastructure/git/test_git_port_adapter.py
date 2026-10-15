@@ -3,16 +3,17 @@
 # git commands, ensuring reliable and fast test execution.
 """Unit tests for GitPortAdapter."""
 
+import ntpath
 import os
 import subprocess
 import unittest.mock
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from freecad.history_wb.infrastructure.git import GitPortAdapter
 from freecad.history_wb.utils import Log
-
 from tests.fakes.fake_repositories import FakeSettingsRepository
 
 
@@ -22,7 +23,7 @@ class TestGitPortAdapter:
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     @pytest.mark.parametrize(
         "path",
@@ -453,7 +454,7 @@ class TestGitPortAdapterGetCommits:
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     def test_get_commits_success_single_commit(self) -> None:
         """Test successful commit retrieval with a single commit."""
@@ -793,7 +794,7 @@ class TestGitPortAdapterIsPathInRepository:
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     @pytest.mark.parametrize(
         "git_root,path,expected",
@@ -863,13 +864,51 @@ class TestGitPortAdapterIsPathInRepository:
         assert result is False
 
 
+    @pytest.mark.parametrize("alias_document", [False, True])
+    def test_is_path_in_repository_resolves_directory_aliases(self, tmp_path: Path, alias_document: bool) -> None:
+        """Recognize documents when either path uses a symlinked directory."""
+        root = tmp_path / "project"
+        root.mkdir()
+        alias = tmp_path / "alias"
+        alias.symlink_to(root, target_is_directory=True)
+        document_root, repository_root = (alias, root) if alias_document else (root, alias)
+
+        assert self.adapter.is_path_in_repository(str(repository_root), str(document_root / "Widget.FCStd"))
+
+    def test_is_path_in_repository_excludes_symlink_to_external_directory(self, tmp_path: Path) -> None:
+        """A directory symlink inside a project does not make its external target eligible."""
+        root = tmp_path / "project"
+        root.mkdir()
+        external = tmp_path / "external"
+        external.mkdir()
+        alias = root / "alias"
+        alias.symlink_to(external, target_is_directory=True)
+
+        assert not self.adapter.is_path_in_repository(str(root), str(alias / "Widget.FCStd"))
+
+    def test_is_path_in_repository_resolves_mapped_drive_to_unc(self) -> None:
+        """Recognize a mapped-drive document inside its UNC repository root."""
+        root = "//server/share/Tempo/test"
+        document = "Z:/Tempo/test/Widget.FCStd"
+        resolved = {
+            root: r"\\server\share\Tempo\test",
+            document: r"\\server\share\Tempo\test\Widget.FCStd",
+        }
+        with (
+            patch("os.path.realpath", side_effect=resolved.__getitem__),
+            patch("os.path.normcase", side_effect=ntpath.normcase),
+            patch("os.path.commonpath", side_effect=ntpath.commonpath),
+        ):
+            assert self.adapter.is_path_in_repository(root, document)
+
+
 class TestGitPortAdapterStageFiles:
     """Tests for the stage_files method of GitPortAdapter."""
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     def test_stage_files_uses_pathspec_separator(self) -> None:
         """Given paths that look like options, git add receives -- separator."""
@@ -909,7 +948,7 @@ class TestGitPortAdapterGetStagedPaths:
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     def test_get_staged_paths_returns_staged_fcstd_files(self) -> None:
         """Test that staged .FCStd files are returned correctly.
@@ -1154,7 +1193,7 @@ class TestGitPortAdapterGetFileContents:
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     def test_get_file_contents_from_index(self) -> None:
         """Test getting file contents from the index (staged version).
@@ -1284,7 +1323,7 @@ class TestGitPortAdapterUnstage:
 
     def setup_method(self) -> None:
         self.adapter = GitPortAdapter(settings_repo=FakeSettingsRepository(git_executable="git"))
-        
+
 
     def test_unstage_files_uses_restore_with_pathspec_separator(self) -> None:
         status_result = subprocess.CompletedProcess(

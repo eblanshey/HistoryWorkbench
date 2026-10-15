@@ -1,8 +1,8 @@
-# File responsibility: Git path helpers that normalize repository-relative paths
-# across operating systems while preserving Git's POSIX-style path convention.
+# File responsibility: Resolve filesystem aliases for repository-relative paths
+# and normalize Git paths across operating systems while preserving their spelling.
 """Git path normalization helpers."""
 
-from os.path import relpath
+from os.path import realpath, relpath
 from pathlib import PurePosixPath
 
 
@@ -12,8 +12,8 @@ def to_git_path(path: str) -> str:
 
 
 def relative_git_path(path: str, root: str) -> str:
-    """Return a repository-relative Git path for an OS filesystem path."""
-    return to_git_path(relpath(path, root))
+    """Resolve filesystem aliases and return a repository-relative Git path."""
+    return to_git_path(relpath(realpath(path), realpath(root)))
 
 
 def git_path_name(path: str) -> str:
